@@ -12,6 +12,10 @@ if exist "%ROOT%app\launcher-new.jar" (
         )
     )
 )
+rem Start local offline mock server for lobby (8200) and map service (8090) if not running
+if exist "%ROOT%app\mock-server.jar" (
+    powershell -NoProfile -Command "if (-not (Get-NetTCPConnection -LocalPort 8200 -State Listen -ErrorAction SilentlyContinue)) { Start-Process -WindowStyle Hidden -FilePath '%ROOT%runtime\bin\javaw.exe' -ArgumentList '-jar \"%ROOT%app\mock-server.jar\"' }"
+)
 if exist "%ROOT%app\launcher.jar" if exist "%ROOT%runtime\bin\javaw.exe" (
     start "" "%ROOT%runtime\bin\javaw.exe" "-splash:%ROOT%cache\splash.png" -Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive "-XX:SharedArchiveFile=%ROOT%cache\eclipse.jsa" --enable-native-access=ALL-UNNAMED "-Dneroxis.home=%ROOT%." -cp "%ROOT%app\launcher.jar" com.faforever.neroxis.generator.bar.BarLauncher
     exit /b 0
