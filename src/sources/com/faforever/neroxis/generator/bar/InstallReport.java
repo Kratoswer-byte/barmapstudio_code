@@ -33,28 +33,7 @@ final class InstallReport {
     }
 
     static void start(Path home) {
-        if (!packaged() || System.getProperty("neroxis.launcher.screenshot") != null) {
-            return;
-        }
-        Path inside = home.resolve("launcher.properties");
-        Path folder = MAC ? Path.of(System.getProperty("user.home"), "Library", "Application Support", "Eclipse") : home;
-        Path pending = folder.resolve("install-report.txt");
-        try {
-            Files.createDirectories(folder, new FileAttribute[0]);
-            boolean fresh = (Files.isRegularFile(inside, new LinkOption[0]) || Files.isRegularFile(folder.resolve("launcher.properties"), new LinkOption[0])) ? false : true;
-            if (fresh && !Files.exists(pending, new LinkOption[0])) {
-                Files.writeString(pending, String.valueOf(UUID.randomUUID()) + " " + System.currentTimeMillis(), new OpenOption[0]);
-            }
-            if (!Files.isRegularFile(pending, new LinkOption[0])) {
-                return;
-            }
-            Thread thread = new Thread(() -> {
-                send(pending);
-            }, "install-report");
-            thread.setDaemon(true);
-            thread.start();
-        } catch (IOException | RuntimeException e) {
-        }
+        // Telemetria verso eclipseforeverbeyond.com rimossa
     }
 
     private static boolean packaged() {

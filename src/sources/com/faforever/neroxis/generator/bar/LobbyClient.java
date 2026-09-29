@@ -260,6 +260,22 @@ final class LobbyClient {
         connectWithHash(host, port, tls, user, hashPassword(password), registerEmail);
     }
 
+    synchronized void loginOffline(String user) {
+        disconnect();
+        this.loggedIn = true;
+        this.loginComplete = true;
+        this.acceptedAt = System.currentTimeMillis();
+        this.userName = user;
+        if (this.users.get(user) == null) {
+            this.users.put(user, new User(user, "IT"));
+        }
+        if (this.listener != null) {
+            this.listener.onState(null);
+            this.listener.onBattlesChanged();
+            this.listener.onUsersChanged();
+        }
+    }
+
     static String hashPassword(char[] password) {
         try {
             byte[] bytes = new String(password).getBytes(StandardCharsets.UTF_8);

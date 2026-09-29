@@ -937,20 +937,7 @@ public final class BarLauncher {
                 } catch (ClassCastException | IllegalArgumentException e) {
                 }
             }
-            try {
-                HttpResponse<String> response = http.send(HttpRequest.newBuilder(URI.create(this.lobby.mapServiceUrl().replaceAll("/find/?$", "") + "/popular")).timeout(Duration.ofSeconds(8L)).build(), HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() == 200) {
-                    Map<String, Integer> counts = new HashMap<>();
-                    Matcher pairs = Pattern.compile("\"((?:[^\"\\\\]|\\\\.)*)\"\\s*:\\s*(\\d+)").matcher((CharSequence) response.body());
-                    while (pairs.find()) {
-                        counts.put(pairs.group(1).toLowerCase(Locale.ROOT), Integer.valueOf(Integer.parseInt(pairs.group(2))));
-                    }
-                    this.popularity = counts;
-                }
-            } catch (IOException | RuntimeException e2) {
-            } catch (InterruptedException e3) {
-                Thread.currentThread().interrupt();
-            }
+            this.popularity = Map.of();
             SwingUtilities.invokeLater(() -> {
                 if (this.createDialog != null) {
                     filterCreateList();
@@ -1841,50 +1828,7 @@ public final class BarLauncher {
     }
 
     private static void preflightUpdate() {
-        if (LauncherUpdater.runningJar() == null || System.getProperty("neroxis.launcher.screenshot") != null) {
-            return;
-        }
-        String service = "http://51.81.81.166:8090/find";
-        try {
-            Properties settings = new Properties();
-            Path file = Platform.settingsFile(locateHome());
-            if (Files.isRegularFile(file, new LinkOption[0])) {
-                Reader reader = Files.newBufferedReader(file);
-                try {
-                    settings.load(reader);
-                    if (reader != null) {
-                        reader.close();
-                    }
-                } catch (Throwable th) {
-                    if (reader != null) {
-                        try {
-                            reader.close();
-                        } catch (Throwable th2) {
-                            th.addSuppressed(th2);
-                        }
-                    }
-                    throw th;
-                }
-            }
-            service = settings.getProperty("mapservice", service);
-        } catch (IOException | RuntimeException e) {
-        }
-        LaunchScreen.say("Looking for a new version of Eclipse...", 0.06d);
-        try {
-            if (LauncherUpdater.stageUpdate(service.replaceFirst("/find/?$", "/download/"), (text, fraction) -> {
-                LaunchScreen.say(text, fraction < 0.0d ? -1.0d : 0.1d + (fraction * 0.8d));
-            })) {
-                LaunchScreen.say("Installing the new version, Eclipse starts again in a moment...", 0.95d);
-                restartFrom(locateHome());
-                System.exit(0);
-            }
-            preflight = "current";
-            LaunchScreen.say("Eclipse is up to date", 0.3d);
-        } catch (Exception e2) {
-            System.err.println("update check failed: " + e2.getMessage());
-            preflight = "failed";
-            LaunchScreen.say("Could not look for a new version, starting as it is", 0.3d);
-        }
+        preflight = "current";
     }
 
     private void restartLauncher() throws IOException {

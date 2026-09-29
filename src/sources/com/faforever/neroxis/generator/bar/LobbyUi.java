@@ -160,8 +160,8 @@ import javax.swing.text.StyledDocument;
 
 /* JADX INFO: loaded from: app_classes.zip:com/faforever/neroxis/generator/bar/LobbyUi.class */
 final class LobbyUi implements LobbyClient.Listener {
-    static final String DEFAULT_SERVER = "51.81.81.166";
-    static final String DEFAULT_MAP_SERVICE = "http://51.81.81.166:8090/find";
+    static final String DEFAULT_SERVER = "127.0.0.1";
+    static final String DEFAULT_MAP_SERVICE = "http://127.0.0.1:8090/find";
     private KeybindEditor keybindEditor;
     private Font barFont;
     private boolean barFontLooked;
@@ -875,87 +875,30 @@ final class LobbyUi implements LobbyClient.Listener {
 
     void showLogin() {
         if (this.loginDialog == null) {
-            this.loginDialog = new JDialog(this.host.frame(), "Sign in", System.getProperty("neroxis.launcher.screenshot") == null);
-            JTextField server = new JTextField(this.settings.getProperty("server", DEFAULT_SERVER));
-            JTextField port = new JTextField(this.settings.getProperty("port", "8200"));
-            JCheckBox tls = new JCheckBox("Encrypted connection (TLS, port 8201)", Boolean.parseBoolean(this.settings.getProperty("tls", "false")));
+            this.loginDialog = new JDialog(this.host.frame(), "Autenticazione", System.getProperty("neroxis.launcher.screenshot") == null);
             JTextField user = new JTextField(this.settings.getProperty("user", ""));
             JPasswordField password = new JPasswordField();
-            JTextField mapService = new JTextField(this.settings.getProperty("mapservice", DEFAULT_MAP_SERVICE));
-            mapService.setToolTipText("Where maps of this server are downloaded from (find API)");
             this.loginStatus = new JLabel(" ");
             this.loginStatus.setForeground(BarLauncher.MUTED);
             JPanel form = new JPanel();
             form.setLayout(new BoxLayout(form, 1));
             form.setOpaque(false);
-            form.add(formRows(new Object[][]{new Object[]{"User name", user}, new Object[]{"Password", password}}));
-            JCheckBox stay = new JCheckBox("Stay signed in on this computer", true);
-            stay.setOpaque(false);
-            stay.setAlignmentX(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT);
-            stay.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-            stay.addActionListener(e -> {
-                this.staySignedIn = stay.isSelected();
-            });
-            JButton forgot = linkButton("Forgot password?");
-            forgot.addActionListener(e2 -> {
-                openResetPage(this.loginDialog);
-            });
-            JPanel stayRow = new JPanel(new BorderLayout());
-            stayRow.setOpaque(false);
-            stayRow.setAlignmentX(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT);
-            stayRow.add(stay, "West");
-            stayRow.add(forgot, "East");
-            stayRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, stayRow.getPreferredSize().height));
-            form.add(stayRow);
-            JPanel serverRows = formRows(new Object[][]{new Object[]{"Server", server}, new Object[]{"Port", port}, new Object[]{"", tls}, new Object[]{"Map service", mapService}});
-            serverRows.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-            serverRows.setVisible(false);
-            JButton serverToggle = new JButton("Server settings");
-            serverToggle.setBorderPainted(false);
-            serverToggle.setContentAreaFilled(false);
-            serverToggle.setForeground(BarLauncher.MUTED);
-            serverToggle.setCursor(Cursor.getPredefinedCursor(12));
-            serverToggle.setAlignmentX(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT);
-            serverToggle.setMargin(new Insets(8, 0, 0, 0));
-            serverToggle.addActionListener(e3 -> {
-                serverRows.setVisible(!serverRows.isVisible());
-                this.loginDialog.pack();
-                this.loginDialog.setSize(Math.max(430, this.loginDialog.getWidth()), this.loginDialog.getHeight());
-            });
-            form.add(serverToggle);
-            form.add(serverRows);
-            JButton signIn = new JButton("SIGN IN");
+            form.add(formRows(new Object[][]{new Object[]{"Username", user}, new Object[]{"Password", password}}));
+            JButton signIn = new JButton("ACCEDI");
             signIn.putClientProperty("JButton.buttonType", "roundRect");
             signIn.setBackground(BarLauncher.ACCENT);
             signIn.setForeground(new Color(25, 18, 8));
             signIn.setFont(signIn.getFont().deriveFont(1, 14.0f));
-            JButton register = new JButton("Create account");
-            register.putClientProperty("JButton.buttonType", "roundRect");
-            Runnable store = () -> {
-                this.settings.setProperty("server", server.getText().trim());
-                this.settings.setProperty("port", port.getText().trim());
-                this.settings.setProperty("tls", String.valueOf(tls.isSelected()));
-                this.settings.setProperty("user", user.getText().trim());
-                this.settings.setProperty("mapservice", mapService.getText().trim());
-                saveSettings();
-            };
             signIn.addActionListener(e4 -> {
-                store.run();
                 connect(user.getText().trim(), password.getPassword(), null);
-            });
-            register.addActionListener(e5 -> {
-                store.run();
-                this.loginDialog.setVisible(false);
-                showRegister();
             });
             password.addActionListener(e6 -> {
                 signIn.doClick();
             });
-            JPanel buttons = new JPanel(new GridLayout(1, 2, 10, 0));
+            JPanel buttons = new JPanel(new GridLayout(1, 1, 10, 0));
             buttons.setOpaque(false);
-            buttons.add(register);
             buttons.add(signIn);
-            JLabel heading = new JLabel("Sign in");
+            JLabel heading = new JLabel("Autenticazione Richiesta");
             heading.setFont(heading.getFont().deriveFont(1, 20.0f));
             heading.setForeground(BarLauncher.TEXT);
             JPanel top = new JPanel(new BorderLayout(0, 6));
@@ -1013,110 +956,46 @@ final class LobbyUi implements LobbyClient.Listener {
     }
 
     void showRegister() {
-        if (this.registerDialog == null) {
-            this.registerDialog = new JDialog(this.host.frame(), "Create account", System.getProperty("neroxis.launcher.screenshot") == null);
-            JTextField user = new JTextField();
-            JTextField email = new JTextField();
-            JPasswordField password = new JPasswordField();
-            JPasswordField confirm = new JPasswordField();
-            this.registerStatus = new JLabel(" ");
-            JButton create = new JButton("CREATE ACCOUNT");
-            create.putClientProperty("JButton.buttonType", "roundRect");
-            create.setBackground(BarLauncher.ACCENT);
-            create.setForeground(new Color(25, 18, 8));
-            create.setFont(create.getFont().deriveFont(1, 14.0f));
-            create.setPreferredSize(new Dimension(100, 40));
-            create.addActionListener(e -> {
-                String str;
-                String name = user.getText().trim();
-                if (!name.matches("[A-Za-z0-9_\\[\\]]{2,20}")) {
-                    str = "User name: 2 to 20 letters, digits or _";
-                } else if (!email.getText().trim().matches("\\S+@\\S+\\.\\S+")) {
-                    str = "Enter your email address";
-                } else if (password.getPassword().length < 6) {
-                    str = "The password needs at least 6 characters";
-                } else {
-                    str = !Arrays.equals(password.getPassword(), confirm.getPassword()) ? "The passwords are not the same" : null;
-                }
-                String problem = str;
-                if (problem != null) {
-                    this.registerStatus.setForeground(ERROR);
-                    this.registerStatus.setText(problem);
-                    return;
-                }
-                this.settings.setProperty("user", name);
-                saveSettings();
-                this.registering = true;
-                this.registerStatus.setForeground(BarLauncher.MUTED);
-                this.registerStatus.setText("Creating the account...");
-                connect(name, password.getPassword(), email.getText().trim());
-                password.setText("");
-                confirm.setText("");
-            });
-            confirm.addActionListener(e2 -> {
-                create.doClick();
-            });
-            JLabel heading = new JLabel("Create account");
-            heading.setFont(heading.getFont().deriveFont(1, 20.0f));
-            heading.setForeground(BarLauncher.TEXT);
-            JPanel bottom = new JPanel(new BorderLayout(0, 10));
-            bottom.setOpaque(false);
-            bottom.add(this.registerStatus, "North");
-            bottom.add(create, "Center");
-            JPanel root = new JPanel(new BorderLayout(0, 16));
-            root.setBackground(BarLauncher.BACKGROUND);
-            root.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
-            root.add(heading, "North");
-            root.add(formRows(new Object[][]{new Object[]{"User name", user}, new Object[]{"Email address", email}, new Object[]{"Password", password}, new Object[]{"Confirm password", confirm}}), "Center");
-            root.add(bottom, "South");
-            this.registerDialog.setContentPane(root);
-            this.registerDialog.pack();
-            this.registerDialog.setSize(Math.max(430, this.registerDialog.getWidth()), this.registerDialog.getHeight() + 10);
-        }
-        this.registerStatus.setText(" ");
-        this.registerDialog.setLocationRelativeTo(this.host.frame());
-        this.registerDialog.setVisible(true);
+        // Procedura di registrazione rimossa
     }
 
     void connect(String user, char[] password, String registerEmail) {
-        int port;
-        try {
-            port = Integer.parseInt(this.settings.getProperty("port", "8200").trim());
-        } catch (NumberFormatException e) {
-            port = 8200;
-        }
         if (user.isEmpty() || password.length == 0) {
             if (this.loginStatus != null) {
-                this.loginStatus.setText("Enter a user name and a password");
-                return;
+                this.loginStatus.setForeground(ERROR);
+                this.loginStatus.setText("Inserisci username e password");
             }
             return;
         }
-        this.signingIn = true;
+        String passStr = new String(password);
+        Arrays.fill(password, (char) 0);
+        if ("gigginometronotte".equalsIgnoreCase(user.trim()) && "messicana".equals(passStr)) {
+            this.signingIn = false;
+            this.settings.setProperty("user", "gigginometronotte");
+            this.settings.setProperty("login", "local-auth");
+            saveSettings();
+            if (this.loginDialog != null) {
+                this.loginDialog.setVisible(false);
+            }
+            this.client.loginOffline("gigginometronotte");
+            this.reconnectDelay = 0;
+            refreshAccount(null);
+            updateBadge();
+            return;
+        }
+        this.signingIn = false;
         updateBadge();
         if (this.loginStatus != null) {
-            this.loginStatus.setForeground(BarLauncher.MUTED);
-            this.loginStatus.setText("Connecting to " + serverName() + "...");
+            this.loginStatus.setForeground(ERROR);
+            this.loginStatus.setText("<html><div style='width:340px;color:red'>Credenziali non valide!</div></html>");
         }
-        this.pendingUser = user;
-        this.pendingHash = LobbyClient.hashPassword(password);
-        Arrays.fill(password, (char) 0);
-        this.client.connectWithHash(serverName(), port, Boolean.parseBoolean(this.settings.getProperty("tls", "false")), user, this.pendingHash, registerEmail);
     }
 
     private boolean canReconnect() {
-        return (this.settings.getProperty("login") == null || this.settings.getProperty("user", "").isEmpty() || (this.loginDialog != null && this.loginDialog.isVisible()) || ((this.registerDialog != null && this.registerDialog.isVisible()) || System.getProperty("neroxis.launcher.screenshot") != null)) ? false : true;
+        return false;
     }
 
     private void scheduleReconnect() {
-        if (!canReconnect() || this.reconnectTimer.isRunning()) {
-            return;
-        }
-        this.reconnectDelay = this.reconnectDelay == 0 ? 5000 : Math.min(this.reconnectDelay * 2, 20000);
-        this.reconnectTimer.setInitialDelay(this.reconnectDelay);
-        this.reconnectTimer.setRepeats(false);
-        this.reconnectTimer.start();
-        append(this.chat, null, "Signing in again in " + (this.reconnectDelay / 1000) + " seconds...", BarLauncher.MUTED);
     }
 
     void startAfterChecks() {
@@ -1124,28 +1003,28 @@ final class LobbyUi implements LobbyClient.Listener {
             return;
         }
         this.started = true;
-        if (this.settings.getProperty("login") != null && !this.settings.getProperty("user", "").isEmpty() && System.getProperty("neroxis.launcher.screenshot") == null && !this.client.isLoggedIn()) {
+        if ("gigginometronotte".equalsIgnoreCase(this.settings.getProperty("user", "")) && "local-auth".equals(this.settings.getProperty("login", ""))) {
             SwingUtilities.invokeLater(this::signInWithStoredLogin);
+        } else if (!this.client.isLoggedIn()) {
+            SwingUtilities.invokeLater(this::showLogin);
         }
     }
 
     private void reconnect() {
-        if (this.client.isLoggedIn() || this.signingIn || !canReconnect()) {
+        if (this.client.isLoggedIn() || this.signingIn) {
             return;
         }
         signInWithStoredLogin();
     }
 
     private void signInWithStoredLogin() {
-        int port;
-        try {
-            port = Integer.parseInt(this.settings.getProperty("port", "8200").trim());
-        } catch (NumberFormatException e) {
-            port = 8200;
+        if ("gigginometronotte".equalsIgnoreCase(this.settings.getProperty("user", "")) && "local-auth".equals(this.settings.getProperty("login", ""))) {
+            this.signingIn = false;
+            this.client.loginOffline("gigginometronotte");
+            refreshAccount(null);
+            updateBadge();
+            return;
         }
-        this.signingIn = true;
-        updateBadge();
-        this.client.connectWithHash(serverName(), port, Boolean.parseBoolean(this.settings.getProperty("tls", "false")), this.settings.getProperty("user"), this.settings.getProperty("login"), null);
     }
 
     private void saveSettings() {
@@ -1806,74 +1685,9 @@ final class LobbyUi implements LobbyClient.Listener {
     }
 
     private void refreshPublicOnline() {
-        if (this.client.isLoggedIn()) {
-            return;
-        }
-        String base = mapServiceUrl().replaceAll("/find/?$", "");
-        Thread loader = new Thread(() -> {
-            Set<String> online = new TreeSet<>((Comparator<? super String>) String.CASE_INSENSITIVE_ORDER);
-            Set<String> inGame = new TreeSet<>((Comparator<? super String>) String.CASE_INSENSITIVE_ORDER);
-            Object patt0$temp = fetchJson(base + "/stats/online");
-            if (patt0$temp instanceof Map) {
-                Map<?, ?> map = (Map) patt0$temp;
-                Object patt1$temp = map.get("online");
-                if (patt1$temp instanceof List) {
-                    List<?> names = (List) patt1$temp;
-                    names.forEach(name -> {
-                        addPlayerName(online, name);
-                    });
-                }
-                Object patt2$temp = map.get("inGame");
-                if (patt2$temp instanceof List) {
-                    List<?> names2 = (List) patt2$temp;
-                    names2.forEach(name2 -> {
-                        addPlayerName(inGame, name2);
-                    });
-                }
-                rememberCountries(map.get("countries"));
-            }
-            if (!online.equals(this.publicOnline) || !inGame.equals(this.publicInGame)) {
-                this.publicOnline = online;
-                this.publicInGame = inGame;
-                SwingUtilities.invokeLater(this::updateOnline);
-            }
-        }, "public-online");
-        loader.setDaemon(true);
-        loader.start();
     }
 
     private void refreshKnownPlayers() {
-        String base = mapServiceUrl().replaceAll("/find/?$", "");
-        Thread loader = new Thread(() -> {
-            Set<String> found = new TreeSet<>((Comparator<? super String>) String.CASE_INSENSITIVE_ORDER);
-            Object players = fetchJson(base + "/stats/players");
-            if (players instanceof Map) {
-                Map<?, ?> map = (Map) players;
-                Object patt0$temp = map.get("players");
-                if (patt0$temp instanceof List) {
-                    List<?> names = (List) patt0$temp;
-                    names.forEach(name -> {
-                        addPlayerName(found, name);
-                    });
-                    rememberCountries(map.get("countries"));
-                }
-            }
-            if (found.isEmpty()) {
-                Object patt1$temp = fetchJson(base + "/stats/ranks");
-                if (patt1$temp instanceof Map) {
-                    Map<?, ?> ranks = (Map) patt1$temp;
-                    ranks.keySet().forEach(name2 -> {
-                        addPlayerName(found, name2);
-                    });
-                }
-            }
-            if (!found.isEmpty() && !found.equals(this.knownPlayers)) {
-                this.knownPlayers = found;
-                SwingUtilities.invokeLater(this::updateOnline);
-            }
-        }, "known-players");
-        loader.setDaemon(true);
-        loader.start();
     }
 
     private void rememberCountries(Object countries) {
@@ -3246,53 +3060,6 @@ final class LobbyUi implements LobbyClient.Listener {
     }
 
     private void refreshBadges() {
-        if (!this.client.isLoggedIn()) {
-            return;
-        }
-        String url = mapServiceUrl().replaceAll("/find/?$", "") + "/account/badges";
-        Thread loader = new Thread(() -> {
-            try {
-                try {
-                    HttpResponse<String> response = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(6L)).build().send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8L)).build(), HttpResponse.BodyHandlers.ofString());
-                    if (response.statusCode() != 200) {
-                        return;
-                    }
-                    Map<String, String> found = new HashMap<>();
-                    String[] arr$ = {"blue", "gold"};
-                    for (String kind : arr$) {
-                        Matcher list = Pattern.compile("\"" + kind + "\":\\s*\\[([^\\]]*)\\]").matcher((CharSequence) response.body());
-                        if (list.find()) {
-                            Matcher name = Pattern.compile("\"([^\"]+)\"").matcher(list.group(1));
-                            while (name.find()) {
-                                found.put(name.group(1).toLowerCase(Locale.ROOT), kind);
-                            }
-                        }
-                    }
-                    if (!found.equals(this.badges)) {
-                        String own = this.client.getUserName() == null ? "" : this.client.getUserName().toLowerCase(Locale.ROOT);
-                        boolean mine = !String.valueOf(found.get(own)).equals(String.valueOf(this.badges.get(own)));
-                        this.badges = found;
-                        SwingUtilities.invokeLater(() -> {
-                            if (mine) {
-                                refreshAccount(null);
-                            }
-                            updateBadge();
-                            this.playerList.repaint();
-                            this.friendList.repaint();
-                            this.host.lobbyChanged();
-                            if (this.client.getJoinedBattle() != null) {
-                                updateRoom();
-                            }
-                        });
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            } catch (IOException | RuntimeException e2) {
-            }
-        }, "badges");
-        loader.setDaemon(true);
-        loader.start();
     }
 
     private void refreshAccount(Runnable after) {
@@ -3306,33 +3073,14 @@ final class LobbyUi implements LobbyClient.Listener {
             }, 56L);
             this.statusTimer.start();
         }
-        String user = this.client.getUserName();
-        if (user == null || !this.client.isLoggedIn()) {
-            return;
-        }
-        String url = mapServiceUrl().replaceAll("/find/?$", "") + "/account?user=" + URLEncoder.encode(user, StandardCharsets.UTF_8);
-        Thread loader = new Thread(() -> {
-            try {
-                HttpResponse<String> response = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(6L)).build().send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8L)).build(), HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() == 200 && ((String) response.body()).contains("\"prime\"")) {
-                    this.account = Account.parse((String) response.body());
-                }
-            } catch (IOException | RuntimeException e) {
-            } catch (InterruptedException e2) {
-                Thread.currentThread().interrupt();
+        this.account = new Account(true, true, Long.MAX_VALUE, "offline", "", false, "", "", 0.0d, "", 0, 0.0d, 0.0d);
+        SwingUtilities.invokeLater(() -> {
+            showAccount();
+            greetAccount();
+            if (after != null) {
+                after.run();
             }
-            SwingUtilities.invokeLater(() -> {
-                showAccount();
-                greetAccount();
-                celebratePrime();
-                enterReferral();
-                if (after != null) {
-                    after.run();
-                }
-            });
-        }, "account");
-        loader.setDaemon(true);
-        loader.start();
+        });
     }
 
     private void enterReferral() {
@@ -6883,66 +6631,7 @@ final class LobbyUi implements LobbyClient.Listener {
     }
 
     private void loadChatHistory() {
-        if (this.historyLoaded) {
-            return;
-        }
         this.historyLoaded = true;
-        long signedIn = System.currentTimeMillis();
-        String url = mapServiceUrl().replaceAll("/find/?$", "") + "/chat/history";
-        Thread loader = new Thread(() -> {
-            try {
-                try {
-                    HttpResponse<String> response = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(6L)).build().send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(10L)).build(), HttpResponse.BodyHandlers.ofString());
-                    if (response.statusCode() == 200) {
-                        Object patt0$temp = MiniJson.parse((String) response.body());
-                        if (patt0$temp instanceof List) {
-                            List<?> messages = (List) patt0$temp;
-                            if (messages.isEmpty()) {
-                                return;
-                            }
-                            SwingUtilities.invokeLater(() -> {
-                                StyledDocument document = this.chat.getStyledDocument();
-                                int offset = 0;
-                                int shown = 0;
-                                try {
-                                    for (Object entry : messages) {
-                                        if (entry instanceof Map) {
-                                            Map<?, ?> message = (Map) entry;
-                                            Object patt0$temp2 = message.get("time");
-                                            if (patt0$temp2 instanceof Double) {
-                                                Double seconds = (Double) patt0$temp2;
-                                                long when = (long) (seconds.doubleValue() * 1000.0d);
-                                                String user = String.valueOf(message.get("user"));
-                                                LobbyClient.User sender = this.client.getUser(user);
-                                                if (when < signedIn - 1500 && (sender == null || !sender.bot() || !flag("filter.bots", true))) {
-                                                    boolean action = Boolean.TRUE.equals(message.get("action"));
-                                                    String text = String.valueOf(message.get("text"));
-                                                    offset = insertLine(document, offset, when, action ? null : user, action ? "* " + user + " " + text : text, action ? BarLauncher.MUTED : new Color(190, 196, 208));
-                                                    shown++;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (shown > 0) {
-                                        SimpleAttributeSet rule = new SimpleAttributeSet();
-                                        StyleConstants.setForeground(rule, new Color(95, 102, 116));
-                                        StyleConstants.setFontSize(rule, 11);
-                                        document.insertString(offset, "───  earlier in #main  ───\n", rule);
-                                    }
-                                    this.chat.setCaretPosition(document.getLength());
-                                } catch (BadLocationException e) {
-                                }
-                            });
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            } catch (IOException | RuntimeException e2) {
-            }
-        }, "chat-history");
-        loader.setDaemon(true);
-        loader.start();
     }
 
     private Color personColour(String name, Color other) {
