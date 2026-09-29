@@ -9,12 +9,24 @@ rem   generate-bar-map.bat --help
 setlocal EnableDelayedExpansion
 
 set "ROOT=%~dp0"
-if not defined BAR_DATA set "BAR_DATA=%LOCALAPPDATA%\Programs\Beyond-All-Reason\data"
+if not defined BAR_DATA (
+    if exist "%ProgramFiles%\Beyond-All-Reason\data\maps" (
+        set "BAR_DATA=%ProgramFiles%\Beyond-All-Reason\data"
+    ) else if exist "%LOCALAPPDATA%\Programs\Beyond-All-Reason\data\maps" (
+        set "BAR_DATA=%LOCALAPPDATA%\Programs\Beyond-All-Reason\data"
+    ) else if exist "C:\Program Files\Beyond-All-Reason\data\maps" (
+        set "BAR_DATA=C:\Program Files\Beyond-All-Reason\data"
+    ) else (
+        set "BAR_DATA=%LOCALAPPDATA%\Programs\Beyond-All-Reason\data"
+    )
+)
 if not defined BAR_MAPS set "BAR_MAPS=%BAR_DATA%\maps"
 set "SCRIPT=%BAR_DATA%\_neroxis_skirmish.txt"
 
 rem the release zip ships its own java runtime, the source tree uses the built jar
-if exist "%ROOT%runtime\bin\java.exe" (
+if exist "%ROOT%app\launcher.jar" (
+    set GENERATE="%ROOT%runtime\bin\java.exe" -Xmx6g -cp "%ROOT%app\launcher.jar" com.faforever.neroxis.generator.MapGeneratorCommand
+) else if exist "%ROOT%runtime\bin\java.exe" (
     set GENERATE="%ROOT%runtime\bin\java.exe" -Xmx6g -m com.faforever.neroxis.generator/com.faforever.neroxis.generator.MapGeneratorCommand
 ) else (
     set "JAVA_EXE=%USERPROFILE%\.gradle\jdks\eclipse_adoptium-25-amd64-windows.2\bin\java.exe"

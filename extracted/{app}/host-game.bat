@@ -6,11 +6,23 @@ rem like Tailscale / ZeroTier / Hamachi with everybody in the same network.
 setlocal EnableDelayedExpansion
 
 set "ROOT=%~dp0"
-if not defined BAR_DATA set "BAR_DATA=%LOCALAPPDATA%\Programs\Beyond-All-Reason\data"
+if not defined BAR_DATA (
+    if exist "%ProgramFiles%\Beyond-All-Reason\data\maps" (
+        set "BAR_DATA=%ProgramFiles%\Beyond-All-Reason\data"
+    ) else if exist "%LOCALAPPDATA%\Programs\Beyond-All-Reason\data\maps" (
+        set "BAR_DATA=%LOCALAPPDATA%\Programs\Beyond-All-Reason\data"
+    ) else if exist "C:\Program Files\Beyond-All-Reason\data\maps" (
+        set "BAR_DATA=C:\Program Files\Beyond-All-Reason\data"
+    ) else (
+        set "BAR_DATA=%LOCALAPPDATA%\Programs\Beyond-All-Reason\data"
+    )
+)
 set "SCRIPT=%BAR_DATA%\_neroxis_host.txt"
 set "LOG=%TEMP%\neroxis_host_log.txt"
 
-if exist "%ROOT%runtime\bin\java.exe" (
+if exist "%ROOT%app\launcher.jar" (
+    set GENERATE="%ROOT%runtime\bin\java.exe" -Xmx6g -cp "%ROOT%app\launcher.jar" com.faforever.neroxis.generator.MapGeneratorCommand
+) else if exist "%ROOT%runtime\bin\java.exe" (
     set GENERATE="%ROOT%runtime\bin\java.exe" -Xmx6g -m com.faforever.neroxis.generator/com.faforever.neroxis.generator.MapGeneratorCommand
 ) else (
     set "JAVA_EXE=%USERPROFILE%\.gradle\jdks\eclipse_adoptium-25-amd64-windows.2\bin\java.exe"

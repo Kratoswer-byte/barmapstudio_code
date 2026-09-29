@@ -6,7 +6,17 @@ rem map of the host as long as both use the same version of this generator.
 setlocal EnableDelayedExpansion
 
 set "ROOT=%~dp0"
-if not defined BAR_DATA set "BAR_DATA=%LOCALAPPDATA%\Programs\Beyond-All-Reason\data"
+if not defined BAR_DATA (
+    if exist "%ProgramFiles%\Beyond-All-Reason\data\maps" (
+        set "BAR_DATA=%ProgramFiles%\Beyond-All-Reason\data"
+    ) else if exist "%LOCALAPPDATA%\Programs\Beyond-All-Reason\data\maps" (
+        set "BAR_DATA=%LOCALAPPDATA%\Programs\Beyond-All-Reason\data"
+    ) else if exist "C:\Program Files\Beyond-All-Reason\data\maps" (
+        set "BAR_DATA=C:\Program Files\Beyond-All-Reason\data"
+    ) else (
+        set "BAR_DATA=%LOCALAPPDATA%\Programs\Beyond-All-Reason\data"
+    )
+)
 set "SCRIPT=%BAR_DATA%\_neroxis_join.txt"
 
 if exist "%ROOT%runtime\bin\java.exe" (
