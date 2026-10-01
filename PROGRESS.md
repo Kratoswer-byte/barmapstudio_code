@@ -15,6 +15,7 @@
 | `efdbe8e` | `feat` | 01/10/2026 10:01 | Controlli GUI per MaxHeight, WaterLevel, Smooth Slopes e importazione da file |
 | `7f822c2` | `build` | 01/10/2026 10:04 | Ricompilazione patch, iniezione launcher.jar e collaudo finale |
 | `50ee05f` | `feat/fix` | 01/10/2026 10:38 | Pannelli resizable con dual JSplitPane, fix glifi unrendered e layout spinner flessibile |
+| `a84b39e` | `feat` | 01/10/2026 11:12 | Migrazione tipografia su Roboto & Roboto Condensed per tutti i pannelli UI e HUD Canvas |
 
 ---
 
@@ -53,3 +54,11 @@
 - [x] Styling ad alto contrasto per tutti i componenti `JSpinner` nel tema Dark
 - [x] `JScrollPane` non compresso con wrapping su `BorderLayout.NORTH`
 - [x] `JSplitPane` integrato anche per la vista Libreria Mappe in `BarMapStudio.java`
+
+### 6. Sistema Tipografico Moderno (Roboto & Roboto Condensed)
+- [x] Rilevamento automatico font con fallback trasparente su Segoe UI (`FONT_MAIN = Roboto`, `FONT_COND = Roboto Condensed`)
+- [x] Metodi helper centralizzati `font(...)` e `fontCond(...)` in `BarMapStudio.java`
+- [x] Configurazione UIManager globale con font Roboto e intestazioni/titoli con Roboto Condensed
+- [x] Aggiornamento pulsanti di navigazione principale (`TopNavButton`), sub-nav (`SubTabButton`) e header
+- [x] Aggiornamento controlli laterali: titoli schede in Roboto Condensed BOLD, label e spinner in Roboto
+- [x] Aggiornamento indicatori Canvas: pill badges del metallo, HUD quote/pendenze live, cheatsheet tasti e legenda Slope Map in Roboto/Roboto Condensed

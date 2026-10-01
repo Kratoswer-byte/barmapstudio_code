@@ -28,31 +28,49 @@ public class BarMapStudio {
     public static final Color TEXT_WHITE = new Color(241, 245, 249);
     public static final Color TEXT_MUTED = new Color(148, 163, 184);
 
+    public static final String FONT_MAIN;
+    public static final String FONT_COND;
+
+    static {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        java.util.Set<String> set = new java.util.HashSet<>(java.util.Arrays.asList(ge.getAvailableFontFamilyNames()));
+        FONT_MAIN = set.contains("Roboto") ? "Roboto" : "Segoe UI";
+        FONT_COND = set.contains("Roboto Condensed") ? "Roboto Condensed" : FONT_MAIN;
+    }
+
+    public static Font font(int style, int size) {
+        return new Font(FONT_MAIN, style, size);
+    }
+
+    public static Font fontCond(int style, int size) {
+        return new Font(FONT_COND, style, size);
+    }
+
     public static void main(String[] args) {
         Locale.setDefault(Locale.ROOT);
 
-        Font boldFont = new Font("Segoe UI", Font.BOLD, 12);
-        Font boldFontLarge = new Font("Segoe UI", Font.BOLD, 13);
-        Font boldFontTitle = new Font("Segoe UI", Font.BOLD, 16);
-        UIManager.put("defaultFont", boldFont);
-        UIManager.put("Label.font", boldFont);
-        UIManager.put("Button.font", boldFont);
-        UIManager.put("ToggleButton.font", boldFont);
-        UIManager.put("RadioButton.font", boldFont);
-        UIManager.put("CheckBox.font", boldFont);
-        UIManager.put("TextField.font", boldFont);
-        UIManager.put("TextArea.font", boldFont);
-        UIManager.put("ComboBox.font", boldFont);
-        UIManager.put("Spinner.font", boldFont);
-        UIManager.put("List.font", boldFont);
-        UIManager.put("Table.font", boldFont);
-        UIManager.put("TableHeader.font", boldFontLarge);
-        UIManager.put("TabbedPane.font", boldFontLarge);
-        UIManager.put("TitledBorder.font", boldFontTitle);
-        UIManager.put("ToolTip.font", boldFont);
-        UIManager.put("MenuItem.font", boldFont);
-        UIManager.put("Menu.font", boldFont);
-        UIManager.put("ProgressBar.font", boldFont);
+        Font mainFont = font(Font.BOLD, 12);
+        Font condFontLarge = fontCond(Font.BOLD, 13);
+        Font condFontTitle = fontCond(Font.BOLD, 16);
+        UIManager.put("defaultFont", mainFont);
+        UIManager.put("Label.font", mainFont);
+        UIManager.put("Button.font", mainFont);
+        UIManager.put("ToggleButton.font", mainFont);
+        UIManager.put("RadioButton.font", mainFont);
+        UIManager.put("CheckBox.font", mainFont);
+        UIManager.put("TextField.font", mainFont);
+        UIManager.put("TextArea.font", mainFont);
+        UIManager.put("ComboBox.font", mainFont);
+        UIManager.put("Spinner.font", mainFont);
+        UIManager.put("List.font", mainFont);
+        UIManager.put("Table.font", mainFont);
+        UIManager.put("TableHeader.font", condFontLarge);
+        UIManager.put("TabbedPane.font", condFontLarge);
+        UIManager.put("TitledBorder.font", condFontTitle);
+        UIManager.put("ToolTip.font", mainFont);
+        UIManager.put("MenuItem.font", mainFont);
+        UIManager.put("Menu.font", mainFont);
+        UIManager.put("ProgressBar.font", mainFont);
 
         FlatLaf.setGlobalExtraDefaults(Map.of(
             "@accentColor", "#00E5FF",
@@ -293,13 +311,13 @@ public class BarMapStudio {
             left.add(new JLabel(new ImageIcon(scaled)));
         } else {
             JLabel title = new JLabel("BAR MAP");
-            title.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            title.setFont(fontCond(Font.BOLD, 20));
             title.setForeground(ACCENT_CYAN);
             left.add(title);
         }
 
         JLabel badge = new JLabel("  STANDALONE  ");
-        badge.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        badge.setFont(fontCond(Font.BOLD, 10));
         badge.setForeground(TEXT_MUTED);
         badge.setBackground(new Color(22, 28, 42));
         badge.setOpaque(true);
@@ -340,7 +358,7 @@ public class BarMapStudio {
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 10));
         right.setOpaque(false);
 
-        barStatus.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        barStatus.setFont(font(Font.BOLD, 12));
         barStatus.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         right.add(barStatus);
 
@@ -373,7 +391,7 @@ public class BarMapStudio {
     public static class TopNavButton extends JToggleButton {
         public TopNavButton(String text, boolean selected) {
             super(text, selected);
-            setFont(new Font("Segoe UI", Font.BOLD, 13));
+            setFont(fontCond(Font.BOLD, 13));
             setPreferredSize(new Dimension(125, 34));
             setFocusPainted(false);
             setBorderPainted(false);
@@ -421,7 +439,7 @@ public class BarMapStudio {
     private static JButton createWindowControlButton(String text, String tip) {
         JButton btn = new JButton(text);
         btn.setToolTipText(tip);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btn.setFont(font(Font.BOLD, 13));
         btn.setForeground(TEXT_MUTED);
         btn.setPreferredSize(new Dimension(32, 28));
         btn.setFocusPainted(false);

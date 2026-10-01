@@ -497,7 +497,7 @@ public final class MapStudioPanel extends JPanel {
         bar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
 
         JLabel titleLbl = new JLabel("STRUMENTI:");
-        titleLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        titleLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         titleLbl.setForeground(ACCENT_CYAN);
         bar.add(titleLbl);
 
@@ -506,10 +506,10 @@ public final class MapStudioPanel extends JPanel {
         bar.add(createToolToggle("Mex [M]", MapStudioCanvas.Tool.MEX, group, false));
 
         JLabel mexMetalLbl = new JLabel("M:");
-        mexMetalLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        mexMetalLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         mexMetalLbl.setForeground(ACCENT_CYAN);
         bar.add(mexMetalLbl);
-        mexPlacementMetalCombo.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        mexPlacementMetalCombo.setFont(BarMapStudio.font(Font.BOLD, 11));
         mexPlacementMetalCombo.setBackground(CARD_INNER);
         mexPlacementMetalCombo.setForeground(TEXT_MAIN);
         mexPlacementMetalCombo.setSelectedIndex(2);
@@ -572,7 +572,7 @@ public final class MapStudioPanel extends JPanel {
         bar.add(slopeToggleBtn);
 
         JLabel opacityLbl = new JLabel("Opacità:");
-        opacityLbl.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        opacityLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
         opacityLbl.setForeground(TEXT_MUTED);
         bar.add(opacityLbl);
 
@@ -595,7 +595,7 @@ public final class MapStudioPanel extends JPanel {
     }
 
     private void styleToggleButton(JToggleButton b) {
-        b.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        b.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         b.setBackground(CARD_INNER);
         b.setForeground(TEXT_MAIN);
         b.setFocusPainted(false);
@@ -612,7 +612,7 @@ public final class MapStudioPanel extends JPanel {
         side.setBorder(new EmptyBorder(14, 14, 14, 14));
 
         JLabel title = new JLabel("1. GENERATORE PROCEDURALE");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        title.setFont(BarMapStudio.fontCond(Font.BOLD, 13));
         title.setForeground(ACCENT_CYAN);
         title.setAlignmentX(0f);
         side.add(title);
@@ -636,7 +636,7 @@ public final class MapStudioPanel extends JPanel {
 
         // Seed with Roll
         JLabel seedLbl = new JLabel("Seed Terreno:");
-        seedLbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        seedLbl.setFont(BarMapStudio.font(Font.PLAIN, 12));
         seedLbl.setForeground(TEXT_MUTED);
         seedLbl.setAlignmentX(0f);
         side.add(seedLbl);
@@ -673,7 +673,7 @@ public final class MapStudioPanel extends JPanel {
         heightCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 260));
 
         JLabel heightCardTitle = new JLabel("2. RILIEVO & PENDENZE");
-        heightCardTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        heightCardTitle.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         heightCardTitle.setForeground(ACCENT_AMBER);
         heightCardTitle.setAlignmentX(0f);
         heightCard.add(heightCardTitle);
@@ -714,7 +714,7 @@ public final class MapStudioPanel extends JPanel {
             "• <span style='color:#FFFF00'>Giallo (12°-20°):</span> Veicoli lenti<br/>" +
             "• <span style='color:#FF9F1C'>Arancio (20°-33°):</span> Solo Kbot / Bot<br/>" +
             "• <span style='color:#FF3333'>Rosso (&gt;33°):</span> Rupi Invalicabili</html>");
-        tip.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        tip.setFont(BarMapStudio.font(Font.PLAIN, 11));
         tip.setForeground(TEXT_MUTED);
         infoBox.add(tip, BorderLayout.CENTER);
         infoBox.setAlignmentX(0f);
@@ -746,7 +746,7 @@ public final class MapStudioPanel extends JPanel {
 
         // Title 2
         JLabel title2 = new JLabel("2. OGGETTI & DETTAGLI MAPPA");
-        title2.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        title2.setFont(BarMapStudio.fontCond(Font.BOLD, 13));
         title2.setForeground(ACCENT_CYAN);
         title2.setAlignmentX(0f);
         side.add(title2);
@@ -754,7 +754,7 @@ public final class MapStudioPanel extends JPanel {
 
         // Map Name field
         JLabel nameLbl = new JLabel("Nome Mappa Personalizzato:");
-        nameLbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        nameLbl.setFont(BarMapStudio.font(Font.PLAIN, 12));
         nameLbl.setForeground(TEXT_MUTED);
         nameLbl.setAlignmentX(0f);
         side.add(nameLbl);
@@ -796,7 +796,7 @@ public final class MapStudioPanel extends JPanel {
         mexMetalCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
 
         JLabel mexMetalCardTitle = new JLabel("VALORE METALLO MEX (PIASTRINE):");
-        mexMetalCardTitle.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        mexMetalCardTitle.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         mexMetalCardTitle.setForeground(ACCENT_CYAN);
         mexMetalCard.add(mexMetalCardTitle);
         mexMetalCard.add(Box.createVerticalStrut(6));
@@ -818,7 +818,7 @@ public final class MapStudioPanel extends JPanel {
         for (float p : presets) {
             JButton pb = createGhostButton(String.format(Locale.ROOT, "%.1f", p));
             pb.setMargin(new Insets(2, 2, 2, 2));
-            pb.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            pb.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
             pb.addActionListener(e -> setPlacementMetalValue(p, true, true));
             presetRow.add(pb);
         }
@@ -826,7 +826,7 @@ public final class MapStudioPanel extends JPanel {
         mexMetalCard.add(Box.createVerticalStrut(6));
 
         JLabel shadeHint = new JLabel("◄ Chiaro (Povero)          Scuro (Ricco) ►");
-        shadeHint.setFont(new Font("Segoe UI", Font.ITALIC, 10));
+        shadeHint.setFont(BarMapStudio.font(Font.ITALIC, 10));
         shadeHint.setForeground(TEXT_MUTED);
         shadeHint.setAlignmentX(0.5f);
         mexMetalCard.add(shadeHint);
@@ -836,7 +836,7 @@ public final class MapStudioPanel extends JPanel {
 
         // Auto Assistants Header
         JLabel assistTitle = new JLabel("Assistenti Posizionamento Rapido:");
-        assistTitle.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        assistTitle.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         assistTitle.setForeground(TEXT_MAIN);
         assistTitle.setAlignmentX(0f);
         side.add(assistTitle);
@@ -890,7 +890,7 @@ public final class MapStudioPanel extends JPanel {
         side.add(Box.createVerticalStrut(8));
 
         side.add(createFieldRow("Densità Reclaim:", reclaimSlider));
-        reclaimValueLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        reclaimValueLabel.setFont(BarMapStudio.font(Font.PLAIN, 11));
         reclaimValueLabel.setForeground(TEXT_MUTED);
         reclaimValueLabel.setAlignmentX(0f);
         side.add(reclaimValueLabel);
@@ -925,7 +925,7 @@ public final class MapStudioPanel extends JPanel {
         exportCard.add(progressBar);
         exportCard.add(Box.createVerticalStrut(4));
 
-        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        statusLabel.setFont(BarMapStudio.font(Font.PLAIN, 11));
         statusLabel.setForeground(TEXT_MUTED);
         statusLabel.setAlignmentX(0f);
         exportCard.add(statusLabel);
@@ -1263,7 +1263,7 @@ public final class MapStudioPanel extends JPanel {
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setOpaque(false);
         JLabel l = new JLabel(label);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setFont(BarMapStudio.font(Font.BOLD, 12));
         l.setForeground(TEXT_MUTED);
         l.setAlignmentX(0f);
         p.add(l);
@@ -1279,7 +1279,7 @@ public final class MapStudioPanel extends JPanel {
         JPanel row = new JPanel(new BorderLayout(8, 0));
         row.setOpaque(false);
         JLabel lbl = new JLabel(labelText);
-        lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lbl.setFont(BarMapStudio.font(Font.BOLD, 11));
         lbl.setForeground(TEXT_MAIN);
         row.add(lbl, BorderLayout.CENTER);
 
@@ -1289,7 +1289,7 @@ public final class MapStudioPanel extends JPanel {
         spinnerWrap.add(spinner, BorderLayout.CENTER);
         if (unit != null && !unit.isEmpty()) {
             JLabel uLbl = new JLabel(unit);
-            uLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            uLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
             uLbl.setForeground(ACCENT_CYAN);
             spinnerWrap.add(uLbl, BorderLayout.EAST);
         }
@@ -1300,7 +1300,7 @@ public final class MapStudioPanel extends JPanel {
     }
 
     private static void styleSpinner(JSpinner spinner) {
-        spinner.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        spinner.setFont(BarMapStudio.font(Font.BOLD, 12));
         spinner.setBackground(CARD_INNER);
         spinner.setForeground(TEXT_MAIN);
         spinner.setBorder(BorderFactory.createCompoundBorder(
@@ -1314,14 +1314,14 @@ public final class MapStudioPanel extends JPanel {
             tf.setForeground(TEXT_MAIN);
             tf.setCaretColor(ACCENT_CYAN);
             tf.setHorizontalAlignment(JTextField.RIGHT);
-            tf.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            tf.setFont(BarMapStudio.font(Font.BOLD, 12));
             tf.setColumns(5);
         }
     }
 
     private static JLabel createChip(String text, Color accent) {
         JLabel chip = new JLabel(text, SwingConstants.CENTER);
-        chip.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        chip.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         chip.setForeground(accent);
         chip.setBackground(CARD_INNER);
         chip.setOpaque(true);
@@ -1334,7 +1334,7 @@ public final class MapStudioPanel extends JPanel {
 
     private static JButton createPrimaryButton(String text, Color color) {
         JButton b = new JButton(text);
-        b.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        b.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         b.setBackground(new Color(color.getRed(), color.getGreen(), color.getBlue(), 35));
         b.setForeground(color);
         b.setFocusPainted(false);
@@ -1347,7 +1347,7 @@ public final class MapStudioPanel extends JPanel {
 
     private static JButton createGhostButton(String text) {
         JButton b = new JButton(text);
-        b.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        b.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         b.setBackground(CARD_INNER);
         b.setForeground(TEXT_MAIN);
         b.setFocusPainted(false);

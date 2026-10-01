@@ -35,7 +35,7 @@ public class MapsMasterPanel extends JPanel {
         leftGroup.setOpaque(false);
 
         JLabel sectionLbl = new JLabel("SEZIONE:");
-        sectionLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        sectionLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         sectionLbl.setForeground(ACCENT_CYAN);
         leftGroup.add(sectionLbl);
 
@@ -52,7 +52,7 @@ public class MapsMasterPanel extends JPanel {
 
         // Info hint on the right
         JLabel hintLbl = new JLabel("Crea mappe con seed e canvas, oppure gestisci quelle installate  ");
-        hintLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        hintLbl.setFont(BarMapStudio.font(Font.BOLD, 12));
         hintLbl.setForeground(TEXT_MUTED);
         subBar.add(hintLbl, BorderLayout.EAST);
 
@@ -86,7 +86,7 @@ public class MapsMasterPanel extends JPanel {
     public static class SubTabButton extends JToggleButton {
         public SubTabButton(String text, boolean selected) {
             super(text, selected);
-            setFont(new Font("Segoe UI", Font.BOLD, 12));
+            setFont(BarMapStudio.fontCond(Font.BOLD, 12));
             setPreferredSize(new Dimension(190, 30));
             setFocusPainted(false);
             setBorderPainted(false);

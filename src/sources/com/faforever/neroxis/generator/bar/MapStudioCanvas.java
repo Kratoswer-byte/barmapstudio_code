@@ -1037,7 +1037,7 @@ public final class MapStudioCanvas extends JPanel {
         } else {
             // Placeholder text
             g.setColor(new Color(0, 229, 255, 120));
-            g.setFont(new Font("Segoe UI", Font.BOLD, 18));
+            g.setFont(BarMapStudio.fontCond(Font.BOLD, 18));
             String msg = "Nessun terreno generato - Clicca su 'GENERA TERRENO'";
             int sw = g.getFontMetrics().stringWidth(msg);
             g.drawString(msg, b.x + (b.width - sw) / 2, b.y + b.height / 2);
@@ -1105,7 +1105,7 @@ public final class MapStudioCanvas extends JPanel {
 
         // 5. Metal value text pill badge
         String valStr = String.format(Locale.ROOT, "%.1f", metalValue);
-        g.setFont(new Font("Segoe UI", Font.BOLD, Math.max(9, (int) (10 * zoom))));
+        g.setFont(BarMapStudio.font(Font.BOLD, Math.max(9, (int) (10 * zoom))));
         int strW = g.getFontMetrics().stringWidth(valStr);
         int badgeH = 13;
         int badgeW = strW + 6;
@@ -1159,7 +1159,7 @@ public final class MapStudioCanvas extends JPanel {
 
         // Text
         g.setColor(Color.WHITE);
-        g.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        g.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
         String txt = "P" + playerNum;
         int tw = g.getFontMetrics().stringWidth(txt);
         g.drawString(txt, x - tw / 2, y + 4);
@@ -1178,7 +1178,7 @@ public final class MapStudioCanvas extends JPanel {
                 g.setColor(Color.WHITE);
                 g.drawOval(x - r, y - r, r * 2, r * 2);
                 String valStr = String.format(Locale.ROOT, "+%.1f M", currentMexMetal);
-                g.setFont(new Font("Segoe UI", Font.BOLD, 10));
+                g.setFont(BarMapStudio.font(Font.BOLD, 10));
                 g.drawString(valStr, x + r + 4, y + 4);
             }
             case GEO -> {
@@ -1229,7 +1229,7 @@ public final class MapStudioCanvas extends JPanel {
             coordStr += String.format(" | SPAWN SELEZIONATO: Player %d", s.getTeamID() + 1);
         }
 
-        g.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        g.setFont(BarMapStudio.font(Font.BOLD, 11));
         int strW = g.getFontMetrics().stringWidth(coordStr);
         int hx = 16;
         int hy = getHeight() - 28;
@@ -1245,7 +1245,7 @@ public final class MapStudioCanvas extends JPanel {
 
         // Hotkey cheatsheet bar in top-left corner
         String hotkeys = "[S] Seleziona  [M] Mex  [G] Geo  [R] Rocce  [E] Cancella  [DEL] Elimina  [Ctrl+Z] Annulla  [L] Slope Map  [Space] Simm  [1-5] Metallo  [+/-] Zoom";
-        g.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        g.setFont(BarMapStudio.font(Font.BOLD, 10));
         int hkW = g.getFontMetrics().stringWidth(hotkeys);
         int hkX = 16;
         int hkY = 24;
@@ -1272,11 +1272,11 @@ public final class MapStudioCanvas extends JPanel {
             g.setStroke(new BasicStroke(1.2f));
             g.drawRoundRect(legX, legY, legW, legH, 10, 10);
 
-            g.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            g.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
             g.setColor(new Color(255, 159, 28));
             g.drawString("⛰️ LEGENDA PENDENZE (BAR)", legX + 10, legY + 18);
 
-            g.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            g.setFont(BarMapStudio.font(Font.BOLD, 10));
             int cy = legY + 36;
 
             // 1. Green
