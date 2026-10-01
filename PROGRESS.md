@@ -14,6 +14,7 @@
 | `12d9cba` | `feat` | 01/10/2026 09:55 | Visualizzatore Slope Map in Canvas, HUD e ispezione quote/pendenza al cursore |
 | `efdbe8e` | `feat` | 01/10/2026 10:01 | Controlli GUI per MaxHeight, WaterLevel, Smooth Slopes e importazione da file |
 | `7f822c2` | `build` | 01/10/2026 10:04 | Ricompilazione patch, iniezione launcher.jar e collaudo finale |
+| *Step 5* | `feat/fix` | 01/10/2026 10:37 | Pannelli resizable con dual JSplitPane, fix glifi unrendered e layout spinner flessibile |
 
 ---
 
@@ -44,3 +45,11 @@
 - [x] Compilazione classi in `patch/`
 - [x] Iniezione classi aggiornate in `extracted/{app}/app/launcher.jar`
 - [x] Test di generazione da CLI e verifica esportazione BAR (generazione .sdz convalidata)
+
+### 5. Layout Resizable, Fix Glifi e Spinner Flessibili
+- [x] Architettura dual `JSplitPane` su MapStudioPanel (Left Sidebar <-> Center Canvas <-> Right Sidebar) per rendere ogni pannello ridimensionabile
+- [x] Rimozione caratteri emoji che causavano glifi quadrati unrendered (`▯`)
+- [x] Layout righe dedicate `createParamRow` con etichette chiare e spinner con unità di misura ("m")
+- [x] Styling ad alto contrasto per tutti i componenti `JSpinner` nel tema Dark
+- [x] `JScrollPane` non compresso con wrapping su `BorderLayout.NORTH`
+- [x] `JSplitPane` integrato anche per la vista Libreria Mappe in `BarMapStudio.java`

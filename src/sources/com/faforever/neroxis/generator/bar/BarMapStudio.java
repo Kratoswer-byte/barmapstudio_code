@@ -136,6 +136,20 @@ public class BarMapStudio {
             Method mBuildMapsView = BarLauncher.class.getDeclaredMethod("buildMapsView");
             mBuildMapsView.setAccessible(true);
             JComponent libraryView = (JComponent) mBuildMapsView.invoke(launcher);
+            if (libraryView != null && libraryView.getLayout() instanceof BorderLayout bl) {
+                Component center = bl.getLayoutComponent(BorderLayout.CENTER);
+                Component east = bl.getLayoutComponent(BorderLayout.EAST);
+                if (center != null && east != null) {
+                    libraryView.removeAll();
+                    JSplitPane libSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, center, east);
+                    libSplit.setDividerSize(7);
+                    libSplit.setContinuousLayout(true);
+                    libSplit.setBorder(null);
+                    libSplit.setOpaque(false);
+                    libSplit.setResizeWeight(1.0);
+                    libraryView.add(libSplit, BorderLayout.CENTER);
+                }
+            }
 
             Field fUnits = BarLauncher.class.getDeclaredField("units");
             fUnits.setAccessible(true);

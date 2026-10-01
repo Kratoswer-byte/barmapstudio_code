@@ -119,8 +119,8 @@ public final class MapStudioPanel extends JPanel {
     private final JToggleButton slopeToggleBtn = new JToggleButton("Slope Map [L]", false);
     private final JSlider slopeOpacitySlider = new JSlider(10, 100, 70);
     private final JButton btnRegenGround = createPrimaryButton("RIGENERA DA HEIGHTMAP", ACCENT_AMBER);
-    private final JButton btnLoadHeightmap = createGhostButton("📁 Carica Heightmap PNG/RAW...");
-    private final JButton btnSmoothSlopes = createGhostButton("⚡ Leviga Pendenze Eccessive");
+    private final JButton btnLoadHeightmap = createGhostButton("Carica Heightmap PNG/RAW...");
+    private final JButton btnSmoothSlopes = createGhostButton("Leviga Pendenze Eccessive");
 
     private final java.util.Map<MapStudioCanvas.Tool, JToggleButton> toolButtons = new java.util.EnumMap<>(MapStudioCanvas.Tool.class);
     private JToggleButton symToggle;
@@ -198,18 +198,56 @@ public final class MapStudioPanel extends JPanel {
         // 1. Top HUD Toolbar
         add(buildTopToolbar(), BorderLayout.NORTH);
 
+        // Style all Spinners across the Studio
+        styleSpinner(maxHeightSpinner);
+        styleSpinner(waterLevelSpinner);
+        styleSpinner(baseMetalSpinner);
+        styleSpinner(maxMetalSpinner);
+        styleSpinner(mexPlacementMetalSpinner);
+
         // 2. Center Canvas Area
         JPanel centerWrapper = new JPanel(new BorderLayout());
         centerWrapper.setOpaque(false);
-        centerWrapper.setBorder(new EmptyBorder(8, 8, 8, 8));
+        centerWrapper.setBorder(new EmptyBorder(6, 6, 6, 6));
         centerWrapper.add(canvas, BorderLayout.CENTER);
-        add(centerWrapper, BorderLayout.CENTER);
 
-        // 3. Left Sidebar: Ground Parameters
-        add(buildLeftSidebar(), BorderLayout.WEST);
+        // 3. Resizable Panels Architecture with JSplitPane
+        JComponent leftSidebar = buildLeftSidebar();
+        JComponent rightSidebar = buildRightSidebar();
 
-        // 4. Right Sidebar: Entity Inspector, Assistants & Final Export
-        add(buildRightSidebar(), BorderLayout.EAST);
+        leftSidebar.setMinimumSize(new Dimension(240, 100));
+        centerWrapper.setMinimumSize(new Dimension(300, 100));
+        rightSidebar.setMinimumSize(new Dimension(260, 100));
+
+        JSplitPane leftSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSidebar, centerWrapper);
+        leftSplit.setDividerSize(7);
+        leftSplit.setContinuousLayout(true);
+        leftSplit.setBorder(null);
+        leftSplit.setOpaque(false);
+        leftSplit.setResizeWeight(0.0);
+        leftSplit.setDividerLocation(350);
+
+        JSplitPane mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSplit, rightSidebar);
+        mainSplit.setDividerSize(7);
+        mainSplit.setContinuousLayout(true);
+        mainSplit.setBorder(null);
+        mainSplit.setOpaque(false);
+        mainSplit.setResizeWeight(1.0);
+
+        mainSplit.addComponentListener(new java.awt.event.ComponentAdapter() {
+            private boolean initialSet = false;
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                if (!initialSet && mainSplit.getWidth() > 0) {
+                    initialSet = true;
+                    int rightW = 350;
+                    int loc = Math.max(300, mainSplit.getWidth() - rightW);
+                    mainSplit.setDividerLocation(loc);
+                }
+            }
+        });
+
+        add(mainSplit, BorderLayout.CENTER);
 
         // Canvas change listener updates counter chips
         canvas.setChangeListener(this::updateCounters);
@@ -632,44 +670,31 @@ public final class MapStudioPanel extends JPanel {
             new EmptyBorder(10, 10, 10, 10)
         ));
         heightCard.setAlignmentX(0f);
-        heightCard.setMaximumSize(new Dimension(400, 260));
+        heightCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 260));
 
         JLabel heightCardTitle = new JLabel("2. RILIEVO & PENDENZE");
         heightCardTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
         heightCardTitle.setForeground(ACCENT_AMBER);
         heightCardTitle.setAlignmentX(0f);
         heightCard.add(heightCardTitle);
-        heightCard.add(Box.createVerticalStrut(8));
-
-        JPanel paramGrid = new JPanel(new GridLayout(2, 2, 6, 6));
-        paramGrid.setOpaque(false);
-        JLabel maxHLbl = new JLabel("Altezza Max (m):");
-        maxHLbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        maxHLbl.setForeground(TEXT_MUTED);
-        paramGrid.add(maxHLbl);
-        paramGrid.add(maxHeightSpinner);
-
-        JLabel waterLbl = new JLabel("Livello Acqua (m):");
-        waterLbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        waterLbl.setForeground(TEXT_MUTED);
-        paramGrid.add(waterLbl);
-        paramGrid.add(waterLevelSpinner);
-        paramGrid.setAlignmentX(0f);
-        paramGrid.setMaximumSize(new Dimension(400, 56));
-        heightCard.add(paramGrid);
         heightCard.add(Box.createVerticalStrut(10));
 
-        btnRegenGround.setMaximumSize(new Dimension(400, 34));
+        heightCard.add(createParamRow("Altezza Massima Rilievo:", maxHeightSpinner, "m"));
+        heightCard.add(Box.createVerticalStrut(6));
+        heightCard.add(createParamRow("Livello Acqua / Mare:", waterLevelSpinner, "m"));
+        heightCard.add(Box.createVerticalStrut(10));
+
+        btnRegenGround.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         btnRegenGround.setAlignmentX(0f);
         heightCard.add(btnRegenGround);
         heightCard.add(Box.createVerticalStrut(6));
 
-        btnSmoothSlopes.setMaximumSize(new Dimension(400, 28));
+        btnSmoothSlopes.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         btnSmoothSlopes.setAlignmentX(0f);
         heightCard.add(btnSmoothSlopes);
         heightCard.add(Box.createVerticalStrut(6));
 
-        btnLoadHeightmap.setMaximumSize(new Dimension(400, 28));
+        btnLoadHeightmap.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         btnLoadHeightmap.setAlignmentX(0f);
         heightCard.add(btnLoadHeightmap);
 
@@ -693,18 +718,23 @@ public final class MapStudioPanel extends JPanel {
         tip.setForeground(TEXT_MUTED);
         infoBox.add(tip, BorderLayout.CENTER);
         infoBox.setAlignmentX(0f);
-        infoBox.setMaximumSize(new Dimension(400, 130));
+        infoBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
         side.add(infoBox);
 
-        side.add(Box.createVerticalGlue());
+        side.add(Box.createVerticalStrut(12));
 
-        JScrollPane scroll = new JScrollPane(side);
+        JPanel container = new JPanel(new BorderLayout());
+        container.setBackground(CARD_BG);
+        container.add(side, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(container);
         scroll.setBackground(CARD_BG);
         scroll.getViewport().setBackground(CARD_BG);
-        scroll.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR));
-        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        scroll.getVerticalScrollBar().setUnitIncrement(16);
-        scroll.setPreferredSize(new Dimension(300, 0));
+        scroll.setBorder(null);
+        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.getVerticalScrollBar().setUnitIncrement(18);
+        scroll.setPreferredSize(new Dimension(350, 600));
         return scroll;
     }
 
@@ -712,11 +742,7 @@ public final class MapStudioPanel extends JPanel {
         JPanel side = new JPanel();
         side.setLayout(new BoxLayout(side, BoxLayout.Y_AXIS));
         side.setBackground(CARD_BG);
-        side.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 1, 0, 0, BORDER_COLOR),
-            new EmptyBorder(14, 14, 14, 14)
-        ));
-        side.setPreferredSize(new Dimension(320, 0));
+        side.setBorder(new EmptyBorder(14, 14, 14, 14));
 
         // Title 2
         JLabel title2 = new JLabel("2. OGGETTI & DETTAGLI MAPPA");
@@ -741,7 +767,7 @@ public final class MapStudioPanel extends JPanel {
             BorderFactory.createLineBorder(BORDER_COLOR, 1),
             new EmptyBorder(6, 8, 6, 8)
         ));
-        mapNameField.setMaximumSize(new Dimension(400, 34));
+        mapNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         mapNameField.setAlignmentX(0f);
         side.add(mapNameField);
         side.add(Box.createVerticalStrut(12));
@@ -753,7 +779,7 @@ public final class MapStudioPanel extends JPanel {
         statGrid.add(geoCountLabel);
         statGrid.add(spawnCountLabel);
         statGrid.add(reclaimCountLabel);
-        statGrid.setMaximumSize(new Dimension(400, 60));
+        statGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
         statGrid.setAlignmentX(0f);
         side.add(statGrid);
         side.add(Box.createVerticalStrut(12));
@@ -767,7 +793,7 @@ public final class MapStudioPanel extends JPanel {
             new EmptyBorder(8, 10, 8, 10)
         ));
         mexMetalCard.setAlignmentX(0f);
-        mexMetalCard.setMaximumSize(new Dimension(400, 130));
+        mexMetalCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
 
         JLabel mexMetalCardTitle = new JLabel("VALORE METALLO MEX (PIASTRINE):");
         mexMetalCardTitle.setFont(new Font("Segoe UI", Font.BOLD, 11));
@@ -818,21 +844,21 @@ public final class MapStudioPanel extends JPanel {
 
         JButton autoMexBtn = createGhostButton("+ Auto Mex Basi (3x attorno a spawn)");
         autoMexBtn.setAlignmentX(0f);
-        autoMexBtn.setMaximumSize(new Dimension(400, 28));
+        autoMexBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         autoMexBtn.addActionListener(e -> canvas.autoPlaceBaseMexes(3, ((Number) baseMetalSpinner.getValue()).floatValue()));
         side.add(autoMexBtn);
         side.add(Box.createVerticalStrut(4));
 
         JButton autoContestedBtn = createGhostButton("+ Auto Mex Contesi Centro");
         autoContestedBtn.setAlignmentX(0f);
-        autoContestedBtn.setMaximumSize(new Dimension(400, 28));
+        autoContestedBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         autoContestedBtn.addActionListener(e -> canvas.autoPlaceContestedMexes(6, ((Number) maxMetalSpinner.getValue()).floatValue()));
         side.add(autoContestedBtn);
         side.add(Box.createVerticalStrut(4));
 
         JButton autoReclaimBtn = createGhostButton("+ Auto Reclaim Bioma (Rocce & Alberi)");
         autoReclaimBtn.setAlignmentX(0f);
-        autoReclaimBtn.setMaximumSize(new Dimension(400, 28));
+        autoReclaimBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         autoReclaimBtn.addActionListener(e -> canvas.autoSeedReclaim(reclaimSlider.getValue() / 10f));
         side.add(autoReclaimBtn);
         side.add(Box.createVerticalStrut(4));
@@ -845,7 +871,7 @@ public final class MapStudioPanel extends JPanel {
         clrRec.addActionListener(e -> canvas.clearReclaim());
         clearRow.add(clrMex);
         clearRow.add(clrRec);
-        clearRow.setMaximumSize(new Dimension(400, 28));
+        clearRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         clearRow.setAlignmentX(0f);
         side.add(clearRow);
 
@@ -858,7 +884,7 @@ public final class MapStudioPanel extends JPanel {
         ecoCard.add(baseMetalSpinner);
         ecoCard.add(new JLabel("Metallo Max:"));
         ecoCard.add(maxMetalSpinner);
-        ecoCard.setMaximumSize(new Dimension(400, 60));
+        ecoCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
         ecoCard.setAlignmentX(0f);
         side.add(ecoCard);
         side.add(Box.createVerticalStrut(8));
@@ -869,7 +895,7 @@ public final class MapStudioPanel extends JPanel {
         reclaimValueLabel.setAlignmentX(0f);
         side.add(reclaimValueLabel);
 
-        side.add(Box.createVerticalGlue());
+        side.add(Box.createVerticalStrut(14));
 
         // Export Actions Card
         JPanel exportCard = new JPanel();
@@ -879,22 +905,22 @@ public final class MapStudioPanel extends JPanel {
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
             new EmptyBorder(10, 10, 10, 10)
         ));
-        exportCard.setMaximumSize(new Dimension(400, 150));
+        exportCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
         exportCard.setAlignmentX(0f);
 
-        genFinalMapBtn.setMaximumSize(new Dimension(400, 36));
+        genFinalMapBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         genFinalMapBtn.setAlignmentX(0f);
         exportCard.add(genFinalMapBtn);
         exportCard.add(Box.createVerticalStrut(6));
 
-        genAndPlayBtn.setMaximumSize(new Dimension(400, 36));
+        genAndPlayBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         genAndPlayBtn.setAlignmentX(0f);
         exportCard.add(genAndPlayBtn);
         exportCard.add(Box.createVerticalStrut(8));
 
         progressBar.setVisible(false);
         progressBar.setForeground(ACCENT_CYAN);
-        progressBar.setMaximumSize(new Dimension(400, 6));
+        progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 6));
         progressBar.setAlignmentX(0f);
         exportCard.add(progressBar);
         exportCard.add(Box.createVerticalStrut(4));
@@ -905,8 +931,21 @@ public final class MapStudioPanel extends JPanel {
         exportCard.add(statusLabel);
 
         side.add(exportCard);
+        side.add(Box.createVerticalStrut(12));
 
-        return side;
+        JPanel container = new JPanel(new BorderLayout());
+        container.setBackground(CARD_BG);
+        container.add(side, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(container);
+        scroll.setBackground(CARD_BG);
+        scroll.getViewport().setBackground(CARD_BG);
+        scroll.setBorder(null);
+        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.getVerticalScrollBar().setUnitIncrement(18);
+        scroll.setPreferredSize(new Dimension(350, 600));
+        return scroll;
     }
 
     private void updateCounters() {
@@ -1230,10 +1269,54 @@ public final class MapStudioPanel extends JPanel {
         p.add(l);
         p.add(Box.createVerticalStrut(4));
         comp.setAlignmentX(0f);
-        comp.setMaximumSize(new Dimension(400, 32));
+        comp.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
         p.add(comp);
         p.setAlignmentX(0f);
         return p;
+    }
+
+    private static JPanel createParamRow(String labelText, JSpinner spinner, String unit) {
+        JPanel row = new JPanel(new BorderLayout(8, 0));
+        row.setOpaque(false);
+        JLabel lbl = new JLabel(labelText);
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lbl.setForeground(TEXT_MAIN);
+        row.add(lbl, BorderLayout.CENTER);
+
+        JPanel spinnerWrap = new JPanel(new BorderLayout(4, 0));
+        spinnerWrap.setOpaque(false);
+        spinner.setPreferredSize(new Dimension(85, 26));
+        spinnerWrap.add(spinner, BorderLayout.CENTER);
+        if (unit != null && !unit.isEmpty()) {
+            JLabel uLbl = new JLabel(unit);
+            uLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            uLbl.setForeground(ACCENT_CYAN);
+            spinnerWrap.add(uLbl, BorderLayout.EAST);
+        }
+        row.add(spinnerWrap, BorderLayout.EAST);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        row.setAlignmentX(0f);
+        return row;
+    }
+
+    private static void styleSpinner(JSpinner spinner) {
+        spinner.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        spinner.setBackground(CARD_INNER);
+        spinner.setForeground(TEXT_MAIN);
+        spinner.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(2, 4, 2, 4)
+        ));
+        JComponent editor = spinner.getEditor();
+        if (editor instanceof JSpinner.DefaultEditor de) {
+            JTextField tf = de.getTextField();
+            tf.setBackground(CARD_INNER);
+            tf.setForeground(TEXT_MAIN);
+            tf.setCaretColor(ACCENT_CYAN);
+            tf.setHorizontalAlignment(JTextField.RIGHT);
+            tf.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            tf.setColumns(5);
+        }
     }
 
     private static JLabel createChip(String text, Color accent) {
