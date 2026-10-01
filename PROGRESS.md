@@ -19,6 +19,10 @@
 | `e8a561e` | `feat` | 01/10/2026 11:18 | Font geometrico rotondo e corposo Poppins Bold applicato a tutta la UI e canvas |
 | `d223c55` | `fix` | 01/10/2026 11:28 | Sostituzione completa emoji e simboli font con icone vettoriali native Java2D |
 | `2ad01b6` | `fix` | 01/10/2026 11:34 | Indicatore stato BAR con LED vettoriale antialiased luminescente (risolto tofu U+25CF) |
+| `096d209` | `feat` | 01/10/2026 11:58 | Footer moderno slim 24px con overlay popups per stato BAR e guida hotkeys |
+| `d296cec` | `fix` | 01/10/2026 12:15 | Risolto taglio pannello sinistro all'avvio e abilitato resize altezza finestra frameless |
+| `28398b9` | `feat` | 01/10/2026 12:35 | Controlli Slope Map, zoom e scala spostati in dock HUD centrale sotto le coordinate |
+| `pending` | `fix` | 01/10/2026 13:05 | Ripristino massimizzazione all'avvio, bounds spaziosi e fix troncamento testi nei pannelli |
 
 ---
 
@@ -113,3 +117,15 @@
 - [x] Il dock include: pulsante interattivo `Slope Map [L]` con stato visivo ON/OFF ambra e sincronizzazione con il tasto rapido [L], slider opacità pendenze, separatore verticale scuro, pulsante `Zoom -`, pulsante `Zoom +` e pulsante `1:1 Scala`
 - [x] Spostata in alto la pillola delle coordinate (`hy = getHeight() - 52`) per creare un layout a due righe perfettamente coordinato e pulito: riga 1 = info coordinate e terreno, riga 2 = pulsanti e controlli di visualizzazione
 - [x] Aggiunto assorbimento eventi mouse sul dock HUD per evitare click-through accidentali sulla mappa
+
+### 13. Risoluzione Risoluzione di Apertura e Troncamento Testi nei Vari Pannelli
+- [x] Rilevamento e ripristino automatico dello stato massimizzato: `BarMapStudio.initCustomApp` ora legge `lobby.setting("display", "maximized")` e, dopo aver rimosso le decorazioni native con `frame.dispose()` e `setUndecorated(true)`, riapplica `setMaximizedBounds(maxBounds)` e `setExtendedState(Frame.MAXIMIZED_BOTH)` evitando l'apertura forzata nella finestra ridotta a 1280x760
+- [x] Geometria windowed di fallback ampia e centrata: per sessioni non massimizzate viene calcolata una dimensione ottimale (~90% schermo: fino a 1640x940 o `maxBounds.width - 60` x `maxBounds.height - 50`) perfettamente centrata per garantire che tutti i pannelli e i componenti abbiano respiro senza tagli
+- [x] Persistenza bidirezionale stato finestra: salvataggio dello stato finestra (`display=maximized` o `display=window`) e dei bounds correnti in `launcher.properties` ad ogni azione di resize, drag o doppio click sull'header
+- [x] Icona dinamica per il pulsante Ingrandisci/Ripristina: `WindowControlButton` visualizza ora nativamente due rettangoli sovrapposti (Ripristina) quando la finestra è massimizzata e un quadrato singolo quando è in modalità finestra
+- [x] Sub-nav `MapsMasterPanel` responsive: etichetta hint snellita con tooltip ("Editor procedurale e gestione libreria mappe") e listener di auto-hide per larghezze inferiori a 880px, prevenendo collisioni coi pulsanti sub-tab
+- [x] Sidebar Sinistra `MapStudioPanel`: testi snelliti e non troncabili ("Alterna Simmetria: Diag / X / Z [X]", "Quota Massima Terreno:", "Livello Mare / Acqua:", "Leviga Pendenze Ripide [Ramps]"), rimosso limite rigido di altezza sull'info box
+- [x] Sidebar Destra `MapStudioPanel`: pulsanti compatti ("+ Auto Mex Basi (Spawn)", "+ Auto Reclaim (Rocce & Alberi)") con tooltip descrittivi, selettore Mex compatto e nuovo helper `setStatus(...)` con text-wrapping HTML a 2 righe per visualizzare i messaggi di stato completi senza ellissi
+- [x] Top Toolbar `MapStudioPanel`: padding interno dei pulsanti ottimizzato (3, 6, 3, 6), menu a tendina metallo mex ridotto a 105px e testi di simmetria compatti per ospitare tutti i 14 strumenti su un'unica riga senza wrapping invisibile
+- [x] Sub-tab Libreria Mappe: divider location proporzionale automatico impostato a `width - 360px` per mantenere l'elenco mappe sempre chiaro e spazioso
+

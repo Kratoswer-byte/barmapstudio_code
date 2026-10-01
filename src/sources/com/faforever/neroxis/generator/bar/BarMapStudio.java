@@ -120,16 +120,36 @@ public class BarMapStudio {
             JFrame frame = (JFrame) fFrame.get(launcher);
             frame.setTitle("BAR MAP");
 
+            Field fLobby = BarLauncher.class.getDeclaredField("lobby");
+            fLobby.setAccessible(true);
+            LobbyUi lobby = (LobbyUi) fLobby.get(launcher);
+
+            Rectangle maxBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+
             // Strip native Windows titlebar completely (clean frameless window)
             try {
                 frame.dispose();
                 frame.setUndecorated(true);
-                Rectangle maxBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
                 frame.setMaximizedBounds(maxBounds);
                 frame.setMinimumSize(new Dimension(850, 480));
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
+
+            // Determine startup display mode and generous default windowed geometry
+            String savedMode = lobby != null ? lobby.setting("display", "maximized") : "maximized";
+            boolean startMaximized = !"window".equalsIgnoreCase(savedMode);
+
+            Rectangle savedWin = lobby != null ? lobby.savedWindow() : null;
+            int defW = Math.min(1640, Math.max(1280, maxBounds.width - 60));
+            int defH = Math.min(940, Math.max(740, maxBounds.height - 50));
+            int defX = maxBounds.x + (maxBounds.width - defW) / 2;
+            int defY = maxBounds.y + (maxBounds.height - defH) / 2;
+            Rectangle normalBounds = (savedWin != null && savedWin.width >= 1000 && savedWin.height >= 600)
+                ? savedWin
+                : new Rectangle(defX, defY, defW, defH);
+
+            frame.setBounds(normalBounds);
 
             // Apply Application Icon
             try {
@@ -176,6 +196,16 @@ public class BarMapStudio {
                     libSplit.setBorder(null);
                     libSplit.setOpaque(false);
                     libSplit.setResizeWeight(1.0);
+                    libSplit.addComponentListener(new java.awt.event.ComponentAdapter() {
+                        private boolean initialSet = false;
+                        @Override
+                        public void componentResized(java.awt.event.ComponentEvent e) {
+                            if (!initialSet && libSplit.getWidth() > 0) {
+                                initialSet = true;
+                                libSplit.setDividerLocation(Math.max(400, libSplit.getWidth() - 360));
+                            }
+                        }
+                    });
                     libraryView.add(libSplit, BorderLayout.CENTER);
                 }
             }
@@ -236,7 +266,7 @@ public class BarMapStudio {
             masterViewPanel.add(unitsView, "UNITS");
 
             // Build Brand-New Modern Header
-            JPanel customHeader = buildCustomHeader(frame, launcher, masterCards, masterViewPanel, mEnsureLoaded, unitsObj);
+            JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj);
 
             // Build Slim Modern Footer with Status & Help Overlays
             JPanel customFooter = buildCustomFooter(frame, launcher, barStatus);
@@ -250,11 +280,19 @@ public class BarMapStudio {
             customRoot.add(customFooter, BorderLayout.SOUTH);
 
             // Add edge window resizer for undecorated window
-            new WindowResizer(frame);
+            new WindowResizer(frame, lobby);
 
             frame.setContentPane(customRoot);
             frame.revalidate();
             frame.repaint();
+
+            if (startMaximized) {
+                frame.setExtendedState(Frame.MAXIMIZED_BOTH);
+                frame.setBounds(maxBounds);
+            } else {
+                frame.setExtendedState(Frame.NORMAL);
+            }
+
             frame.setVisible(true);
 
         } catch (Throwable t) {
@@ -262,17 +300,26 @@ public class BarMapStudio {
         }
     }
 
-    public static void toggleMaximize(JFrame frame) {
+    public static void toggleMaximize(JFrame frame, LobbyUi lobby) {
+        Rectangle maxBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+        frame.setMaximizedBounds(maxBounds);
         if ((frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
             frame.setExtendedState(Frame.NORMAL);
+            if (lobby != null) {
+                lobby.remember("display", "window");
+                lobby.saveWindow(frame.getBounds());
+            }
         } else {
-            Rectangle maxBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-            frame.setMaximizedBounds(maxBounds);
             frame.setExtendedState(Frame.MAXIMIZED_BOTH);
+            frame.setBounds(maxBounds);
+            if (lobby != null) {
+                lobby.remember("display", "maximized");
+            }
         }
+        frame.repaint();
     }
 
-    private static void makeDraggable(JComponent comp, JFrame frame, Point[] dragPoint) {
+    private static void makeDraggable(JComponent comp, JFrame frame, Point[] dragPoint, LobbyUi lobby) {
         comp.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -282,12 +329,15 @@ public class BarMapStudio {
                     dragPoint[0] = e.getPoint();
                 }
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
-                    toggleMaximize(frame);
+                    toggleMaximize(frame, lobby);
                 }
             }
             @Override
             public void mouseReleased(MouseEvent e) {
                 dragPoint[0] = null;
+                if (lobby != null && (frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == 0) {
+                    lobby.saveWindow(frame.getBounds());
+                }
             }
         });
         comp.addMouseMotionListener(new MouseMotionAdapter() {
@@ -296,6 +346,9 @@ public class BarMapStudio {
                 if (dragPoint[0] != null) {
                     if ((frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
                         frame.setExtendedState(Frame.NORMAL);
+                        if (lobby != null) {
+                            lobby.remember("display", "window");
+                        }
                     }
                     Point current = e.getLocationOnScreen();
                     frame.setLocation(current.x - dragPoint[0].x, current.y - dragPoint[0].y);
@@ -304,7 +357,7 @@ public class BarMapStudio {
         });
     }
 
-    private static JPanel buildCustomHeader(JFrame frame, BarLauncher launcher, CardLayout masterCards, JPanel masterViewPanel, Method mEnsureLoaded, Object unitsObj) {
+    private static JPanel buildCustomHeader(JFrame frame, BarLauncher launcher, LobbyUi lobby, CardLayout masterCards, JPanel masterViewPanel, Method mEnsureLoaded, Object unitsObj) {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(BG_HEADER);
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
@@ -312,12 +365,12 @@ public class BarMapStudio {
 
         // Make whole custom header draggable
         final Point[] dragPoint = new Point[1];
-        makeDraggable(header, frame, dragPoint);
+        makeDraggable(header, frame, dragPoint, lobby);
 
         // Left: Logo and Badge
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 14));
         left.setOpaque(false);
-        makeDraggable(left, frame, dragPoint);
+        makeDraggable(left, frame, dragPoint, lobby);
 
         URL logoUrl = BarMapStudio.class.getResource("barmap.png");
         if (logoUrl != null) {
@@ -380,7 +433,7 @@ public class BarMapStudio {
         minBtn.addActionListener(e -> frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED));
 
         JButton maxBtn = new WindowControlButton(WindowControlType.MAX, "Ingrandisci / Finestra");
-        maxBtn.addActionListener(e -> toggleMaximize(frame));
+        maxBtn.addActionListener(e -> toggleMaximize(frame, lobby));
 
         JButton closeBtn = new WindowControlButton(WindowControlType.CLOSE, "Chiudi");
         closeBtn.addActionListener(e -> frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING)));
@@ -796,7 +849,18 @@ public class BarMapStudio {
             if (type == WindowControlType.MIN) {
                 g.drawLine(cx - 5, cy + 3, cx + 5, cy + 3);
             } else if (type == WindowControlType.MAX) {
-                g.drawRect(cx - 5, cy - 5, 10, 10);
+                Window win = SwingUtilities.getWindowAncestor(this);
+                boolean isMax = (win instanceof Frame f) && ((f.getExtendedState() & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH);
+                if (isMax) {
+                    g.drawRect(cx - 3, cy - 6, 8, 8);
+                    g.clearRect(cx - 6, cy - 3, 8, 8);
+                    g.setColor(hover ? new Color(255, 255, 255, 25) : BG_HEADER);
+                    g.fillRect(cx - 6, cy - 3, 8, 8);
+                    g.setColor(iconColor);
+                    g.drawRect(cx - 6, cy - 3, 8, 8);
+                } else {
+                    g.drawRect(cx - 5, cy - 5, 10, 10);
+                }
             } else if (type == WindowControlType.CLOSE) {
                 g.drawLine(cx - 4, cy - 4, cx + 4, cy + 4);
                 g.drawLine(cx + 4, cy - 4, cx - 4, cy + 4);
@@ -809,6 +873,7 @@ public class BarMapStudio {
     public static class WindowResizer implements AWTEventListener {
         private static final int BORDER_DRAG_THICKNESS = 7;
         private final JFrame frame;
+        private final LobbyUi lobby;
         private Point clickPoint;
         private Rectangle initialBounds;
         private int cursorDirection = 0;
@@ -818,8 +883,9 @@ public class BarMapStudio {
         private static final int WEST = 4;
         private static final int EAST = 8;
 
-        public WindowResizer(JFrame frame) {
+        public WindowResizer(JFrame frame, LobbyUi lobby) {
             this.frame = frame;
+            this.lobby = lobby;
             Toolkit.getDefaultToolkit().addAWTEventListener(this,
                 AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
         }
@@ -946,6 +1012,9 @@ public class BarMapStudio {
                             frame.setCursor(Cursor.getPredefinedCursor(getCursorForDirection(dir)));
                         } else {
                             frame.setCursor(Cursor.getDefaultCursor());
+                        }
+                        if (lobby != null && (frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == 0) {
+                            lobby.saveWindow(frame.getBounds());
                         }
                         e.consume();
                     }

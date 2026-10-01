@@ -50,11 +50,19 @@ public class MapsMasterPanel extends JPanel {
         leftGroup.add(libraryBtn);
         subBar.add(leftGroup, BorderLayout.WEST);
 
-        // Info hint on the right
-        JLabel hintLbl = new JLabel("Crea mappe con seed e canvas, oppure gestisci quelle installate  ");
-        hintLbl.setFont(BarMapStudio.font(Font.BOLD, 12));
+        // Info hint on the right (responsive, auto-hides if window is narrow to prevent collision)
+        JLabel hintLbl = new JLabel("Editor procedurale e gestione libreria mappe  ");
+        hintLbl.setFont(BarMapStudio.font(Font.BOLD, 11));
         hintLbl.setForeground(TEXT_MUTED);
+        hintLbl.setToolTipText("Editor procedurale mappa con canvas interattivo e gestione archivio mappe Beyond All Reason");
         subBar.add(hintLbl, BorderLayout.EAST);
+
+        subBar.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                hintLbl.setVisible(subBar.getWidth() > 880);
+            }
+        });
 
         add(subBar, BorderLayout.NORTH);
 

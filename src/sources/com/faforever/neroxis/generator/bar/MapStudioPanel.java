@@ -120,17 +120,17 @@ public final class MapStudioPanel extends JPanel {
     private final JToggleButton slopeToggleBtn = new JToggleButton("Slope Map [L]", false);
     private final JSlider slopeOpacitySlider = new JSlider(10, 100, 70);
     private final JButton btnRegenGround = createPrimaryButton("RIGENERA DA HEIGHTMAP", ACCENT_AMBER);
-    private final JButton btnLoadHeightmap = createGhostButton("Carica Heightmap PNG/RAW...");
-    private final JButton btnSmoothSlopes = createGhostButton("Leviga Pendenze Eccessive");
+    private final JButton btnLoadHeightmap = createGhostButton("Carica Heightmap...");
+    private final JButton btnSmoothSlopes = createGhostButton("Leviga Pendenze Ripide [Ramps]");
 
     private final java.util.Map<MapStudioCanvas.Tool, JToggleButton> toolButtons = new java.util.EnumMap<>(MapStudioCanvas.Tool.class);
     private JToggleButton symToggle;
-    private final JButton axisToggleBtn = createGhostButton("Asse: Z (Nord-Sud) [X]");
+    private final JButton axisToggleBtn = createGhostButton("Asse: Z [X]");
 
     // Mex Placement Metal controls
     private final JSpinner mexPlacementMetalSpinner = new JSpinner(new SpinnerNumberModel(2.0, 0.5, 10.0, 0.1));
     private final JComboBox<String> mexPlacementMetalCombo = new JComboBox<>(new String[]{
-        "1.0 M (Povero / Chiaro)", "1.5 M", "2.0 M (Standard)", "2.5 M", "3.0 M", "3.5 M (Ricco)", "4.0 M", "5.0 M (Alto / Scuro)"
+        "1.0 M (Povero)", "1.5 M", "2.0 M (Std)", "2.5 M", "3.0 M", "3.5 M (Ricco)", "4.0 M", "5.0 M (Alto)"
     });
     private final JPanel mexColorSwatch = new JPanel() {
         @Override
@@ -296,7 +296,7 @@ public final class MapStudioPanel extends JPanel {
 
         canvas.setOnTerrainHover(info -> {
             if (info != null && !info.isEmpty()) {
-                statusLabel.setText(info);
+                setStatus(info);
             }
         });
 
@@ -346,19 +346,24 @@ public final class MapStudioPanel extends JPanel {
     public void updateAxisToggleLabel(Symmetry sym) {
         if (axisToggleBtn == null || sym == null) return;
         if (sym == Symmetry.POINT2 || sym == Symmetry.DIAG) {
-            axisToggleBtn.setText("Simm: Diagonale (X+Z) [X]");
+            axisToggleBtn.setText("Asse: Diag [X]");
+            axisToggleBtn.setToolTipText("Simmetria Diagonale X+Z [Tasto X]");
             axisToggleBtn.setForeground(ACCENT_CYAN);
         } else if (sym == Symmetry.Z) {
-            axisToggleBtn.setText("Simm: Solo Z (N-S) [X]");
+            axisToggleBtn.setText("Asse: Z [X]");
+            axisToggleBtn.setToolTipText("Simmetria Speculare Asse Z (Nord-Sud) [Tasto X]");
             axisToggleBtn.setForeground(ACCENT_CYAN);
         } else if (sym == Symmetry.X) {
-            axisToggleBtn.setText("Simm: Solo X (W-E) [X]");
+            axisToggleBtn.setText("Asse: X [X]");
+            axisToggleBtn.setToolTipText("Simmetria Speculare Asse X (Ovest-Est) [Tasto X]");
             axisToggleBtn.setForeground(ACCENT_CYAN);
         } else if (sym == Symmetry.QUAD) {
-            axisToggleBtn.setText("Simm: Quad (X+Z) [X]");
+            axisToggleBtn.setText("Asse: Quad [X]");
+            axisToggleBtn.setToolTipText("Simmetria Quadrangolare 4-vie [Tasto X]");
             axisToggleBtn.setForeground(ACCENT_CYAN);
         } else {
-            axisToggleBtn.setText("Simm: Libera [X]");
+            axisToggleBtn.setText("Asse: Libero [X]");
+            axisToggleBtn.setToolTipText("Nessuna simmetria asse [Tasto X]");
             axisToggleBtn.setForeground(TEXT_MAIN);
         }
     }
@@ -532,7 +537,8 @@ public final class MapStudioPanel extends JPanel {
         mexPlacementMetalCombo.setBackground(CARD_INNER);
         mexPlacementMetalCombo.setForeground(TEXT_MAIN);
         mexPlacementMetalCombo.setSelectedIndex(2);
-        mexPlacementMetalCombo.setPreferredSize(new Dimension(130, 25));
+        mexPlacementMetalCombo.setPreferredSize(new Dimension(105, 25));
+        mexPlacementMetalCombo.setToolTipText("Valore del metallo per le nuove piastrine Mex");
         bar.add(mexPlacementMetalCombo);
 
         bar.add(createToolToggle("Geo [G]", MapStudioCanvas.Tool.GEO, group, false));
@@ -542,13 +548,15 @@ public final class MapStudioPanel extends JPanel {
         bar.add(createToolToggle("Relitti [W]", MapStudioCanvas.Tool.RECLAIM_WRECK, group, false));
         bar.add(createToolToggle("Gomma [E]", MapStudioCanvas.Tool.ERASE, group, false));
 
-        bar.add(Box.createHorizontalStrut(6));
+        bar.add(Box.createHorizontalStrut(4));
 
-        symToggle = new JToggleButton("Simm: ON [Space]", true);
+        symToggle = new JToggleButton("Simm [Space]", true);
         styleToggleButton(symToggle);
+        symToggle.setForeground(ACCENT_CYAN);
+        symToggle.setToolTipText("Attiva o disattiva il disegno speculare simmetrico [Barra Spaziatrice]");
         symToggle.addActionListener(e -> {
             boolean active = symToggle.isSelected();
-            symToggle.setText(active ? "Simm: ON [Space]" : "Simm: OFF [Space]");
+            symToggle.setForeground(active ? ACCENT_CYAN : TEXT_MUTED);
             canvas.setSymmetryEnabled(active);
         });
         bar.add(symToggle);
@@ -556,12 +564,14 @@ public final class MapStudioPanel extends JPanel {
         axisToggleBtn.addActionListener(e -> toggleMirrorAxis());
         bar.add(axisToggleBtn);
 
-        bar.add(Box.createHorizontalStrut(6));
+        bar.add(Box.createHorizontalStrut(4));
         JButton undoBtn = createGhostButton("Annulla [^Z]");
+        undoBtn.setToolTipText("Annulla ultima modifica [Ctrl+Z]");
         undoBtn.addActionListener(e -> canvas.undo());
         bar.add(undoBtn);
 
         JButton redoBtn = createGhostButton("Ripristina [^Y]");
+        redoBtn.setToolTipText("Ripristina modifica annullata [Ctrl+Y]");
         redoBtn.addActionListener(e -> canvas.redo());
         bar.add(redoBtn);
 
@@ -658,7 +668,7 @@ public final class MapStudioPanel extends JPanel {
         b.setFocusPainted(false);
         b.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-            new EmptyBorder(4, 7, 4, 7)
+            new EmptyBorder(3, 6, 3, 6)
         ));
     }
 
@@ -684,9 +694,10 @@ public final class MapStudioPanel extends JPanel {
         side.add(createFieldRow("Simmetria:", symmetryCombo));
         side.add(Box.createVerticalStrut(4));
 
-        JButton sideAxisBtn = createGhostButton("Cambia Simmetria (Diag / Z / X / Quad) [X]");
+        JButton sideAxisBtn = createGhostButton("Alterna Simmetria: Diag / X / Z [X]");
         sideAxisBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
         sideAxisBtn.setAlignmentX(0f);
+        sideAxisBtn.setToolTipText("Cicla tra Diagonale, Asse Z, Asse X e Quad [Tasto rapido: X]");
         sideAxisBtn.addActionListener(e -> cycleSymmetryMode());
         side.add(sideAxisBtn);
         side.add(Box.createVerticalStrut(6));
@@ -737,23 +748,26 @@ public final class MapStudioPanel extends JPanel {
         heightCard.add(heightCardTitle);
         heightCard.add(Box.createVerticalStrut(10));
 
-        heightCard.add(createParamRow("Altezza Massima Rilievo:", maxHeightSpinner, "m"));
+        heightCard.add(createParamRow("Quota Massima Terreno:", maxHeightSpinner, "m"));
         heightCard.add(Box.createVerticalStrut(6));
-        heightCard.add(createParamRow("Livello Acqua / Mare:", waterLevelSpinner, "m"));
+        heightCard.add(createParamRow("Livello Mare / Acqua:", waterLevelSpinner, "m"));
         heightCard.add(Box.createVerticalStrut(10));
 
         btnRegenGround.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         btnRegenGround.setAlignmentX(0f);
+        btnRegenGround.setToolTipText("Ricalcola le texture, la mappa di pendenza, i gradienti e l'acqua dall'heightmap");
         heightCard.add(btnRegenGround);
         heightCard.add(Box.createVerticalStrut(6));
 
         btnSmoothSlopes.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         btnSmoothSlopes.setAlignmentX(0f);
+        btnSmoothSlopes.setToolTipText("Appiana e leviga i dislivelli impraticabili per bot e veicoli (Anti-Cliff)");
         heightCard.add(btnSmoothSlopes);
         heightCard.add(Box.createVerticalStrut(6));
 
         btnLoadHeightmap.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         btnLoadHeightmap.setAlignmentX(0f);
+        btnLoadHeightmap.setToolTipText("Importa un file immagine (PNG 16-bit, RAW, BMP) come heightmap");
         heightCard.add(btnLoadHeightmap);
 
         side.add(heightCard);
@@ -776,7 +790,6 @@ public final class MapStudioPanel extends JPanel {
         tip.setForeground(TEXT_MUTED);
         infoBox.add(tip, BorderLayout.CENTER);
         infoBox.setAlignmentX(0f);
-        infoBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
         side.add(infoBox);
 
         side.add(Box.createVerticalStrut(12));
@@ -900,9 +913,10 @@ public final class MapStudioPanel extends JPanel {
         side.add(assistTitle);
         side.add(Box.createVerticalStrut(6));
 
-        JButton autoMexBtn = createGhostButton("+ Auto Mex Basi (3x attorno a spawn)");
+        JButton autoMexBtn = createGhostButton("+ Auto Mex Basi (Spawn)");
         autoMexBtn.setAlignmentX(0f);
         autoMexBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        autoMexBtn.setToolTipText("Posiziona automaticamente 3 estrattori di metallo attorno a ciascuno spawn");
         autoMexBtn.addActionListener(e -> canvas.autoPlaceBaseMexes(3, ((Number) baseMetalSpinner.getValue()).floatValue()));
         side.add(autoMexBtn);
         side.add(Box.createVerticalStrut(4));
@@ -910,13 +924,15 @@ public final class MapStudioPanel extends JPanel {
         JButton autoContestedBtn = createGhostButton("+ Auto Mex Contesi Centro");
         autoContestedBtn.setAlignmentX(0f);
         autoContestedBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        autoContestedBtn.setToolTipText("Posiziona automaticamente 6 piastrine mex contestate al centro mappa");
         autoContestedBtn.addActionListener(e -> canvas.autoPlaceContestedMexes(6, ((Number) maxMetalSpinner.getValue()).floatValue()));
         side.add(autoContestedBtn);
         side.add(Box.createVerticalStrut(4));
 
-        JButton autoReclaimBtn = createGhostButton("+ Auto Reclaim Bioma (Rocce & Alberi)");
+        JButton autoReclaimBtn = createGhostButton("+ Auto Reclaim (Rocce & Alberi)");
         autoReclaimBtn.setAlignmentX(0f);
         autoReclaimBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        autoReclaimBtn.setToolTipText("Distribuisce rocce e alberi proceduralmente in base al bioma e alla densità");
         autoReclaimBtn.addActionListener(e -> canvas.autoSeedReclaim(reclaimSlider.getValue() / 10f));
         side.add(autoReclaimBtn);
         side.add(Box.createVerticalStrut(4));
@@ -1039,7 +1055,7 @@ public final class MapStudioPanel extends JPanel {
 
         TerrainStyle terrainStyle = TerrainStyle.valueOf(styleName);
 
-        statusLabel.setText("Generazione terreno (" + width + "x" + height + ") in corso...");
+        setStatus("Generazione terreno (" + width + "x" + height + ") in corso...");
         progressBar.setIndeterminate(true);
         progressBar.setVisible(true);
         genGroundBtn.setEnabled(false);
@@ -1066,14 +1082,14 @@ public final class MapStudioPanel extends JPanel {
                     }
                     float wElev = res.map().getWaterElevation();
                     waterLevelSpinner.setValue((double) Math.round(wElev));
-                    statusLabel.setText("Terreno generato! Premi [L] per visualizzare la Slope Map.");
+                    setStatus("Terreno generato! Premi [L] per visualizzare la Slope Map.");
                     progressBar.setVisible(false);
                     genGroundBtn.setEnabled(true);
                 });
             } catch (Throwable ex) {
                 ex.printStackTrace();
                 SwingUtilities.invokeLater(() -> {
-                    statusLabel.setText("Errore generazione terreno: " + ex.getMessage());
+                    setStatus("Errore generazione terreno: " + ex.getMessage());
                     progressBar.setVisible(false);
                     genGroundBtn.setEnabled(true);
                 });
@@ -1108,7 +1124,7 @@ public final class MapStudioPanel extends JPanel {
             seed = new Random().nextLong();
         }
 
-        statusLabel.setText("Rigenerazione Ground da Heightmap (MaxH: " + (int) maxHeight + "m, Acqua: " + (int) waterLevel + "m)...");
+        setStatus("Rigenerazione Ground da Heightmap (MaxH: " + (int) maxHeight + "m, Acqua: " + (int) waterLevel + "m)...");
         progressBar.setIndeterminate(true);
         progressBar.setVisible(true);
         btnRegenGround.setEnabled(false);
@@ -1138,7 +1154,7 @@ public final class MapStudioPanel extends JPanel {
                         selectSymmetryInCombo(res.symmetrySettings().terrainSymmetry());
                         updateAxisToggleLabel(res.symmetrySettings().terrainSymmetry());
                     }
-                    statusLabel.setText("Ground rigenerato con successo da Heightmap! [L per Slope Map]");
+                    setStatus("Ground rigenerato con successo da Heightmap! [L per Slope Map]");
                     progressBar.setVisible(false);
                     btnRegenGround.setEnabled(true);
                     btnLoadHeightmap.setEnabled(true);
@@ -1147,7 +1163,7 @@ public final class MapStudioPanel extends JPanel {
             } catch (Throwable ex) {
                 ex.printStackTrace();
                 SwingUtilities.invokeLater(() -> {
-                    statusLabel.setText("Errore rigenerazione: " + ex.getMessage());
+                    setStatus("Errore rigenerazione: " + ex.getMessage());
                     progressBar.setVisible(false);
                     btnRegenGround.setEnabled(true);
                     btnLoadHeightmap.setEnabled(true);
@@ -1190,7 +1206,7 @@ public final class MapStudioPanel extends JPanel {
                         return;
                     }
                 }
-                statusLabel.setText("Heightmap caricata: " + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + ")");
+                setStatus("Heightmap caricata: " + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + ")");
                 doRegenerateFromHeightmap(loaded);
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -1206,7 +1222,7 @@ public final class MapStudioPanel extends JPanel {
             return;
         }
 
-        statusLabel.setText("Levigatura pendenze eccessive in corso...");
+        setStatus("Levigatura pendenze eccessive in corso...");
         progressBar.setIndeterminate(true);
         progressBar.setVisible(true);
         btnSmoothSlopes.setEnabled(false);
@@ -1220,14 +1236,14 @@ public final class MapStudioPanel extends JPanel {
                     canvas.setSlopeOverlay(newSlope);
                     canvas.setShowSlopeMap(true);
                     updateSlopeButtonState();
-                    statusLabel.setText("Pendenze ripide levigate! Rupi impraticabili ridotte. [Slope Map ON]");
+                    setStatus("Pendenze ripide levigate! Rupi impraticabili ridotte. [Slope Map ON]");
                     progressBar.setVisible(false);
                     btnSmoothSlopes.setEnabled(true);
                 });
             } catch (Throwable ex) {
                 ex.printStackTrace();
                 SwingUtilities.invokeLater(() -> {
-                    statusLabel.setText("Errore durante la levigatura: " + ex.getMessage());
+                    setStatus("Errore durante la levigatura: " + ex.getMessage());
                     progressBar.setVisible(false);
                     btnSmoothSlopes.setEnabled(true);
                 });
@@ -1257,7 +1273,7 @@ public final class MapStudioPanel extends JPanel {
         }
         final String finalMapName = rawName;
 
-        statusLabel.setText("Compilazione mappa BAR in corso...");
+        setStatus("Compilazione mappa BAR in corso...");
         progressBar.setIndeterminate(true);
         progressBar.setVisible(true);
         genFinalMapBtn.setEnabled(false);
@@ -1292,7 +1308,7 @@ public final class MapStudioPanel extends JPanel {
                 Path archive = BarMapExporter.exportMap(mapsDir, m, options, skirmishScript);
 
                 SwingUtilities.invokeLater(() -> {
-                    statusLabel.setText("Mappa esportata con successo: " + archive.getFileName());
+                    setStatus("Mappa esportata con successo: " + archive.getFileName());
                     progressBar.setVisible(false);
                     genFinalMapBtn.setEnabled(true);
                     genAndPlayBtn.setEnabled(true);
@@ -1307,13 +1323,19 @@ public final class MapStudioPanel extends JPanel {
             } catch (Throwable ex) {
                 ex.printStackTrace();
                 SwingUtilities.invokeLater(() -> {
-                    statusLabel.setText("Errore durante l'esportazione: " + ex.getMessage());
+                    setStatus("Errore durante l'esportazione: " + ex.getMessage());
                     progressBar.setVisible(false);
                     genFinalMapBtn.setEnabled(true);
                     genAndPlayBtn.setEnabled(true);
                 });
             }
         }, "final-map-export").start();
+    }
+
+    private void setStatus(String text) {
+        if (text == null) text = "";
+        statusLabel.setText("<html><body style='width: 250px;'>" + text.replace("<", "&lt;").replace(">", "&gt;") + "</body></html>");
+        statusLabel.setToolTipText(text);
     }
 
     private static JPanel createFieldRow(String label, JComponent comp) {
@@ -1339,11 +1361,12 @@ public final class MapStudioPanel extends JPanel {
         JLabel lbl = new JLabel(labelText);
         lbl.setFont(BarMapStudio.font(Font.BOLD, 11));
         lbl.setForeground(TEXT_MAIN);
+        lbl.setToolTipText(labelText);
         row.add(lbl, BorderLayout.CENTER);
 
         JPanel spinnerWrap = new JPanel(new BorderLayout(4, 0));
         spinnerWrap.setOpaque(false);
-        spinner.setPreferredSize(new Dimension(72, 26));
+        spinner.setPreferredSize(new Dimension(68, 25));
         spinnerWrap.add(spinner, BorderLayout.CENTER);
         if (unit != null && !unit.isEmpty()) {
             JLabel uLbl = new JLabel(unit);
@@ -1411,7 +1434,7 @@ public final class MapStudioPanel extends JPanel {
         b.setFocusPainted(false);
         b.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-            new EmptyBorder(4, 7, 4, 7)
+            new EmptyBorder(3, 6, 3, 6)
         ));
         return b;
     }
