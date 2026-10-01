@@ -27,7 +27,8 @@
 | `0da6da3` | `feat` | 01/10/2026 15:16 | Finestra AssetSpecsDialog (guida requisiti asset) e supporto texture custom |
 | `3146ec6` | `fix/feat` | 01/10/2026 15:58 | Icone vettoriali specs (no tofu), apertura allo start, specs button su slope map e sidebar responsive con margini |
 | `0a5ebc4` | `feat` | 01/10/2026 16:55 | Modulo Texture Studio (PBR Seamless 4D, Splatting Multi-Materiale RGBA e nuova tab TEXTURES) |
-| `d94997d` | `feat/fix` | 01/10/2026 17:40 | Riprogettazione Texture Studio: layout compatto 240px, default Metodo B (file maschera) e fallback Metodo A |
+| `eea4450` | `feat/fix` | 01/10/2026 17:40 | Riprogettazione Texture Studio: layout compatto 240px, default Metodo B (file maschera) e fallback Metodo A |
+| `PENDING` | `feat/fix` | 01/10/2026 18:00 | Sblocco pulsante Pialla Pendenze [Ramps] e integrazione completa Sliders Metodo A & PBR in sidebar compatta 240px |
 
 ---
 
@@ -172,11 +173,28 @@
 - [x] Navigazione Superiore in `BarMapStudio.java`: aggiunta la voce `TEXTURES` posizionata tra `MAPS` e `UNITS`, corredata da nuova icona vettoriale della tavolozza artistica Java2D
 - [x] Collegamento rapido nell'Editor: aggiunto pulsante `Apri Texture Studio (Splatting)...` nella sidebar sinistra di `MapStudioPanel`
 
-### 18. Riprogettazione Texture Studio: Layout Compatto 240px e Default Metodo B (File Maschera) [Commit: d94997d]
+### 18. Riprogettazione Texture Studio: Layout Compatto 240px e Default Metodo B (File Maschera) [Commit: eea4450]
 - [x] Risoluzione radicale dell'ingombro a schermo: sidebar laterale snellita da mezza schermata a soli 240px-260px, lasciando oltre l'80% dello schermo per il canvas della mappa
 - [x] Implementato `ScrollableTrackWidthPanel` con vincolo rigido della larghezza al viewport del `JScrollPane`, azzerando qualsiasi overflow o forzatura orizzontale
 - [x] Attivato di **Default il Metodo B (Caricamento Maschere da File)** per ciascuna delle 4 Zone: ogni zona offre in prima evidenza il pulsante `Carica Maschera` con visualizzazione immediata del file PNG/BMP caricato
 - [x] Mantenuto il **Metodo A (Regola Automatica da Heightmap)** come fallback intelligente: se per una zona non viene caricato un file, il programma calcola in automatico le pendenze e le quote dalla mappa, evitando schermate rotte o vuote
 - [x] Schede di Zona compatte a righe verticali separate: riga 1 (titolo + indicatore a pallino colorato), riga 2 (pulsante maschera + nome file), riga 3 (selettore materiale preset + caricamento texture personale)
 - [x] Barra divisore impostata a 275px con limite minimo a 220px, garantendo massima flessibilità sia in modalità finestra che a schermo intero
+
+### 19. Ripristino "Pialla Pendenze [Ramps]" e Reintegrazione Sliders Metodo A & PBR [Commit: PENDING]
+- [x] **Risolto blocco "Pialla Pendenze":** In `MapStudioPanel.java`, la card `heightCard` ("2. RILIEVO & PENDENZE") aveva un vincolo rigido `setMaximumSize(new Dimension(Integer.MAX_VALUE, 260))`. Avendo 8 righe e pulsanti interni per un'altezza totale > 288px, il layout BoxLayout schiacciava e rendeva invisibile il pulsante `btnSmoothSlopes`. Il vincolo è stato portato a 420px e il pulsante è stato rinominato in `"Leviga / Pialla Pendenze [Ramps]"` con tooltip `"Appiana, pialla e leviga i dislivelli impraticabili per bot e veicoli (Anti-Cliff / Ramps)"`.
+- [x] **Reintegrazione Sliders Metodo A in Texture Studio:** Aggiunta la sezione "REGOLE TERRENO (METODO A)" subito sotto le schede delle zone con 6 slider procedurali completi:
+  - *Soglia Pendenza Roccia* (10° - 60°)
+  - *Morbidezza Transizione Falloff* (2° - 20°)
+  - *Quota Livello Acqua* (-50m - 300m)
+  - *Fascia di Spiaggia / Costa* (2m - 40m)
+  - *Quota Picchi Rocciosi / Neve* (40% - 95%)
+  - *Perturbazione Frattale Bordi* (0% - 100%)
+- [x] **Reintegrazione Sliders Dettaglio PBR:** Aggiunta la sezione "DETTAGLIO PBR & MATERIALI" con 5 slider di regolazione del rumore frattale:
+  - *Scala Frequenza Frattale* (0.5x - 8.0x)
+  - *Livello Dettaglio Ottave* (1 - 8)
+  - *Rugosità / Persistenza* (10% - 90%)
+  - *Contrasto Cromatico* (0.5x - 3.0x)
+  - *Intensità Rilievo Normal Map* (0.1x - 3.0x)
+- [x] **Architettura Layout a Due Righe Compatta:** Per evitare che i controlli forzino la larghezza orizzontale, ogni slider è strutturato su due livelli verticali (Riga 1: etichetta + valore dinamico allineato a destra; Riga 2: slider esteso al 100% della larghezza). L'intero pannello adotta `ScrollableTrackWidthPanel`, consentendo di alloggiare sia il Metodo B che il Metodo A e i controlli PBR entro i consueti 240px-260px senza toccare la visuale del canvas.
 

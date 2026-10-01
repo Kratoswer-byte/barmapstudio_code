@@ -122,7 +122,7 @@ public final class MapStudioPanel extends JPanel {
     private final JButton btnRegenGround = createPrimaryButton("RIGENERA DA HEIGHTMAP", ACCENT_AMBER);
     private final JButton btnLoadHeightmap = createGhostButton("Carica Heightmap...");
     private final JButton btnLoadTexture = createGhostButton("Carica Texture Terreno...");
-    private final JButton btnSmoothSlopes = createGhostButton("Leviga Pendenze Ripide [Ramps]");
+    private final JButton btnSmoothSlopes = createGhostButton("Leviga / Pialla Pendenze [Ramps]");
 
     private final java.util.Map<MapStudioCanvas.Tool, JToggleButton> toolButtons = new java.util.EnumMap<>(MapStudioCanvas.Tool.class);
     private JToggleButton symToggle;
@@ -750,7 +750,7 @@ public final class MapStudioPanel extends JPanel {
             new EmptyBorder(10, 10, 10, 10)
         ));
         heightCard.setAlignmentX(0f);
-        heightCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 260));
+        heightCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 420));
 
         JLabel heightCardTitle = new JLabel("2. RILIEVO & PENDENZE");
         heightCardTitle.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
@@ -772,7 +772,7 @@ public final class MapStudioPanel extends JPanel {
 
         btnSmoothSlopes.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         btnSmoothSlopes.setAlignmentX(0f);
-        btnSmoothSlopes.setToolTipText("Appiana e leviga i dislivelli impraticabili per bot e veicoli (Anti-Cliff)");
+        btnSmoothSlopes.setToolTipText("Appiana, pialla e leviga i dislivelli impraticabili per bot e veicoli (Anti-Cliff / Ramps)");
         heightCard.add(btnSmoothSlopes);
         heightCard.add(Box.createVerticalStrut(6));
 
