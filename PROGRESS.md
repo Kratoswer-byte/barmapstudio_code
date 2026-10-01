@@ -28,7 +28,7 @@
 | `3146ec6` | `fix/feat` | 01/10/2026 15:58 | Icone vettoriali specs (no tofu), apertura allo start, specs button su slope map e sidebar responsive con margini |
 | `0a5ebc4` | `feat` | 01/10/2026 16:55 | Modulo Texture Studio (PBR Seamless 4D, Splatting Multi-Materiale RGBA e nuova tab TEXTURES) |
 | `eea4450` | `feat/fix` | 01/10/2026 17:40 | Riprogettazione Texture Studio: layout compatto 240px, default Metodo B (file maschera) e fallback Metodo A |
-| `PENDING` | `feat/fix` | 01/10/2026 18:00 | Sblocco pulsante Pialla Pendenze [Ramps] e integrazione completa Sliders Metodo A & PBR in sidebar compatta 240px |
+| `8975273` | `feat/fix` | 01/10/2026 18:00 | Sblocco pulsante Pialla Pendenze [Ramps] e integrazione completa Sliders Metodo A & PBR in sidebar compatta 240px |
 
 ---
 
@@ -181,7 +181,7 @@
 - [x] Schede di Zona compatte a righe verticali separate: riga 1 (titolo + indicatore a pallino colorato), riga 2 (pulsante maschera + nome file), riga 3 (selettore materiale preset + caricamento texture personale)
 - [x] Barra divisore impostata a 275px con limite minimo a 220px, garantendo massima flessibilità sia in modalità finestra che a schermo intero
 
-### 19. Ripristino "Pialla Pendenze [Ramps]" e Reintegrazione Sliders Metodo A & PBR [Commit: PENDING]
+### 19. Ripristino "Pialla Pendenze [Ramps]" e Reintegrazione Sliders Metodo A & PBR [Commit: 8975273]
 - [x] **Risolto blocco "Pialla Pendenze":** In `MapStudioPanel.java`, la card `heightCard` ("2. RILIEVO & PENDENZE") aveva un vincolo rigido `setMaximumSize(new Dimension(Integer.MAX_VALUE, 260))`. Avendo 8 righe e pulsanti interni per un'altezza totale > 288px, il layout BoxLayout schiacciava e rendeva invisibile il pulsante `btnSmoothSlopes`. Il vincolo è stato portato a 420px e il pulsante è stato rinominato in `"Leviga / Pialla Pendenze [Ramps]"` con tooltip `"Appiana, pialla e leviga i dislivelli impraticabili per bot e veicoli (Anti-Cliff / Ramps)"`.
 - [x] **Reintegrazione Sliders Metodo A in Texture Studio:** Aggiunta la sezione "REGOLE TERRENO (METODO A)" subito sotto le schede delle zone con 6 slider procedurali completi:
   - *Soglia Pendenza Roccia* (10° - 60°)
