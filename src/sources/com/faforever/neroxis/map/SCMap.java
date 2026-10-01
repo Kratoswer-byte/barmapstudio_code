@@ -872,6 +872,37 @@ public class SCMap {
         setCroppedImages(heightmap, normalMap, textureMasksLow, textureMasksHigh, waterMap, waterFoamMap, waterShadowMap, waterDepthBiasMap, terrainType, null);
     }
 
+    public float getWaterElevation() {
+        if (this.biome != null && this.biome.waterSettings() != null) {
+            return this.biome.waterSettings().elevation();
+        }
+        return 0.0f;
+    }
+
+    public float getHeightAtWorld(float x, float z) {
+        if (this.heightmap == null) return 0f;
+        int ix = Math.max(0, Math.min(this.heightmap.getWidth() - 1, (int) Math.round(x)));
+        int iz = Math.max(0, Math.min(this.heightmap.getHeight() - 1, (int) Math.round(z)));
+        return this.heightmap.getRaster().getPixel(ix, iz, new int[1])[0] * this.heightMapScale;
+    }
+
+    public float getSlopeAtWorld(float x, float z) {
+        if (this.heightmap == null) return 0f;
+        int ix = Math.max(0, Math.min(this.heightmap.getWidth() - 1, (int) Math.round(x)));
+        int iz = Math.max(0, Math.min(this.heightmap.getHeight() - 1, (int) Math.round(z)));
+        int x0 = Math.max(0, ix - 1);
+        int x1 = Math.min(this.heightmap.getWidth() - 1, ix + 1);
+        int z0 = Math.max(0, iz - 1);
+        int z1 = Math.min(this.heightmap.getHeight() - 1, iz + 1);
+        float hL = this.heightmap.getRaster().getPixel(x0, iz, new int[1])[0] * this.heightMapScale;
+        float hR = this.heightmap.getRaster().getPixel(x1, iz, new int[1])[0] * this.heightMapScale;
+        float hU = this.heightmap.getRaster().getPixel(ix, z0, new int[1])[0] * this.heightMapScale;
+        float hD = this.heightmap.getRaster().getPixel(ix, z1, new int[1])[0] * this.heightMapScale;
+        float dx = (hR - hL) / Math.max(1, x1 - x0);
+        float dz = (hD - hU) / Math.max(1, z1 - z0);
+        return (float) Math.sqrt(dx * dx + dz * dz) * 0.35f;
+    }
+
     @Generated
     public Vector4 getPlayableArea() {
         return this.playableArea;

@@ -9,8 +9,8 @@
 
 | Commit ID | Tipo | Data / Ora | Descrizione |
 | :--- | :---: | :---: | :--- |
-| *Baseline* | `chore` | 01/10/2026 09:47 | Baseline savepoint prima delle feature heightmap, pendenze e slope map |
-| *Step 1* | `feat` | In attesa | Motore di calcolo pendenze, rigenerazione ground e smooth slopes |
+| `21df09b` | `chore` | 01/10/2026 09:47 | Baseline savepoint prima delle feature heightmap, pendenze e slope map |
+| *Step 1* | `feat` | 01/10/2026 09:51 | Motore di calcolo pendenze, rigenerazione ground e smooth slopes |
 | *Step 2* | `feat` | In attesa | Visualizzatore Slope Map in Canvas, HUD e ispezione quote/pendenza al cursore |
 | *Step 3* | `feat` | In attesa | Controlli GUI per MaxHeight, WaterLevel, Smooth Slopes e importazione da file |
 | *Step 4* | `build` | In attesa | Ricompilazione patch, iniezione launcher.jar e collaudo finale |
@@ -20,11 +20,11 @@
 ## Roadmap e Stato delle Funzionalità
 
 ### 1. Engine Rilievo e Pendenze (`GroundGenerator.java` & `SCMap.java`)
-- [ ] Analisi quote minime e massime da heightmap (`minHeight`, `maxHeight`)
-- [ ] Calcolo pendenze discrete con gradiente normalizzato
-- [ ] Generazione maschera Slope Map colorata (standard Recoil: verde, giallo, arancio, rosso, blu)
-- [ ] Rigenerazione ground (texture, bioma, normali, acqua) da heightmap
-- [ ] Algoritmo di levigatura pendenze (*Smooth Slopes / Ramps*)
+- [x] Analisi quote minime e massime da heightmap (`minHeight`, `maxHeight`)
+- [x] Calcolo pendenze discrete con gradiente normalizzato Recoil (`getSlopeAtWorld`, `calculateSlope`)
+- [x] Generazione maschera Slope Map colorata (standard Recoil: verde, giallo, arancio, rosso, blu)
+- [x] Rigenerazione ground (texture, bioma, normali, acqua) da heightmap (`generateGroundFromHeightmap`)
+- [x] Algoritmo di levigatura pendenze (*Smooth Slopes / Ramps*) (`smoothSlopes`)
 
 ### 2. Rendering e Interfaccia Canvas (`MapStudioCanvas.java`)
 - [ ] Layer sovrapposto Slope Map con trasparenza regolabile (0% - 100%)
