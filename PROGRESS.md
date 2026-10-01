@@ -104,3 +104,12 @@
 - [x] Ottimizzata la riga parametri `createParamRow` (Altezza Massima Rilievo e Livello Acqua): spinner compatto a 72px e gap a 6px per garantire piena visibilità a label, spinner e unità di misura 'm'
 - [x] Rimosso blocco limite altezza finestra: ridotto `frame.setMinimumSize` da 1280x720 a 850x480 pixel
 - [x] Implementato `WindowResizer` globale basato su `AWTEventListener` registrato su `Toolkit.getDefaultToolkit`: cattura e gestisce il ridimensionamento della finestra frameless su TUTTI i bordi (Nord, Sud, Est, Ovest e angoli), inclusa l'altezza dal bordo superiore (header) e inferiore (footer)
+
+### 12. Spostamento Controlli Slope Map, Zoom e Scala nel Riquadro Centrale sotto le Coordinate
+- [x] Rimossi controlli di visualizzazione dalla toolbar superiore (`STRUMENTI`): rimossi pulsanti Zoom `+`, Zoom `-`, Scala `1:1`, pulsante `Slope Map [L]` e slider `Opacità`
+- [x] Snellita la toolbar superiore che ora accoglie unicamente gli strumenti di disegno/editing, metallo mex, controlli simmetria e undo/redo, evitando sovraffollamento e wrapping
+- [x] Creato dock HUD interattivo flottante in `MapStudioPanel` (`buildCanvasHudDock`) ancorato nel riquadro centrale della mappa
+- [x] Posizionato il dock comandi direttamente SOTTO al testo delle coordinate (`Pos: [x, y] | Mappa: ... | Zoom: ...`) in basso a sinistra della canvas
+- [x] Il dock include: pulsante interattivo `Slope Map [L]` con stato visivo ON/OFF ambra e sincronizzazione con il tasto rapido [L], slider opacità pendenze, separatore verticale scuro, pulsante `Zoom -`, pulsante `Zoom +` e pulsante `1:1 Scala`
+- [x] Spostata in alto la pillola delle coordinate (`hy = getHeight() - 52`) per creare un layout a due righe perfettamente coordinato e pulito: riga 1 = info coordinate e terreno, riga 2 = pulsanti e controlli di visualizzazione
+- [x] Aggiunto assorbimento eventi mouse sul dock HUD per evitare click-through accidentali sulla mappa

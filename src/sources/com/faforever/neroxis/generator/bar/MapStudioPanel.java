@@ -14,6 +14,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
@@ -210,6 +211,7 @@ public final class MapStudioPanel extends JPanel {
         centerWrapper.setOpaque(false);
         centerWrapper.setBorder(new EmptyBorder(6, 6, 6, 6));
         centerWrapper.add(canvas, BorderLayout.CENTER);
+        canvas.setHudDock(buildCanvasHudDock());
 
         // 3. Resizable Panels Architecture with JSplitPane
         JComponent leftSidebar = buildLeftSidebar();
@@ -474,6 +476,11 @@ public final class MapStudioPanel extends JPanel {
         slopeToggleBtn.setSelected(active);
         slopeToggleBtn.setText(active ? "Slope Map: ON [L]" : "Slope Map [L]");
         slopeToggleBtn.setForeground(active ? ACCENT_AMBER : TEXT_MAIN);
+        slopeToggleBtn.setBackground(active ? new Color(45, 34, 18) : CARD_INNER);
+        slopeToggleBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(active ? ACCENT_AMBER : BORDER_COLOR, 1, true),
+            new EmptyBorder(2, 8, 2, 8)
+        ));
     }
 
     private void setPlacementMetalValue(float val, boolean updateSpinner, boolean updateCombo) {
@@ -558,43 +565,81 @@ public final class MapStudioPanel extends JPanel {
         redoBtn.addActionListener(e -> canvas.redo());
         bar.add(redoBtn);
 
-        bar.add(Box.createHorizontalStrut(6));
-        JButton zoomIn = createGhostButton("+");
-        zoomIn.setToolTipText("Zoom Avanti [+]");
-        zoomIn.addActionListener(e -> canvas.zoomIn());
-        bar.add(zoomIn);
+        return bar;
+    }
 
-        JButton zoomOut = createGhostButton("-");
-        zoomOut.setToolTipText("Zoom Indietro [-]");
-        zoomOut.addActionListener(e -> canvas.zoomOut());
-        bar.add(zoomOut);
+    private JComponent buildCanvasHudDock() {
+        JPanel dock = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(11, 14, 20, 230));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2.setColor(new Color(0, 229, 255, 130));
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        dock.setOpaque(false);
+        dock.setBorder(new EmptyBorder(2, 6, 2, 6));
+        dock.addMouseListener(new MouseAdapter() {});
 
-        JButton zoomReset = createGhostButton("1:1");
-        zoomReset.setToolTipText("Reset Zoom [0]");
-        zoomReset.addActionListener(e -> canvas.resetZoom());
-        bar.add(zoomReset);
-
-        bar.add(Box.createHorizontalStrut(10));
+        // Slope Map Toggle Button
         styleToggleButton(slopeToggleBtn);
+        slopeToggleBtn.setPreferredSize(new Dimension(135, 24));
         slopeToggleBtn.setToolTipText("Attiva/Disattiva Overlay Pendenze (Slope Map) [Tasto L]");
         slopeToggleBtn.addActionListener(e -> {
             canvas.setShowSlopeMap(slopeToggleBtn.isSelected());
             updateSlopeButtonState();
         });
-        bar.add(slopeToggleBtn);
+        dock.add(slopeToggleBtn);
 
+        // Opacity Label & Slider
         JLabel opacityLbl = new JLabel("Opacità:");
         opacityLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
         opacityLbl.setForeground(TEXT_MUTED);
-        bar.add(opacityLbl);
+        dock.add(opacityLbl);
 
-        slopeOpacitySlider.setPreferredSize(new Dimension(65, 22));
+        slopeOpacitySlider.setPreferredSize(new Dimension(65, 20));
         slopeOpacitySlider.setOpaque(false);
         slopeOpacitySlider.setToolTipText("Regola l'opacità dello Slope Map Overlay");
         slopeOpacitySlider.addChangeListener(e -> canvas.setSlopeOpacity(slopeOpacitySlider.getValue() / 100.0f));
-        bar.add(slopeOpacitySlider);
+        dock.add(slopeOpacitySlider);
 
-        return bar;
+        // Separator
+        JPanel sep = new JPanel();
+        sep.setBackground(new Color(30, 38, 56));
+        sep.setPreferredSize(new Dimension(1, 16));
+        dock.add(sep);
+
+        // Zoom Out [-]
+        JButton zoomOut = createGhostButton("-");
+        zoomOut.setFont(BarMapStudio.font(Font.BOLD, 13));
+        zoomOut.setPreferredSize(new Dimension(28, 24));
+        zoomOut.setToolTipText("Zoom Indietro [-]");
+        zoomOut.addActionListener(e -> canvas.zoomOut());
+        dock.add(zoomOut);
+
+        // Zoom In [+]
+        JButton zoomIn = createGhostButton("+");
+        zoomIn.setFont(BarMapStudio.font(Font.BOLD, 13));
+        zoomIn.setPreferredSize(new Dimension(28, 24));
+        zoomIn.setToolTipText("Zoom Avanti [+]");
+        zoomIn.addActionListener(e -> canvas.zoomIn());
+        dock.add(zoomIn);
+
+        // 1:1 Scala
+        JButton zoomReset = createGhostButton("1:1 Scala");
+        zoomReset.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
+        zoomReset.setPreferredSize(new Dimension(76, 24));
+        zoomReset.setToolTipText("Ripristina Scala 1:1 [0]");
+        zoomReset.addActionListener(e -> canvas.resetZoom());
+        dock.add(zoomReset);
+
+        return dock;
     }
 
     private JToggleButton createToolToggle(String label, MapStudioCanvas.Tool tool, ButtonGroup group, boolean select) {

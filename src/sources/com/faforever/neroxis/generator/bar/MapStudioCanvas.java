@@ -69,8 +69,10 @@ public final class MapStudioCanvas extends JPanel {
     ) {}
     private final Deque<CanvasState> undoStack = new ArrayDeque<>();
     private final Deque<CanvasState> redoStack = new ArrayDeque<>();
+    private JComponent hudDock;
 
     public MapStudioCanvas() {
+        setLayout(null);
         setOpaque(true);
         setBackground(new Color(11, 14, 20));
         setFocusable(true);
@@ -196,6 +198,32 @@ public final class MapStudioCanvas extends JPanel {
         addMouseListener(mouse);
         addMouseMotionListener(mouse);
         addMouseWheelListener(mouse);
+    }
+
+    public void setHudDock(JComponent dock) {
+        if (this.hudDock != null) {
+            remove(this.hudDock);
+        }
+        this.hudDock = dock;
+        if (dock != null) {
+            add(dock);
+            layoutHudDock();
+        }
+        revalidate();
+        repaint();
+    }
+
+    private void layoutHudDock() {
+        if (hudDock != null) {
+            Dimension ps = hudDock.getPreferredSize();
+            hudDock.setBounds(16, Math.max(10, getHeight() - 38), ps.width, 28);
+        }
+    }
+
+    @Override
+    public void doLayout() {
+        super.doLayout();
+        layoutHudDock();
     }
 
     public void setChangeListener(Runnable r) {
@@ -1232,7 +1260,7 @@ public final class MapStudioCanvas extends JPanel {
         g.setFont(BarMapStudio.font(Font.BOLD, 11));
         int strW = g.getFontMetrics().stringWidth(coordStr);
         int hx = 16;
-        int hy = getHeight() - 28;
+        int hy = (hudDock != null) ? (getHeight() - 52) : (getHeight() - 28);
 
         g.setColor(new Color(11, 14, 20, 230));
         g.fillRoundRect(hx - 6, hy - 14, strW + 16, 22, 8, 8);
