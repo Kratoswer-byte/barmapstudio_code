@@ -18,6 +18,7 @@
 | `e48b38b` | `feat` | 01/10/2026 11:12 | Migrazione tipografia su Roboto & Roboto Condensed per tutti i pannelli UI e HUD Canvas |
 | `e8a561e` | `feat` | 01/10/2026 11:18 | Font geometrico rotondo e corposo Poppins Bold applicato a tutta la UI e canvas |
 | `d223c55` | `fix` | 01/10/2026 11:28 | Sostituzione completa emoji e simboli font con icone vettoriali native Java2D |
+| `b1e84a2` | `fix` | 01/10/2026 11:34 | Indicatore stato BAR con LED vettoriale antialiased luminescente (risolto tofu U+25CF) |
 
 ---
 
@@ -79,3 +80,9 @@
 - [x] Icona montagna a doppio picco a vettore per la legenda `Slope Map` nel Canvas HUD
 - [x] Sostituzione frecce non visualizzabili in `shadeHint` con caratteri standard ASCII `<` e `>`
 - [x] Risoluzione definitiva di tutti i box quadrati vuoti con crocetta (tofu `☒`)
+
+### 9. LED Vettoriale di Stato BAR (Risoluzione Glifo Tofu [ ▯ ] su barStatus)
+- [x] Identificazione carattere Unicode `●` (`\u25CF` Black Circle) impostato dinamicamente da `BarLauncher.updateBarStatus()`
+- [x] Creazione di un'icona vettoriale `statusDot` con doppio anello (alone luminoso esterno a 60% alpha e nucleo LED pieno)
+- [x] Aggiunto listener reattivo su `barStatus.text` per intercettare e rimuovere il prefisso `●` / `•`, rimpiazzandolo con l'icona LED vettoriale
+- [x] Risoluzione del glifo `▯` mostrato accanto alla versione di Beyond All Reason ed engine Recoil

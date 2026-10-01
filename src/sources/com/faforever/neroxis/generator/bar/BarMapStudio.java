@@ -366,8 +366,46 @@ public class BarMapStudio {
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 10));
         right.setOpaque(false);
 
+        // Vector glowing LED status dot icon (replaces unrenderable Unicode black circle U+25CF)
+        Icon statusDot = new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                Color fg = c.getForeground();
+                if (fg == null) fg = new Color(58, 176, 84);
+                // Glow halo
+                g2.setColor(new Color(fg.getRed(), fg.getGreen(), fg.getBlue(), 60));
+                g2.fillOval(x, y + 2, 10, 10);
+                // Bright center core
+                g2.setColor(fg);
+                g2.fillOval(x + 2, y + 4, 6, 6);
+                g2.dispose();
+            }
+
+            @Override
+            public int getIconWidth() { return 12; }
+
+            @Override
+            public int getIconHeight() { return 14; }
+        };
+
         barStatus.setFont(font(Font.BOLD, 12));
+        barStatus.setIcon(statusDot);
+        barStatus.setIconTextGap(6);
         barStatus.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        String curText = barStatus.getText();
+        if (curText != null && (curText.startsWith("●") || curText.startsWith("•") || curText.startsWith("\u25CF"))) {
+            barStatus.setText(curText.replaceFirst("^[●•\u25CF]\\s*", ""));
+        }
+        barStatus.addPropertyChangeListener("text", evt -> {
+            String val = (String) evt.getNewValue();
+            if (val != null && (val.startsWith("●") || val.startsWith("•") || val.startsWith("\u25CF"))) {
+                String clean = val.replaceFirst("^[●•\u25CF]\\s*", "");
+                SwingUtilities.invokeLater(() -> barStatus.setText(clean));
+            }
+        });
         right.add(barStatus);
 
         // Window Controls
