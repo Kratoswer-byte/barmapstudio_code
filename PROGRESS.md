@@ -22,7 +22,7 @@
 | `096d209` | `feat` | 01/10/2026 11:58 | Footer moderno slim 24px con overlay popups per stato BAR e guida hotkeys |
 | `d296cec` | `fix` | 01/10/2026 12:15 | Risolto taglio pannello sinistro all'avvio e abilitato resize altezza finestra frameless |
 | `28398b9` | `feat` | 01/10/2026 12:35 | Controlli Slope Map, zoom e scala spostati in dock HUD centrale sotto le coordinate |
-| `pending` | `fix` | 01/10/2026 13:05 | Ripristino massimizzazione all'avvio, bounds spaziosi e fix troncamento testi nei pannelli |
+| `ab50212` | `fix` | 01/10/2026 14:27 | Ripristino massimizzazione all'avvio, bounds spaziosi e fix troncamento testi nei pannelli |
 
 ---
 
