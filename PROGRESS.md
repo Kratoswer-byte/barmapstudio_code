@@ -128,4 +128,9 @@
 - [x] Sidebar Destra `MapStudioPanel`: pulsanti compatti ("+ Auto Mex Basi (Spawn)", "+ Auto Reclaim (Rocce & Alberi)") con tooltip descrittivi, selettore Mex compatto e nuovo helper `setStatus(...)` con text-wrapping HTML a 2 righe per visualizzare i messaggi di stato completi senza ellissi
 - [x] Top Toolbar `MapStudioPanel`: padding interno dei pulsanti ottimizzato (3, 6, 3, 6), menu a tendina metallo mex ridotto a 105px e testi di simmetria compatti per ospitare tutti i 14 strumenti su un'unica riga senza wrapping invisibile
 - [x] Sub-tab Libreria Mappe: divider location proporzionale automatico impostato a `width - 360px` per mantenere l'elenco mappe sempre chiaro e spazioso
-
+### 14. Architettura Dati: Origine di Biomi, Texture e Stili Rilievo (/plan)
+- [x] Indagine approfondita sorgenti `com.faforever.neroxis`: tracciata intera catena di caricamento ed elaborazione
+- [x] Origine Biomi: identificati i 13 biomi (`BiomeName.java`), percorso interno JAR `/custom_biome/<BiomeName>/` e i 5 file di configurazione (`materials.json`, `Light.scmlighting`, `WaterSettings.scmwtr`, `props.json`, `decals.json`)
+- [x] Origine Texture: mappati i 3 livelli (anteprima UI con `previewColors` + illuminazione normale in `PreviewGenerator.java`, detail textures procedurali matematiche fBm/Voronoi in `DetailTextures.java`, e asset 3D BAR in `BiomeFlora.java`)
+- [x] Origine Stili Rilievo: identificati i 18+ stili (`TerrainStyle.java`), pennelli alfa PNG in `/images/brushes/` (`Brushes.java`) e pipeline di calcolo procedurale (`BooleanMask`/`FloatMask`, `randomWalk`, erosione e simmetria)
+- [x] Creazione artifact architetturale dedicato: `biome_texture_terrain_pipeline.md`
