@@ -16,7 +16,7 @@
 | `7f822c2` | `build` | 01/10/2026 10:04 | Ricompilazione patch, iniezione launcher.jar e collaudo finale |
 | `50ee05f` | `feat/fix` | 01/10/2026 10:38 | Pannelli resizable con dual JSplitPane, fix glifi unrendered e layout spinner flessibile |
 | `e48b38b` | `feat` | 01/10/2026 11:12 | Migrazione tipografia su Roboto & Roboto Condensed per tutti i pannelli UI e HUD Canvas |
-| `fd73a90` | `feat` | 01/10/2026 11:18 | Font geometrico rotondo e corposo Poppins Bold applicato a tutta la UI e canvas |
+| `e8a561e` | `feat` | 01/10/2026 11:18 | Font geometrico rotondo e corposo Poppins Bold applicato a tutta la UI e canvas |
 
 ---
 
