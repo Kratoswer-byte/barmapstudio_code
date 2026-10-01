@@ -25,6 +25,7 @@
 | `ab50212` | `fix` | 01/10/2026 14:27 | Ripristino massimizzazione all'avvio, bounds spaziosi e fix troncamento testi nei pannelli |
 | `22ccb6b` | `docs` | 01/10/2026 14:57 | Analisi e documentazione architetturale origine biomi, texture e stili rilievo (/plan) |
 | `0da6da3` | `feat` | 01/10/2026 15:16 | Finestra AssetSpecsDialog (guida requisiti asset) e supporto texture custom |
+| `3146ec6` | `fix/feat` | 01/10/2026 15:58 | Icone vettoriali specs (no tofu), apertura allo start, specs button su slope map e sidebar responsive con margini |
 
 ---
 
@@ -144,3 +145,15 @@
 - [x] Creazione directory `custom_assets/` (`heightmaps/`, `textures/`, `features/`) con guide `README` e pulsante di apertura diretta in Windows Explorer
 - [x] Nuovo pulsante "Carica Texture Terreno..." in `MapStudioPanel` per applicare texture diffuse personali in tempo reale
 - [x] Compilazione ed iniezione in `launcher.jar`, test di esecuzione completato con successo
+
+### 16. Icone Vettoriali Specs (Risoluzione Tofu ☒), Apertura allo Start, Layout Sidebar Responsive [Commit: 3146ec6]
+- [x] Risoluzione totale dei glifi tofu `[☒]` in `AssetSpecsDialog`: rimossi caratteri Unicode ed emoji (`ⓘ`, `✕`, `✓`, `•`, `🏔`, `🎨`, `🌲`, `⚙`, `📁`) e sostituiti con rendering vettoriale nativo Java2D (icona header "i", croce di chiusura animata in rosso all'hover, icone tab montagna, tavolozza a livelli, pino/flora, ingranaggio mapinfo e cartella explorer, spunte di successo verdi e triangoli di avviso ambra)
+- [x] Tipografia unificata su font Poppins Bold e Roboto/Segoe UI, eliminando fallback a font serif o stili tipografici disomogenei
+- [x] Apertura automatica all'avvio: implementato `AssetSpecsDialog.showOnStartup(frame, lobby)` in `BarMapStudio.initCustomApp` dopo l'avvio della finestra principale
+- [x] Checkbox "Non mostrare più all'avvio" nella barra inferiore del dialog delle specifiche, con persistenza delle preferenze utente in `launcher.properties` (`hide_specs_on_start=true`)
+- [x] Pulsante Specifiche posizionato in basso a sinistra in `MapStudioPanel`: nuovo pulsante in stile ciano fluorescente (`btnLeftSpecs` - "SPECIFICHE & REQUISITI ASSET") inserito direttamente sopra il box informativo della Slope Map
+- [x] Pulsante vettoriale footer aggiornato: rimosso glifo unicode dal pulsante `SPECS` nel footer, sostituito con disegno vettoriale del cerchio informativo antialiased
+- [x] Sidebar laterali fluide e responsive: introdotto `ScrollableTrackWidthPanel` (JPanel che implementa `Scrollable` vincolando la larghezza al viewport del `JScrollPane`), garantendo che gli elementi dei pannelli si restringano proporzionalmente quando si sposta il divider di `JSplitPane`
+- [x] Margini laterali preservati: impostato padding rigido `EmptyBorder(12, 12, 12, 12)` sia sulla sidebar sinistra che su quella destra, garantendo 12px di margine sinistro e destro costanti senza overflow orizzontale
+- [x] Ridotta dimensione minima delle sidebar a 180px per permettere all'utente di restringere i pannelli senza blocchi rigidi
+

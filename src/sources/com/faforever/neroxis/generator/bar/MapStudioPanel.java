@@ -218,9 +218,9 @@ public final class MapStudioPanel extends JPanel {
         JComponent leftSidebar = buildLeftSidebar();
         JComponent rightSidebar = buildRightSidebar();
 
-        leftSidebar.setMinimumSize(new Dimension(340, 100));
-        centerWrapper.setMinimumSize(new Dimension(300, 100));
-        rightSidebar.setMinimumSize(new Dimension(280, 100));
+        leftSidebar.setMinimumSize(new Dimension(180, 100));
+        centerWrapper.setMinimumSize(new Dimension(200, 100));
+        rightSidebar.setMinimumSize(new Dimension(180, 100));
 
         JSplitPane leftSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSidebar, centerWrapper);
         leftSplit.setDividerSize(7);
@@ -675,10 +675,10 @@ public final class MapStudioPanel extends JPanel {
     }
 
     private JComponent buildLeftSidebar() {
-        JPanel side = new JPanel();
+        ScrollableTrackWidthPanel side = new ScrollableTrackWidthPanel();
         side.setLayout(new BoxLayout(side, BoxLayout.Y_AXIS));
         side.setBackground(CARD_BG);
-        side.setBorder(new EmptyBorder(14, 14, 14, 14));
+        side.setBorder(new EmptyBorder(12, 12, 12, 12));
 
         JLabel title = new JLabel("1. GENERATORE PROCEDURALE");
         title.setFont(BarMapStudio.fontCond(Font.BOLD, 13));
@@ -781,7 +781,16 @@ public final class MapStudioPanel extends JPanel {
         side.add(heightCard);
         side.add(Box.createVerticalStrut(12));
 
-        // Info box
+        // Pulsante Specifiche & Requisiti Asset posizionato sopra alla Slope Map Info
+        JButton btnLeftSpecs = createPrimaryButton("SPECIFICHE & REQUISITI ASSET", ACCENT_CYAN);
+        btnLeftSpecs.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        btnLeftSpecs.setAlignmentX(0f);
+        btnLeftSpecs.setToolTipText("Linee guida e specifiche tecniche per Heightmap 16-bit, Texture e Modelli 3D");
+        btnLeftSpecs.addActionListener(e -> AssetSpecsDialog.toggle((JFrame) SwingUtilities.getWindowAncestor(this)));
+        side.add(btnLeftSpecs);
+        side.add(Box.createVerticalStrut(8));
+
+        // Info box (Slope Map [Tasto L])
         JPanel infoBox = new JPanel(new BorderLayout());
         infoBox.setBackground(CARD_INNER);
         infoBox.setBorder(BorderFactory.createCompoundBorder(
@@ -790,10 +799,10 @@ public final class MapStudioPanel extends JPanel {
         ));
         JLabel tip = new JLabel("<html><b style='color:#00E5FF'>Slope Map [Tasto L]:</b><br/>" +
             "Visualizza in tempo reale le pendenze Recoil/BAR:<br/>" +
-            "• <span style='color:#00FF88'>Verde (&lt;12°):</span> Veicoli & Costruibile<br/>" +
-            "• <span style='color:#FFFF00'>Giallo (12°-20°):</span> Veicoli lenti<br/>" +
-            "• <span style='color:#FF9F1C'>Arancio (20°-33°):</span> Solo Kbot / Bot<br/>" +
-            "• <span style='color:#FF3333'>Rosso (&gt;33°):</span> Rupi Invalicabili</html>");
+            "- <span style='color:#00FF88'>Verde (&lt;12°):</span> Veicoli & Costruibile<br/>" +
+            "- <span style='color:#FFFF00'>Giallo (12°-20°):</span> Veicoli lenti<br/>" +
+            "- <span style='color:#FF9F1C'>Arancio (20°-33°):</span> Solo Kbot / Bot<br/>" +
+            "- <span style='color:#FF3333'>Rosso (&gt;33°):</span> Rupi Invalicabili</html>");
         tip.setFont(BarMapStudio.font(Font.PLAIN, 11));
         tip.setForeground(TEXT_MUTED);
         infoBox.add(tip, BorderLayout.CENTER);
@@ -802,7 +811,7 @@ public final class MapStudioPanel extends JPanel {
 
         side.add(Box.createVerticalStrut(12));
 
-        JPanel container = new JPanel(new BorderLayout());
+        ScrollableTrackWidthPanel container = new ScrollableTrackWidthPanel(new BorderLayout());
         container.setBackground(CARD_BG);
         container.add(side, BorderLayout.NORTH);
 
@@ -813,15 +822,14 @@ public final class MapStudioPanel extends JPanel {
         scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         scroll.getVerticalScrollBar().setUnitIncrement(18);
-        scroll.setPreferredSize(new Dimension(380, 600));
         return scroll;
     }
 
     private JComponent buildRightSidebar() {
-        JPanel side = new JPanel();
+        ScrollableTrackWidthPanel side = new ScrollableTrackWidthPanel();
         side.setLayout(new BoxLayout(side, BoxLayout.Y_AXIS));
         side.setBackground(CARD_BG);
-        side.setBorder(new EmptyBorder(14, 14, 14, 14));
+        side.setBorder(new EmptyBorder(12, 12, 12, 12));
 
         // Title 2
         JLabel title2 = new JLabel("2. OGGETTI & DETTAGLI MAPPA");
@@ -1015,7 +1023,7 @@ public final class MapStudioPanel extends JPanel {
         side.add(exportCard);
         side.add(Box.createVerticalStrut(12));
 
-        JPanel container = new JPanel(new BorderLayout());
+        ScrollableTrackWidthPanel container = new ScrollableTrackWidthPanel(new BorderLayout());
         container.setBackground(CARD_BG);
         container.add(side, BorderLayout.NORTH);
 
@@ -1023,10 +1031,9 @@ public final class MapStudioPanel extends JPanel {
         scroll.setBackground(CARD_BG);
         scroll.getViewport().setBackground(CARD_BG);
         scroll.setBorder(null);
-        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         scroll.getVerticalScrollBar().setUnitIncrement(18);
-        scroll.setPreferredSize(new Dimension(350, 600));
         return scroll;
     }
 
@@ -1490,5 +1497,34 @@ public final class MapStudioPanel extends JPanel {
             new EmptyBorder(3, 6, 3, 6)
         ));
         return b;
+    }
+
+    public static class ScrollableTrackWidthPanel extends JPanel implements Scrollable {
+        public ScrollableTrackWidthPanel() {
+            super();
+        }
+        public ScrollableTrackWidthPanel(LayoutManager layout) {
+            super(layout);
+        }
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 18;
+        }
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 72;
+        }
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
     }
 }

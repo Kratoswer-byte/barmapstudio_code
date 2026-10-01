@@ -269,7 +269,7 @@ public class BarMapStudio {
             JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj);
 
             // Build Slim Modern Footer with Status & Help Overlays
-            JPanel customFooter = buildCustomFooter(frame, launcher, barStatus);
+            JPanel customFooter = buildCustomFooter(frame, launcher, barStatus, lobby);
 
             // Construct Root Panel (100% full width, ZERO ONLINE DOCK!)
             JPanel customRoot = new JPanel(new BorderLayout());
@@ -294,6 +294,9 @@ public class BarMapStudio {
             }
 
             frame.setVisible(true);
+
+            // Mostra automaticamente la finestra delle specifiche all'avvio se non silenziata
+            SwingUtilities.invokeLater(() -> AssetSpecsDialog.showOnStartup(frame, lobby));
 
         } catch (Throwable t) {
             t.printStackTrace();
@@ -447,7 +450,7 @@ public class BarMapStudio {
         return header;
     }
 
-    private static JPanel buildCustomFooter(JFrame frame, BarLauncher launcher, JLabel barStatus) {
+    private static JPanel buildCustomFooter(JFrame frame, BarLauncher launcher, JLabel barStatus, LobbyUi lobby) {
         JPanel footer = new JPanel(new BorderLayout());
         footer.setBackground(BG_HEADER);
         footer.setPreferredSize(new Dimension(100, 24));
@@ -467,7 +470,7 @@ public class BarMapStudio {
         right.setOpaque(false);
 
         JButton barBtn = createBarStatusOverlayButton(launcher, barStatus);
-        JButton specsBtn = createSpecsOverlayButton(frame);
+        JButton specsBtn = createSpecsOverlayButton(frame, lobby);
         JButton helpBtn = createHelpOverlayButton();
 
         right.add(barBtn);
@@ -599,13 +602,14 @@ public class BarMapStudio {
         popup.show(anchor, anchor.getWidth() - ps.width, -ps.height - 4);
     }
 
-    private static JButton createSpecsOverlayButton(JFrame frame) {
+    private static JButton createSpecsOverlayButton(JFrame frame, LobbyUi lobby) {
         JButton btn = new JButton() {
             @Override
             protected void paintComponent(Graphics graphics) {
                 Graphics2D g = (Graphics2D) graphics.create();
                 g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
                 int w = getWidth();
                 int h = getHeight();
                 boolean hover = getModel().isRollover();
@@ -615,12 +619,19 @@ public class BarMapStudio {
                 g.setColor(hover ? ACCENT_CYAN : BORDER_COLOR);
                 g.drawRoundRect(0, 0, w - 1, h - 1, 8, 8);
 
+                Color fg = hover ? ACCENT_CYAN : TEXT_MUTED;
+                g.setColor(fg);
+
+                // Native Vector Info Circle
+                int iconX = 7;
+                int iconY = (h - 10) / 2;
+                g.setStroke(new BasicStroke(1.2f));
+                g.drawOval(iconX, iconY, 10, 10);
+                g.fillRect(iconX + 4, iconY + 2, 2, 2);
+                g.fillRect(iconX + 4, iconY + 5, 2, 3);
+
                 g.setFont(fontCond(Font.BOLD, 10));
-                g.setColor(hover ? ACCENT_CYAN : TEXT_MUTED);
-                FontMetrics fm = g.getFontMetrics();
-                String txt = "ⓘ SPECS";
-                int tw = fm.stringWidth(txt);
-                g.drawString(txt, (w - tw) / 2, (h + fm.getAscent()) / 2 - 2);
+                g.drawString("SPECS", 21, (h + g.getFontMetrics().getAscent()) / 2 - 2);
                 g.dispose();
             }
         };
@@ -632,7 +643,7 @@ public class BarMapStudio {
         btn.setContentAreaFilled(false);
         btn.setOpaque(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addActionListener(e -> AssetSpecsDialog.toggle(frame));
+        btn.addActionListener(e -> AssetSpecsDialog.toggle(frame, lobby));
         return btn;
     }
 
