@@ -5,3 +5,13 @@ extracted/classes/
 cache/
 .idea/
 *.class
+!patch/**/*.class
+*.log
+*.lock
+*.bak
+extracted/{app}/app/launcher.jar.bak
+extracted/{app}/app/update.lock
+extracted/{app}/.generator-settings-open
+extracted/{app}/.shortcut-asked
+extracted/{app}/mapfeatures/
+TestFolder.class

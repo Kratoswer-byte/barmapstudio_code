@@ -281,7 +281,7 @@ final class LobbyUi implements LobbyClient.Listener {
     private int reconnectDelay;
     private int quickCloses;
     private long badgeMenuClosedAt;
-    static final String RESET_PAGE = "https://eclipseforeverbeyond.com/reset-password.html";
+    static final String RESET_PAGE = "https://www.beyondallreason.info";
     private boolean started;
     private int bugsUnread;
     private final JComboBox<String> displayChoice;
@@ -292,7 +292,7 @@ final class LobbyUi implements LobbyClient.Listener {
     private final Map<Path, Image> flagPictures;
     private Map<String, Color> gameColours;
     private boolean historyLoaded;
-    private static final String CHAT_USER = "eclipse.user";
+    private static final String CHAT_USER = "studio.user";
     private static final Color ONLINE = BarLauncher.GREEN;
     private static final Color BUSY = new Color(255, 170, 60);
     private static final Color ERROR = new Color(255, 96, 84);
@@ -338,7 +338,7 @@ final class LobbyUi implements LobbyClient.Listener {
     });
 
     void showTrialWelcome(String user, String until, String price) {
-        BarLauncher.greetingCard(this.host.frame(), "YOUR FIRST 3 MONTHS ARE FREE", "Welcome, " + user + "!", "<span style='color:#e2e6ed'>You are all set. No card, nothing to fill in, just play.</span><br><br><table cellpadding='0' cellspacing='0'>" + "<tr><td style='color:#3ab054' valign='top'>&#10004;&nbsp;&nbsp;</td><td style='padding-bottom:6px'>" + "Generated maps, rooms and everything else of Eclipse, free until " + "<b style='color:#e2e6ed'>" + until + "</b></td></tr>" + "<tr><td style='color:#3ab054' valign='top'>&#10004;&nbsp;&nbsp;</td><td style='padding-bottom:6px'>" + "After that " + "<b style='color:#e2e6ed'>" + "Eclipse Prime</b> keeps you playing for " + "<b style='color:#e2e6ed'>" + price + " a month</b>, only if you want to stay</td></tr>" + "<tr><td style='color:#3ab054' valign='top'>&#10004;&nbsp;&nbsp;</td><td style='padding-bottom:6px'>" + "Prime and codes live under your name at the top right: " + "<b style='color:#e2e6ed'>" + "View profile</b></td></tr></table>", "Start playing", null);
+        BarLauncher.greetingCard(this.host.frame(), "YOUR FIRST 3 MONTHS ARE FREE", "Welcome, " + user + "!", "<span style='color:#e2e6ed'>You are all set. No card, nothing to fill in, just play.</span><br><br><table cellpadding='0' cellspacing='0'>" + "<tr><td style='color:#3ab054' valign='top'>&#10004;&nbsp;&nbsp;</td><td style='padding-bottom:6px'>" + "Generated maps, rooms and everything else of BAR Map Studio, free until " + "<b style='color:#e2e6ed'>" + until + "</b></td></tr>" + "<tr><td style='color:#3ab054' valign='top'>&#10004;&nbsp;&nbsp;</td><td style='padding-bottom:6px'>" + "After that " + "<b style='color:#e2e6ed'>" + "BAR Map Studio Prime</b> keeps you playing for " + "<b style='color:#e2e6ed'>" + price + " a month</b>, only if you want to stay</td></tr>" + "<tr><td style='color:#3ab054' valign='top'>&#10004;&nbsp;&nbsp;</td><td style='padding-bottom:6px'>" + "Prime and codes live under your name at the top right: " + "<b style='color:#e2e6ed'>" + "View profile</b></td></tr></table>", "Start playing", null);
     }
 
     private Font barFont(Font fallback, float size) {
@@ -938,7 +938,7 @@ final class LobbyUi implements LobbyClient.Listener {
         try {
             Desktop.getDesktop().browse(URI.create(RESET_PAGE));
         } catch (IOException | RuntimeException e) {
-            JOptionPane.showMessageDialog(parent, "Open this page in your browser to choose a new password:\nhttps://eclipseforeverbeyond.com/reset-password.html", "New password", 1);
+            JOptionPane.showMessageDialog(parent, "Open this page in your browser:\nhttps://www.beyondallreason.info", "New password", 1);
         }
     }
 
@@ -1031,7 +1031,7 @@ final class LobbyUi implements LobbyClient.Listener {
         try {
             OutputStream stream = Files.newOutputStream(Platform.settingsFile(this.host.home()), new OpenOption[0]);
             try {
-                this.settings.store(stream, "Eclipse launcher (the password is never stored; \"login\" is the hash the lobby protocol sends, sign out removes it)");
+                this.settings.store(stream, "BAR Map Studio (the password is never stored; \"login\" is the hash the lobby protocol sends, sign out removes it)");
                 if (stream != null) {
                     stream.close();
                 }
@@ -1193,7 +1193,7 @@ final class LobbyUi implements LobbyClient.Listener {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(16, 18, 16, 18));
         panel.setBackground(BarLauncher.BACKGROUND);
-        JLabel intro = new JLabel("<html><div style='width:440px'>What went wrong, and what you did before. Screenshots help a lot. The report goes to the people who run Eclipse; their answer shows up in your chat the next time you sign in.</div></html>");
+        JLabel intro = new JLabel("<html><div style='width:440px'>What went wrong, and what you did before. Screenshots help a lot. The report goes to the developers; their answer shows up in your chat the next time you sign in.</div></html>");
         intro.setForeground(BarLauncher.TEXT);
         JTextArea text = new JTextArea(9, 50);
         text.setLineWrap(true);
@@ -1216,7 +1216,7 @@ final class LobbyUi implements LobbyClient.Listener {
                 thumbs.add(thumb(file.getFileName().toString(), null, file));
             }
             for (int i = 0; i < captured.size(); i++) {
-                thumbs.add(thumb("Eclipse " + (i + 1), (BufferedImage) captured.get(i), null));
+                thumbs.add(thumb("Studio " + (i + 1), (BufferedImage) captured.get(i), null));
             }
             thumbs.revalidate();
             thumbs.repaint();
@@ -1240,7 +1240,7 @@ final class LobbyUi implements LobbyClient.Listener {
                 showThumbs.run();
             }
         });
-        JButton capture = new JButton("Screenshot of Eclipse now");
+        JButton capture = new JButton("Screenshot of app now");
         capture.addActionListener(e2 -> {
             if (pictures.size() + captured.size() >= 4) {
                 status.setText("Four screenshots at most.");
@@ -1427,7 +1427,7 @@ final class LobbyUi implements LobbyClient.Listener {
                                     Object patt1$temp = replies.get(i);
                                     if (patt1$temp instanceof Map) {
                                         Map<?, ?> reply = (Map) patt1$temp;
-                                        append(this.chat, null, "Eclipse support on your bug report #" + id + ": " + String.valueOf(reply.get("text")), BarLauncher.ACCENT);
+                                        append(this.chat, null, "Support on your bug report #" + id + ": " + String.valueOf(reply.get("text")), BarLauncher.ACCENT);
                                     }
                                 }
                                 if (replies.size() > seen) {
@@ -1641,7 +1641,7 @@ final class LobbyUi implements LobbyClient.Listener {
         }
         JTextField answer = new JTextField();
         chatInputStyle(answer, true);
-        answer.putClientProperty("JTextField.placeholderText", "Answer (the reporter sees it as \"Eclipse support\")");
+        answer.putClientProperty("JTextField.placeholderText", "Answer (the reporter sees it as \"Support\")");
         JButton send = new JButton("Answer");
         JButton close = new JButton(closed ? "Reopen" : "Close");
         BiConsumer<String, Boolean> post = (text, closeIt) -> {
@@ -2211,8 +2211,8 @@ final class LobbyUi implements LobbyClient.Listener {
             saveSettings();
         });
         add.accept("Battle join state", joinState);
-        String[] backgrounds = {"eclipse", "battlefield", "wartable", "orbit", "bar", "custom", "none"};
-        JComboBox<String> background = new JComboBox<>(new String[]{"Eclipse art (changes per room)", "Eclipse: Battlefield", "Eclipse: War table", "Eclipse: Orbit", "Beyond All Reason artwork", "Own picture...", "None"});
+        String[] backgrounds = {"studio", "battlefield", "wartable", "orbit", "bar", "custom", "none"};
+        JComboBox<String> background = new JComboBox<>(new String[]{"Studio art (changes per room)", "Studio: Battlefield", "Studio: War table", "Studio: Orbit", "Beyond All Reason artwork", "Own picture...", "None"});
         background.setSelectedIndex(Math.max(0, Arrays.asList(backgrounds).indexOf(setting("room.background", "wartable"))));
         background.addActionListener(e8 -> {
             String picked = backgrounds[background.getSelectedIndex()];
@@ -3119,7 +3119,7 @@ final class LobbyUi implements LobbyClient.Listener {
         }
         if (!before.isEmpty() && level.compareTo(before) > 0) {
             Confetti.burst(this.host.frame(), true);
-            append(this.chat, null, level.equals("2") ? "Prime for life. Welcome to the gold club!" : "You are Eclipse Prime now. Thank you for supporting Eclipse!", ONLINE);
+            append(this.chat, null, level.equals("2") ? "Prime for life. Welcome to the gold club!" : "You are Prime now. Thank you for supporting BAR Map Studio!", ONLINE);
         }
     }
 
@@ -3139,10 +3139,10 @@ final class LobbyUi implements LobbyClient.Listener {
                 saveSettings();
                 showTrialWelcome(user, until, "$" + String.format(Locale.ROOT, "%.0f", Double.valueOf(current.price())));
             } else if (current.prime() && current.source().equals("trial") && daysLeft <= 7) {
-                append(this.chat, null, "Your free time on Eclipse ends " + until + ". Prime keeps you playing: your name, View profile.", BUSY);
+                append(this.chat, null, "Your free time on BAR Map Studio ends " + until + ". Prime keeps you playing: your name, View profile.", BUSY);
             } else if (!current.prime()) {
                 Object[] choices = {"Get Prime", "Later"};
-                if (JOptionPane.showOptionDialog(this.host.frame(), "<html><div style='width:340px'>Your free time on Eclipse ended " + until + ".<br><br>Eclipse Prime is $" + String.format(Locale.ROOT, "%.0f", Double.valueOf(current.price())) + " a month and keeps you playing: games on generated maps and the rooms of this server.</div></html>", "Prime account", -1, 1, (Icon) null, choices, choices[0]) == 0) {
+                if (JOptionPane.showOptionDialog(this.host.frame(), "<html><div style='width:340px'>Your free time on BAR Map Studio ended " + until + ".<br><br>Prime is $" + String.format(Locale.ROOT, "%.0f", Double.valueOf(current.price())) + " a month and keeps you playing: games on generated maps and the rooms of this server.</div></html>", "Prime account", -1, 1, (Icon) null, choices, choices[0]) == 0) {
                     showProfile(3);
                 }
             }
@@ -3155,7 +3155,7 @@ final class LobbyUi implements LobbyClient.Listener {
             return true;
         }
         Object[] choices = {"Get Prime", "Cancel"};
-        if (JOptionPane.showOptionDialog(this.host.frame(), "You need a Prime account to " + what + " on Eclipse.\nYour free time is over. Prime is the access to the custom map generator and its rooms;\nBeyond All Reason itself stays free on the official servers.", "Prime account", -1, 1, (Icon) null, choices, choices[0]) == 0) {
+        if (JOptionPane.showOptionDialog(this.host.frame(), "You need a Prime account to " + what + " on BAR Map Studio.\nYour free time is over. Prime is the access to the custom map generator and its rooms;\nBeyond All Reason itself stays free on the official servers.", "Prime account", -1, 1, (Icon) null, choices, choices[0]) == 0) {
             showProfile(3);
             return false;
         }
@@ -3249,7 +3249,7 @@ final class LobbyUi implements LobbyClient.Listener {
                 openCheckout(true);
             });
             JButton jButton = this.primeExplanation;
-            jButton.setText("<html><div style='width:330px'>Prime is your access to Eclipse: games on custom generated maps, the rooms and everything around them. $10 a month, it starts when your free time is over. Beyond All Reason itself stays free on the official servers.</div></html>");
+            jButton.setText("<html><div style='width:330px'>Prime is your access to BAR Map Studio: games on custom generated maps, the rooms and everything around them. $10 a month, it starts when your free time is over. Beyond All Reason itself stays free on the official servers.</div></html>");
             jButton.setForeground(BarLauncher.MUTED);
             JTextField code = new JTextField();
             code.putClientProperty("JTextField.placeholderText", "Promo code or creator code");
@@ -3583,7 +3583,7 @@ final class LobbyUi implements LobbyClient.Listener {
         this.rankPanel.repaint();
         this.statsPanel.removeAll();
         if (stats == null) {
-            this.statsPanel.add(text("<html><div style='width:400px'>No games counted yet. Finished games on Eclipse show up here: wins, losses, time played, damage, units and more.</div></html>", 14.0f, BarLauncher.MUTED));
+            this.statsPanel.add(text("<html><div style='width:400px'>No games counted yet. Finished games show up here: wins, losses, time played, damage, units and more.</div></html>", 14.0f, BarLauncher.MUTED));
         } else {
             double games = num(stats, "games");
             double streak = num(stats, "streak");
@@ -3740,7 +3740,7 @@ final class LobbyUi implements LobbyClient.Listener {
         }
         String page = strCheckoutPaypal;
         if (page.isBlank()) {
-            JOptionPane.showMessageDialog(this.profileDialog, "The checkout is not open yet.\nUntil it is, nobody needs Prime to play on Eclipse.", "Prime account", 1);
+            JOptionPane.showMessageDialog(this.profileDialog, "The checkout is not open yet.\nUntil it is, nobody needs Prime to play on BAR Map Studio.", "Prime account", 1);
             return;
         }
         try {
@@ -5357,7 +5357,7 @@ final class LobbyUi implements LobbyClient.Listener {
             values.put("SimpleTeamColorsPlayerR", String.valueOf(own.getRed()));
             values.put("SimpleTeamColorsPlayerG", String.valueOf(own.getGreen()));
             values.put("SimpleTeamColorsPlayerB", String.valueOf(own.getBlue()));
-            values.put("EclipseOwnColour", "1");
+            values.put("StudioOwnColour", "1");
         }
         return values;
     }
@@ -5767,7 +5767,7 @@ final class LobbyUi implements LobbyClient.Listener {
 
     private Path putMapAside(Path archive) {
         try {
-            Path folder = this.host.barData().resolve("eclipse-replaced-maps");
+            Path folder = this.host.barData().resolve("studio-replaced-maps");
             Files.createDirectories(folder, new FileAttribute[0]);
             String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
             Path target = folder.resolve(String.valueOf(archive.getFileName()) + "." + stamp);

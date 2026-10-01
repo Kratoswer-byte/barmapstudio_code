@@ -1,20 +1,20 @@
-﻿; Created by "innounp" version 2.70.1
-; Setup file: EclipseSetup.exe
+; Created by "innounp" version 2.70.1
+; Setup file: BARMapStudioSetup.exe
 ; Inno Setup Version: 6.7.0 (Unicode)
 
 [Setup]
-AppName=Eclipse
-AppVerName=Eclipse 2026.09.29.143
+AppName=BAR Map Studio
+AppVerName=BAR Map Studio 1.0.0
 AppId={{7C1E2A9B-5D0E-4F5B-9B7A-0EC11A5E0001}
-AppVersion=2026.09.29.143
-AppPublisher=Eclipse
-AppPublisherURL=https://eclipseforeverbeyond.com
-AppSupportURL=https://eclipseforeverbeyond.com
-AppUpdatesURL=https://eclipseforeverbeyond.com/download.html
+AppVersion=1.0.0
+AppPublisher=BAR Map Studio
+AppPublisherURL=https://www.beyondallreason.info
+AppSupportURL=https://www.beyondallreason.info
+AppUpdatesURL=https://www.beyondallreason.info/download
 DefaultDirName={localappdata}\NeroxisLauncher
-OutputBaseFilename=EclipseSetup
+OutputBaseFilename=BARMapStudioSetup
 UninstallDisplayIcon={app}\neroxis.ico
-UninstallDisplayName=Eclipse
+UninstallDisplayName=BAR Map Studio
 Compression=lzma2
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -216,20 +216,20 @@ Source: "{app}\runtime\lib\security\cacerts"; DestDir: "{app}\runtime\lib\securi
 Source: "{app}\runtime\lib\security\public_suffix_list.dat"; DestDir: "{app}\runtime\lib\security"; Flags: ignoreversion 
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\EclipseLauncher"; Flags: uninsdeletekey deletekey 
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\BARMapStudio"; Flags: uninsdeletekey deletekey 
 
 [Run]
-Filename: "{app}\runtime\bin\javaw.exe"; Parameters: """-splash:{app}\cache\splash.png"" -Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive ""-XX:SharedArchiveFile={app}\cache\eclipse.jsa"" --enable-native-access=ALL-UNNAMED ""-Dneroxis.home={app}"" -cp ""{app}\app\launcher.jar"" com.faforever.neroxis.generator.bar.BarLauncher"; WorkingDir: "{app}"; Description: "Start Eclipse"; Flags: postinstall skipifsilent nowait
+Filename: "{app}\runtime\bin\javaw.exe"; Parameters: """-splash:{app}\cache\splash.png"" -Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive ""-XX:SharedArchiveFile={app}\cache\barmapstudio.jsa"" --enable-native-access=ALL-UNNAMED ""-Dneroxis.home={app}"" -cp ""{app}\app\launcher.jar"" com.faforever.neroxis.generator.bar.BarLauncher"; WorkingDir: "{app}"; Description: "Start BAR Map Studio"; Flags: postinstall skipifsilent nowait
 
 [Icons]
-Name: "{userprograms}\Eclipse"; Filename: "{app}\runtime\bin\javaw.exe"; Parameters: """-splash:{app}\cache\splash.png"" -Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive ""-XX:SharedArchiveFile={app}\cache\eclipse.jsa"" --enable-native-access=ALL-UNNAMED ""-Dneroxis.home={app}"" -cp ""{app}\app\launcher.jar"" com.faforever.neroxis.generator.bar.BarLauncher"; WorkingDir: "{app}"; IconFilename: "{app}\neroxis.ico"; Comment: "Eclipse - map generator and lobby for Beyond All Reason"; 
-Name: "{userdesktop}\Eclipse"; Filename: "{app}\runtime\bin\javaw.exe"; Parameters: """-splash:{app}\cache\splash.png"" -Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive ""-XX:SharedArchiveFile={app}\cache\eclipse.jsa"" --enable-native-access=ALL-UNNAMED ""-Dneroxis.home={app}"" -cp ""{app}\app\launcher.jar"" com.faforever.neroxis.generator.bar.BarLauncher"; WorkingDir: "{app}"; IconFilename: "{app}\neroxis.ico"; Tasks: desktopicon; 
+Name: "{userprograms}\BAR Map Studio"; Filename: "{app}\runtime\bin\javaw.exe"; Parameters: """-splash:{app}\cache\splash.png"" -Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive ""-XX:SharedArchiveFile={app}\cache\barmapstudio.jsa"" --enable-native-access=ALL-UNNAMED ""-Dneroxis.home={app}"" -cp ""{app}\app\launcher.jar"" com.faforever.neroxis.generator.bar.BarLauncher"; WorkingDir: "{app}"; IconFilename: "{app}\neroxis.ico"; Comment: "BAR Map Studio - map creator and lobby for Beyond All Reason"; 
+Name: "{userdesktop}\BAR Map Studio"; Filename: "{app}\runtime\bin\javaw.exe"; Parameters: """-splash:{app}\cache\splash.png"" -Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive ""-XX:SharedArchiveFile={app}\cache\barmapstudio.jsa"" --enable-native-access=ALL-UNNAMED ""-Dneroxis.home={app}"" -cp ""{app}\app\launcher.jar"" com.faforever.neroxis.generator.bar.BarLauncher"; WorkingDir: "{app}"; IconFilename: "{app}\neroxis.ico"; Tasks: desktopicon; 
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; 
 
 [InstallDelete]
-Type: files; Name: "{app}\EclipseSetup.exe"; 
+Type: files; Name: "{app}\BARMapStudioSetup.exe"; 
 Type: files; Name: "{app}\NeroxisLauncherSetup.exe"; 
 
 [UninstallDelete]

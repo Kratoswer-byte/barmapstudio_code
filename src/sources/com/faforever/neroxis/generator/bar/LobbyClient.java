@@ -492,7 +492,7 @@ final class LobbyClient {
                 return;
             case "LOGININFOEND":
                 this.loginComplete = true;
-                send("c.telemetry.update_client_property hardware:cpuinfo " + Base64.getUrlEncoder().encodeToString("Eclipse launcher".getBytes(StandardCharsets.UTF_8)) + " eclipse");
+                send("c.telemetry.update_client_property hardware:cpuinfo " + Base64.getUrlEncoder().encodeToString("BAR Map Studio launcher".getBytes(StandardCharsets.UTF_8)) + " barmapstudio");
                 send("JOIN main");
                 refreshFriends();
                 this.listener.onState(null);

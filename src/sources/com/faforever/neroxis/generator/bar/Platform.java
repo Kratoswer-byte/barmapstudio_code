@@ -107,7 +107,7 @@ final class Platform {
         if (!MAC) {
             return inside;
         }
-        Path folder = Path.of(System.getProperty("user.home"), "Library", "Application Support", "Eclipse");
+        Path folder = Path.of(System.getProperty("user.home"), "Library", "Application Support", "BARMapStudio");
         Path outside = folder.resolve("launcher.properties");
         try {
             Files.createDirectories(folder, new FileAttribute[0]);
@@ -135,7 +135,20 @@ final class Platform {
         }
         if (WINDOWS) {
             String localAppData = System.getenv("LOCALAPPDATA");
-            return Path.of(localAppData != null ? localAppData : System.getProperty("user.home"), "Programs", "Beyond-All-Reason", "data");
+            Path local = Path.of(localAppData != null ? localAppData : System.getProperty("user.home"), "Programs", "Beyond-All-Reason", "data");
+            if (Files.isDirectory(local)) {
+                return local;
+            }
+            String progFiles = System.getenv("ProgramFiles");
+            Path prog = Path.of(progFiles != null ? progFiles : "C:\\Program Files", "Beyond-All-Reason", "data");
+            if (Files.isDirectory(prog)) {
+                return prog;
+            }
+            Path fixedProg = Path.of("C:\\Program Files\\Beyond-All-Reason\\data");
+            if (Files.isDirectory(fixedProg)) {
+                return fixedProg;
+            }
+            return local;
         }
         if (MAC) {
             return MacOs.dataDir();
@@ -202,6 +215,6 @@ final class Platform {
         if (WINDOWS) {
             return "the 7-Zip of the BAR launcher was not found";
         }
-        return MAC ? "7zz not found in the Eclipse folder (brew install sevenzip also works)" : "no 7z found: install p7zip (for example: sudo apt install p7zip-full)";
+        return MAC ? "7zz not found in the application folder (brew install sevenzip also works)" : "no 7z found: install p7zip (for example: sudo apt install p7zip-full)";
     }
 }

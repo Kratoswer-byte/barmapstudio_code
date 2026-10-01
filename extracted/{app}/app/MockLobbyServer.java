@@ -86,7 +86,7 @@ public class MockLobbyServer {
                         currentUser = parts[1];
                     }
                     writer.write("ACCEPTED " + currentUser + "\n");
-                    writer.write("SERVERMSG Benvenuto nel server locale Eclipse offline!\n");
+                    writer.write("SERVERMSG Benvenuto nel server locale BAR Map Studio offline!\n");
                     writer.write("ADDUSER " + currentUser + " IT 0\n");
                     writer.write("CLIENTSTATUS " + currentUser + " 0\n");
                     writer.write("LOGININFOEND\n");

@@ -44,6 +44,8 @@ public class SCMap {
     private byte[] compressedNormal;
     private byte[] compressedShadows;
     private int size;
+    private int width;
+    private int height;
     private Vector4 playableArea;
     private boolean isUnexplored;
     private Biome biome;
@@ -838,6 +840,38 @@ public class SCMap {
         return this.size;
     }
 
+    public int getWidth() {
+        return this.width > 0 ? this.width : this.size;
+    }
+
+    public int getHeight() {
+        return this.height > 0 ? this.height : this.size;
+    }
+
+    public void setDimensions(int width, int height) {
+        this.width = width;
+        this.height = height;
+    }
+
+    public void setCroppedImages(BufferedImage heightmap, BufferedImage normalMap, BufferedImage textureMasksLow, BufferedImage textureMasksHigh, BufferedImage waterMap, BufferedImage waterFoamMap, BufferedImage waterShadowMap, BufferedImage waterDepthBiasMap, BufferedImage terrainType, BufferedImage preview) {
+        this.heightmap = heightmap;
+        this.normalMap = normalMap;
+        this.textureMasksLow = textureMasksLow;
+        this.textureMasksHigh = textureMasksHigh;
+        this.waterMap = waterMap;
+        this.waterFoamMap = waterFoamMap;
+        this.waterShadowMap = waterShadowMap;
+        this.waterDepthBiasMap = waterDepthBiasMap;
+        this.terrainType = terrainType;
+        if (preview != null) {
+            this.preview = preview;
+        }
+    }
+
+    public void setCroppedImages(BufferedImage heightmap, BufferedImage normalMap, BufferedImage textureMasksLow, BufferedImage textureMasksHigh, BufferedImage waterMap, BufferedImage waterFoamMap, BufferedImage waterShadowMap, BufferedImage waterDepthBiasMap, BufferedImage terrainType) {
+        setCroppedImages(heightmap, normalMap, textureMasksLow, textureMasksHigh, waterMap, waterFoamMap, waterShadowMap, waterDepthBiasMap, terrainType, null);
+    }
+
     @Generated
     public Vector4 getPlayableArea() {
         return this.playableArea;
@@ -1031,7 +1065,9 @@ public class SCMap {
     }
 
     public void setPreview(BufferedImage preview) {
-        checkImageSize(preview, PreviewGenerator.PREVIEW_SIZE);
+        if (preview != null && (width <= 0 || width == height)) {
+            checkImageSize(preview, PreviewGenerator.PREVIEW_SIZE);
+        }
         this.preview = preview;
     }
 
@@ -1633,7 +1669,7 @@ public class SCMap {
         return 0;
     }
 
-    public void writeToFile(Path path) {
+    public void writeToFile(Path path) throws Exception {
         Files.deleteIfExists(path);
         File outFile = path.toFile();
         outFile.createNewFile();

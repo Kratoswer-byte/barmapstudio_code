@@ -29,7 +29,7 @@ if exist "%ROOT%app\launcher.jar" (
 ) else if exist "%ROOT%runtime\bin\java.exe" (
     set GENERATE="%ROOT%runtime\bin\java.exe" -Xmx6g -m com.faforever.neroxis.generator/com.faforever.neroxis.generator.MapGeneratorCommand
 ) else (
-    set "JAVA_EXE=%USERPROFILE%\.gradle\jdks\eclipse_adoptium-25-amd64-windows.2\bin\java.exe"
+    set "JAVA_EXE=java"
     if not exist "!JAVA_EXE!" set "JAVA_EXE=java"
     if not exist "%ROOT%generator\build\libs\NeroxisGen_snapshot.jar" (
         echo The generator is not built yet, run build-bar-generator.bat first.

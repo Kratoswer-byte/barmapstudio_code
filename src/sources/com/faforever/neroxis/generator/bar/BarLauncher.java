@@ -216,21 +216,22 @@ public final class BarLauncher {
     private JPanel headerWindowButtons;
     private boolean restoringDisplay;
     private boolean windowTracked;
-    private static final String LAUNCHER_JVM_OPTIONS = "-Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive \"-XX:SharedArchiveFile=%ROOT%cache\\eclipse.jsa\"";
+    private static final String LAUNCHER_JVM_OPTIONS = "-Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive \"-XX:SharedArchiveFile=%ROOT%cache\\barmapstudio.jsa\"";
     private final Replays replays;
     private final Map<String, BufferedImage> officialThumbs;
     private final Set<String> officialThumbsLoading;
     private boolean onStartScreen;
     private boolean gameRefreshing;
-    static final Color BACKGROUND = new Color(18, 20, 25);
-    static final Color CARD = new Color(30, 33, 41);
-    static final Color CARD_BORDER = new Color(45, 49, 60);
-    static final Color GLASS = new Color(22, 25, 33, 176);
-    static final Color TEXT = new Color(226, 230, 237);
-    static final Color MUTED = new Color(140, 148, 163);
-    static final Color ACCENT = new Color(240, 150, 46);
-    static final Color GREEN = new Color(58, 176, 84);
-    static final Color[] TEAM_COLORS = {new Color(74, 158, 255), new Color(255, 84, 72), GREEN, new Color(250, 208, 70), new Color(190, 120, 255), new Color(70, 220, 220), new Color(255, 150, 200), new Color(200, 200, 200)};
+    private MapStudioPanel studioPanel;
+    static final Color BACKGROUND = new Color(11, 14, 20);
+    static final Color CARD = new Color(19, 24, 34);
+    static final Color CARD_BORDER = new Color(38, 50, 70);
+    static final Color GLASS = new Color(15, 20, 30, 210);
+    static final Color TEXT = new Color(240, 244, 250);
+    static final Color MUTED = new Color(140, 155, 180);
+    static final Color ACCENT = new Color(0, 229, 255);
+    static final Color GREEN = new Color(0, 255, 136);
+    static final Color[] TEAM_COLORS = {new Color(0, 229, 255), new Color(255, 56, 92), GREEN, new Color(255, 159, 28), new Color(190, 120, 255), new Color(70, 220, 220), new Color(255, 150, 200), new Color(200, 200, 200)};
     private static final String[] LAND_STYLES = {"BASIC", "VALLEY", "LAND_BRIDGE", "LITTLE_MOUNTAIN", "MOUNTAIN_RANGE", "MULTILEVEL", "FRACTAL_LAND", "DROP_PLATEAU", "CENTER_LAKE"};
     private static final String[] STYLES = {"Random land map", "Random (anything)", "BASIC", "VALLEY", "LAND_BRIDGE", "LITTLE_MOUNTAIN", "MOUNTAIN_RANGE", "MULTILEVEL", "DROP_PLATEAU", "CENTER_LAKE", "FRACTAL_LAND", "FRACTAL_PLATEAU", "ONE_ISLAND", "BIG_ISLANDS", "SMALL_ISLANDS", "FRACTAL_NAVY", "RIVERS", "RIVERS_AND_OCEANS", "FLOODED", "HIGH_RECLAIM", "LOW_MEX", "SETONISH", "Custom..."};
     private static final String[] TERRAIN_STYLES = {"Random", "BASIC", "BIG_ISLANDS", "CENTER_LAKE", "DROP_PLATEAU", "FLOODED", "LAND_BRIDGE", "LITTLE_MOUNTAIN", "MOUNTAIN_RANGE", "MULTILEVEL_LAST", "ONE_ISLAND", "SMALL_ISLANDS", "VALLEY", "RIVERS", "RIVERS_AND_OCEANS", "FRACTAL_LAND", "FRACTAL_PLATEAU", "FRACTAL_NAVY", "SETONS"};
@@ -252,7 +253,7 @@ public final class BarLauncher {
     private static final BufferedImage[] SIGILS = new BufferedImage[6];
     private final JLabel styleNote = new JLabel(" ");
     private final Path home = locateHome();
-    private final JFrame frame = new JFrame("Eclipse");
+    private final JFrame frame = new JFrame("BAR Map Studio");
     private final List<JToggleButton> formatButtons = new ArrayList();
     private final JSpinner playersPerTeam = new JSpinner(new SpinnerNumberModel(1, 1, 8, 1));
     private final JComboBox<String> teams = new JComboBox<>(new String[]{"2 teams", "3 teams", "4 teams", "Free for all"});
@@ -578,7 +579,7 @@ public final class BarLauncher {
             try {
                 try {
                     try {
-                        HttpResponse<String> response = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8L)).build().send(HttpRequest.newBuilder(URI.create("https://api.bar-rts.com/battles")).header("User-Agent", "Eclipse launcher").timeout(Duration.ofSeconds(20L)).build(), HttpResponse.BodyHandlers.ofString());
+                        HttpResponse<String> response = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8L)).build().send(HttpRequest.newBuilder(URI.create("https://api.bar-rts.com/battles")).header("User-Agent", "BAR Map Studio").timeout(Duration.ofSeconds(20L)).build(), HttpResponse.BodyHandlers.ofString());
                         if (response.statusCode() == 200) {
                             Object patt0$temp = MiniJson.parse((String) response.body());
                             if (patt0$temp instanceof List) {
@@ -1176,15 +1177,15 @@ public final class BarLauncher {
     }
 
     static String mapLabel(String name) {
-        return name.startsWith(BarMapExporter.OLD_GENERATED_PREFIX) ? "Eclipse_Mapgen_" + name.substring(BarMapExporter.OLD_GENERATED_PREFIX.length()) : name;
+        return name.startsWith(BarMapExporter.OLD_GENERATED_PREFIX) ? "Map_" + name.substring(BarMapExporter.OLD_GENERATED_PREFIX.length()) : name;
     }
 
     static boolean isGeneratedName(String name) {
-        return name.startsWith(BarMapExporter.GENERATED_PREFIX) || name.startsWith(BarMapExporter.OLD_GENERATED_PREFIX);
+        return name.startsWith(BarMapExporter.GENERATED_PREFIX) || name.startsWith(BarMapExporter.OLD_GENERATED_PREFIX) || name.startsWith("Map_");
     }
 
     static String generatedDescription(String text) {
-        return text.replace("Neroxis Map Generator", "Eclipse Map Generator").replaceAll("\\s*Regenerate with --map-name \\S+", "").trim();
+        return text.replace("Neroxis Map Generator", "BAR Map Studio").replaceAll("\\s*Regenerate with --map-name \\S+", "").trim();
     }
 
     /* JADX INFO: loaded from: app_classes.zip:com/faforever/neroxis/generator/bar/BarLauncher$MapEntry.class */
@@ -1479,12 +1480,12 @@ public final class BarLauncher {
                 panel.setOpaque(false);
                 panel.setBorder(BorderFactory.createEmptyBorder(28, 34, 24, 34));
                 JLabel picture = new JLabel();
-                URL logo = BarLauncher.class.getResource("eclipse.png");
+                URL logo = BarLauncher.class.getResource("barmapstudio.png");
                 if (logo != null) {
-                    picture.setIcon(new ImageIcon(new ImageIcon(logo).getImage().getScaledInstance(120, 120, 4)));
+                    picture.setIcon(new ImageIcon(new ImageIcon(logo).getImage().getScaledInstance(200, 33, 4)));
                 }
                 picture.setHorizontalAlignment(0);
-                JLabel title = new JLabel("ECLIPSE", 0);
+                JLabel title = new JLabel("BAR MAP STUDIO", 0);
                 title.setForeground(BarLauncher.ACCENT);
                 title.setFont(title.getFont().deriveFont(1, 30.0f));
                 JLabel subtitle = new JLabel("for Beyond All Reason", 0);
@@ -1578,13 +1579,13 @@ public final class BarLauncher {
             g.fillRoundRect(0, 0, 420, 330, 22, 22);
             g.setColor(new Color(240, 150, 46, 110));
             g.drawRoundRect(0, 0, 419, 329, 22, 22);
-            URL logo = BarLauncher.class.getResource("eclipse.png");
+            URL logo = BarLauncher.class.getResource("barmapstudio.png");
             if (logo != null) {
-                g.drawImage(new ImageIcon(logo).getImage(), 150, 28, 120, 120, (ImageObserver) null);
+                g.drawImage(new ImageIcon(logo).getImage(), 110, 45, 200, 33, (ImageObserver) null);
             }
             g.setColor(ACCENT);
-            g.setFont(new Font("Segoe UI", 1, 30));
-            g.drawString("ECLIPSE", (420 - g.getFontMetrics().stringWidth("ECLIPSE")) / 2, 195);
+            g.setFont(new Font("Segoe UI", 1, 26));
+            g.drawString("BAR MAP STUDIO", (420 - g.getFontMetrics().stringWidth("BAR MAP STUDIO")) / 2, 195);
             g.setColor(MUTED);
             g.setFont(new Font("Segoe UI", 0, 14));
             g.drawString("for Beyond All Reason", (420 - g.getFontMetrics().stringWidth("for Beyond All Reason")) / 2, 222);
@@ -1721,6 +1722,7 @@ public final class BarLauncher {
         north.add(buildUpdateBar(), "South");
         root.add(north, "North");
         this.viewPanel.setBackground(BACKGROUND);
+        this.viewPanel.add(buildStudioView(), "STUDIO");
         this.viewPanel.add(buildPlayView(), "PLAY");
         this.viewPanel.add(buildMapsView(), "MAPS");
         this.viewPanel.add(buildReplaysView(), "REPLAYS");
@@ -1728,9 +1730,9 @@ public final class BarLauncher {
         this.viewPanel.add(this.units.view(), "UNITS");
         this.viewPanel.add(this.startScreen.view(), "START");
         this.onStartScreen = false;
-        this.views.show(this.viewPanel, "PLAY");
+        this.views.show(this.viewPanel, "STUDIO");
         this.lobby.startAfterChecks();
-        URL iconImage = BarLauncher.class.getResource("eclipse.png");
+        URL iconImage = BarLauncher.class.getResource("barmapstudio.png");
         if (iconImage != null) {
             this.frame.setIconImage(new ImageIcon(iconImage).getImage());
         }
@@ -1799,7 +1801,7 @@ public final class BarLauncher {
         this.frame.setMinimumSize(new Dimension(1280, 720));
         this.frame.setLocationRelativeTo((Component) null);
         if (System.getProperty("neroxis.launcher.screenshot") != null) {
-            this.frame.setTitle("Eclipse TEST RUN");
+            this.frame.setTitle("BAR Map Studio TEST RUN");
             this.frame.setLocation(-5000, -5000);
             this.frame.setFocusableWindowState(false);
             this.frame.setType(Window.Type.UTILITY);
@@ -1859,7 +1861,7 @@ public final class BarLauncher {
             if (Files.isRegularFile(splash, new LinkOption[0])) {
                 command.add("-splash:" + String.valueOf(splash));
             }
-            command.addAll(List.of((Object[]) new String[]{"-Xms48m", "-Xmx1g", "-XX:+UseG1GC", "-XX:G1PeriodicGCInterval=20000", "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=25", "-XX:TieredStopAtLevel=1", "-XX:+AutoCreateSharedArchive", "--enable-native-access=ALL-UNNAMED", "-XX:SharedArchiveFile=" + String.valueOf(home.resolve("cache").resolve("eclipse.jsa")), "-Dneroxis.home=" + String.valueOf(home), "-cp", jar.toString(), BarLauncher.class.getName()}));
+            command.addAll(List.of((Object[]) new String[]{"-Xms48m", "-Xmx1g", "-XX:+UseG1GC", "-XX:G1PeriodicGCInterval=20000", "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=25", "-XX:TieredStopAtLevel=1", "-XX:+AutoCreateSharedArchive", "--enable-native-access=ALL-UNNAMED", "-XX:SharedArchiveFile=" + String.valueOf(home.resolve("cache").resolve("barmapstudio.jsa")), "-Dneroxis.home=" + String.valueOf(home), "-cp", jar.toString(), BarLauncher.class.getName()}));
             new ProcessBuilder(command).directory(home.toFile()).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
             return;
         }
@@ -1930,7 +1932,7 @@ public final class BarLauncher {
                     Path jar = LauncherUpdater.runningJar();
                     if (Platform.MAC && jar != null && !Files.isWritable(jar.getParent())) {
                         SwingUtilities.invokeLater(() -> {
-                            text.setText("Eclipse cannot update itself from here: move Eclipse.app into Applications with the Finder, then start it again.");
+                            text.setText("BAR Map Studio cannot update itself from here: move BAR Map Studio.app into Applications with the Finder, then start it again.");
                             restart.setVisible(false);
                             this.updateBar.setVisible(true);
                             this.frame.revalidate();
@@ -1954,9 +1956,9 @@ public final class BarLauncher {
     }
 
     private Path writeIcon() {
-        Path icon = this.home.resolve("eclipse.ico");
+        Path icon = this.home.resolve("barmapstudio.ico");
         try {
-            InputStream stream = BarLauncher.class.getResourceAsStream("eclipse.ico");
+            InputStream stream = BarLauncher.class.getResourceAsStream("barmapstudio.ico");
             if (stream != null) {
                 try {
                     byte[] bytes = stream.readAllBytes();
@@ -1984,7 +1986,7 @@ public final class BarLauncher {
 
     private void createShortcut(Path script) {
         Path icon = writeIcon();
-        String command = "$d = [Environment]::GetFolderPath('Desktop'); Remove-Item -ErrorAction SilentlyContinue ($d + '\\Neroxis Launcher.lnk'); $s = (New-Object -ComObject WScript.Shell).CreateShortcut($d + '\\Eclipse.lnk'); $s.TargetPath = '" + script.toString().replace("'", "''") + "'; $s.WorkingDirectory = '" + this.home.toString().replace("'", "''") + "'; $s.WindowStyle = 7; " + (Files.isRegularFile(icon, new LinkOption[0]) ? "$s.IconLocation = '" + icon.toString().replace("'", "''") + "'; " : "") + "$s.Description = 'Eclipse, launcher for Beyond All Reason'; $s.Save()";
+        String command = "$d = [Environment]::GetFolderPath('Desktop'); Remove-Item -ErrorAction SilentlyContinue ($d + '\\Neroxis Launcher.lnk'); Remove-Item -ErrorAction SilentlyContinue ($d + '\\Eclipse.lnk'); $s = (New-Object -ComObject WScript.Shell).CreateShortcut($d + '\\BAR Map Studio.lnk'); $s.TargetPath = '" + script.toString().replace("'", "''") + "'; $s.WorkingDirectory = '" + this.home.toString().replace("'", "''") + "'; $s.WindowStyle = 7; " + (Files.isRegularFile(icon, new LinkOption[0]) ? "$s.IconLocation = '" + icon.toString().replace("'", "''") + "'; " : "") + "$s.Description = 'BAR Map Studio, map creator and launcher for Beyond All Reason'; $s.Save()";
         try {
             new ProcessBuilder("powershell", "-NoProfile", "-Command", command).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
         } catch (IOException e) {
@@ -2019,11 +2021,11 @@ public final class BarLauncher {
     }
 
     private boolean askInstalled() {
-        return greetingCard(this.frame, "INSTALLATION COMPLETE", "Welcome to Eclipse", "Eclipse is ready and keeps itself up to date. Do you want a shortcut on your desktop so you find it again?", "Create desktop shortcut", "Not now");
+        return greetingCard(this.frame, "INSTALLATION COMPLETE", "Welcome to BAR Map Studio", "BAR Map Studio is ready and keeps itself up to date. Do you want a shortcut on your desktop so you find it again?", "Create desktop shortcut", "Not now");
     }
 
     static boolean greetingCard(JFrame frame, String smallLine, String headingText, String html, String primary, String secondary) {
-        JDialog dialog = new JDialog(frame, "Eclipse", true);
+        JDialog dialog = new JDialog(frame, "BAR Map Studio", true);
         dialog.setUndecorated(true);
         dialog.setBackground(new Color(0, 0, 0, 0));
         boolean[] wanted = {false};
@@ -2045,7 +2047,7 @@ public final class BarLauncher {
         card.setBorder(BorderFactory.createEmptyBorder(26, 30, 24, 30));
         JLabel mark = new JLabel();
         try {
-            InputStream stream = BarLauncher.class.getResourceAsStream("eclipse.png");
+            InputStream stream = BarLauncher.class.getResourceAsStream("barmapstudio.png");
             if (stream != null) {
                 try {
                     mark.setIcon(new ImageIcon(ImageIO.read(stream).getScaledInstance(108, 108, 4)));
@@ -2283,19 +2285,32 @@ public final class BarLauncher {
             }
         };
         header.setBorder(BorderFactory.createEmptyBorder(14, 22, 14, 22));
-        JLabel name = new JLabel("ECLIPSE");
-        name.setFont(name.getFont().deriveFont(1, 24.0f));
-        name.setForeground(ACCENT);
-        JLabel subtitle = new JLabel("  for Beyond All Reason      ");
-        subtitle.setFont(subtitle.getFont().deriveFont(14.0f));
-        subtitle.setForeground(MUTED);
         JPanel left = new JPanel(new FlowLayout(0, 0, 0));
         left.setOpaque(false);
-        left.add(name);
+        URL logoUrl = BarLauncher.class.getResource("barmapstudio.png");
+        if (logoUrl != null) {
+            ImageIcon icon = new ImageIcon(logoUrl);
+            Image scaled = icon.getImage().getScaledInstance(180, 29, Image.SCALE_SMOOTH);
+            left.add(new JLabel(new ImageIcon(scaled)));
+        } else {
+            JLabel name = new JLabel("BAR MAP STUDIO");
+            name.setFont(name.getFont().deriveFont(1, 22.0f));
+            name.setForeground(ACCENT);
+            left.add(name);
+        }
+        JLabel subtitle = new JLabel("   for Beyond All Reason      ");
+        subtitle.setFont(subtitle.getFont().deriveFont(13.0f));
+        subtitle.setForeground(MUTED);
         left.add(subtitle);
         ButtonGroup group = new ButtonGroup();
-        for (String view : new String[]{"PLAY", "REPLAYS", "MAPS", "NEWS", "UNITS"}) {
-            JToggleButton button = new JToggleButton(this, view) { // from class: com.faforever.neroxis.generator.bar.BarLauncher.7
+        for (String view : new String[]{"STUDIO", "PLAY", "MAPS", "REPLAYS", "NEWS", "UNITS"}) {
+            String tabLabel = switch (view) {
+                case "STUDIO" -> "MAP STUDIO";
+                case "PLAY" -> "BATTLES";
+                case "MAPS" -> "MAP LIBRARY";
+                default -> view;
+            };
+            JToggleButton button = new JToggleButton(this, tabLabel) { // from class: com.faforever.neroxis.generator.bar.BarLauncher.7
                 final /* synthetic */ BarLauncher this$0;
 
                 {
@@ -2321,8 +2336,8 @@ public final class BarLauncher {
                     }
                 }
             };
-            button.setFont(button.getFont().deriveFont(1, 17.0f));
-            button.setPreferredSize(new Dimension(view.length() > 5 ? 112 : 88, 34));
+            button.setFont(button.getFont().deriveFont(1, 15.0f));
+            button.setPreferredSize(new Dimension(tabLabel.length() > 7 ? 130 : 92, 34));
             button.setRolloverEnabled(true);
             button.setCursor(Cursor.getPredefinedCursor(12));
             button.setBorderPainted(false);
@@ -2341,11 +2356,7 @@ public final class BarLauncher {
             });
             group.add(button);
             this.navigation.add(button);
-            if (view.equals("NEWS")) {
-                left.add(button, 2);
-            } else {
-                left.add(button);
-            }
+            left.add(button);
         }
         ((JToggleButton) this.navigation.getFirst()).setSelected(true);
         header.add(left, "West");
@@ -3250,7 +3261,7 @@ public final class BarLauncher {
     }
 
     private static void installGameWidgets(Path data) {
-        for (String name : List.of("eclipse_return_to_lobby.lua", "eclipse_own_colour.lua")) {
+        for (String name : List.of("barmap_return_to_lobby.lua", "barmap_own_colour.lua")) {
             try {
                 InputStream stream = BarLauncher.class.getResourceAsStream(name);
                 if (stream != null) {
@@ -3299,7 +3310,7 @@ public final class BarLauncher {
             return false;
         }
         try {
-            Path config = BarInstall.eclipseSettings(data, online ? this.lobby.settingsForGame() : Map.of());
+            Path config = BarInstall.barStudioSettings(data, online ? this.lobby.settingsForGame() : Map.of());
             String executable = System.getProperty("neroxis.launcher.engine", Platform.program("spring"));
             List<String> command = new ArrayList<>(List.of(engine.resolve(executable).toString(), "--write-dir", data.toString(), "--isolation"));
             if (config != null) {
@@ -3457,7 +3468,7 @@ public final class BarLauncher {
                     image2 = this.artwork;
                 } else {
                     try {
-                        InputStream stream = BarLauncher.class.getResourceAsStream("eclipse-background.jpg");
+                        InputStream stream = BarLauncher.class.getResourceAsStream("barmapstudio-background.jpg");
                         if (stream != null) {
                             try {
                                 image = ImageIO.read(stream);
@@ -3560,7 +3571,7 @@ public final class BarLauncher {
         right.setOpaque(false);
         right.add(this.onlineStatus);
         right.add(Box.createHorizontalStrut(8));
-        JToggleButton ours = new JToggleButton("Eclipse games", true);
+        JToggleButton ours = new JToggleButton("Studio games", true);
         JToggleButton official = new JToggleButton("Official BAR games");
         ButtonGroup whose = new ButtonGroup();
         for (JToggleButton button : List.of(ours, official)) {
@@ -3685,6 +3696,23 @@ public final class BarLauncher {
 
     private JComponent buildReplaysView() {
         return this.replays.view();
+    }
+
+    private JComponent buildStudioView() {
+        if (this.studioPanel == null) {
+            Path barData = Path.of(this.barFolder.getText().trim());
+            this.studioPanel = new MapStudioPanel(
+                this.home,
+                barData,
+                archive -> {
+                    refreshLibrary(archive);
+                },
+                archive -> {
+                    startEngine(barData.resolve("_neroxis_skirmish.txt"), null);
+                }
+            );
+        }
+        return this.studioPanel;
     }
 
     private JComponent buildMapsView() {
@@ -5229,12 +5257,12 @@ public final class BarLauncher {
         String str;
         Object[] choices = {"Choose folder...", "Download BAR", "Later"};
         if (MacOs.isMac()) {
-            str = "There is no official BAR for Macs. Install the Apple Silicon port of the engine (Download BAR opens its page), start it once so it downloads the game, then start Eclipse again. If it is installed already, choose its data folder (Library/Application Support/Beyond-All-Reason-mac).";
+            str = "There is no official BAR for Macs. Install the Apple Silicon port of the engine (Download BAR opens its page), start it once so it downloads the game, then start BAR Map Studio again. If it is installed already, choose its data folder (Library/Application Support/Beyond-All-Reason-mac).";
         } else {
             str = "If it is installed, choose its folder (the one with Beyond-All-Reason.exe and a data folder). If not, get it for free from beyondallreason.info first.";
         }
         String hint = str;
-        int answer = JOptionPane.showOptionDialog(this.frame, "<html><div style='width:360px'><b>Eclipse cannot find Beyond All Reason.</b><br><br>" + hint + "</div></html>", "Beyond All Reason", -1, 3, (Icon) null, choices, choices[0]);
+        int answer = JOptionPane.showOptionDialog(this.frame, "<html><div style='width:360px'><b>BAR Map Studio cannot find Beyond All Reason.</b><br><br>" + hint + "</div></html>", "Beyond All Reason", -1, 3, (Icon) null, choices, choices[0]);
         if (answer == 0) {
             chooseBarFolder(this.frame);
         } else if (answer == 1) {
@@ -5273,7 +5301,7 @@ public final class BarLauncher {
     private JComponent barFolderRow() {
         JTextField shown = new JTextField(this.barFolder.getText());
         shown.setEditable(false);
-        shown.setToolTipText("Where Eclipse finds the game, its maps and replays");
+        shown.setToolTipText("Where BAR Map Studio finds the game, its maps and replays");
         this.barFolder.getDocument().addDocumentListener(onChange(() -> {
             shown.setText(this.barFolder.getText());
         }));

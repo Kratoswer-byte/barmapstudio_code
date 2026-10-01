@@ -25,7 +25,7 @@ import javax.net.ssl.SSLSocketFactory;
 
 /* JADX INFO: loaded from: app_classes.zip:com/faforever/neroxis/generator/bar/InstallReport.class */
 final class InstallReport {
-    private static final String HOST = "eclipseforeverbeyond.com";
+    private static final String HOST = "127.0.0.1";
     private static final long WEEK = 604800000;
     private static final boolean MAC = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac");
 
@@ -33,7 +33,7 @@ final class InstallReport {
     }
 
     static void start(Path home) {
-        // Telemetria verso eclipseforeverbeyond.com rimossa
+        // Telemetria disabilitata
     }
 
     private static boolean packaged() {
@@ -97,7 +97,7 @@ final class InstallReport {
                 socket.startHandshake();
                 byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
                 OutputStream out = socket.getOutputStream();
-                out.write(("POST /api/installed HTTP/1.1\r\nHost: eclipseforeverbeyond.com\r\nContent-Type: application/json\r\nContent-Length: " + bytes.length + "\r\nUser-Agent: Eclipse-launcher\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+                out.write(("POST /api/installed HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: " + bytes.length + "\r\nUser-Agent: BARMapStudio\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
                 out.write(bytes);
                 out.flush();
                 String status = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.US_ASCII)).readLine();

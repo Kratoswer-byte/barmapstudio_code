@@ -808,7 +808,7 @@ final class BarInstall {
             Path program = downloader;
             Thread thread = new Thread(() -> {
                 try {
-                    ProcessBuilder builder = new ProcessBuilder(program.toString(), "--filesystem-writepath", data.toString(), "--download-game", "byar:test", "--download-game", "byar-chobby:test").redirectErrorStream(true).redirectOutput(data.resolve("eclipse-game-refresh.log").toFile());
+                    ProcessBuilder builder = new ProcessBuilder(program.toString(), "--filesystem-writepath", data.toString(), "--download-game", "byar:test", "--download-game", "byar-chobby:test").redirectErrorStream(true).redirectOutput(data.resolve("barmapstudio-game-refresh.log").toFile());
                     builder.environment().put("PRD_RAPID_USE_STREAMER", "false");
                     builder.environment().put("PRD_RAPID_REPO_MASTER", "https://repos-cdn.beyondallreason.dev/repos.gz");
                     builder.start().waitFor();
@@ -1115,13 +1115,13 @@ final class BarInstall {
         return script.append("}\n").toString();
     }
 
-    static Path eclipseSettingsFile(Path data) {
+    static Path barStudioSettingsFile(Path data) {
         return data.resolve("neroxis_scripts").resolve("springsettings.cfg");
     }
 
-    static Path eclipseSettings(Path data, Map<String, String> extra) {
+    static Path barStudioSettings(Path data, Map<String, String> extra) {
         Path own = data.resolve("springsettings.cfg");
-        Path copy = eclipseSettingsFile(data);
+        Path copy = barStudioSettingsFile(data);
         List<String> lines = new ArrayList<>();
         try {
             boolean fresh = !Files.isRegularFile(copy, new LinkOption[0]) || (Files.isRegularFile(own, new LinkOption[0]) && Files.getLastModifiedTime(own, new LinkOption[0]).toMillis() > Files.getLastModifiedTime(copy, new LinkOption[0]).toMillis());
@@ -1137,7 +1137,7 @@ final class BarInstall {
             values.put("WindowPosY", "0");
         }
         values.putAll(extra);
-        for (String key : new String[]{"SimpleTeamColors", "SimpleTeamColorsPlayerR", "SimpleTeamColorsPlayerG", "SimpleTeamColorsPlayerB", "EclipseOwnColour"}) {
+        for (String key : new String[]{"SimpleTeamColors", "SimpleTeamColorsPlayerR", "SimpleTeamColorsPlayerG", "SimpleTeamColorsPlayerB", "StudioOwnColour"}) {
             if (!extra.containsKey(key)) {
                 lines.removeIf(line -> {
                     return line.trim().matches(key + "\\s*=.*");

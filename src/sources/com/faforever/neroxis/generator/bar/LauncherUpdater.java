@@ -104,7 +104,7 @@ final class LauncherUpdater {
             try {
                 FileLock held = lock.tryLock();
                 if (held == null) {
-                    log("update check skipped: another Eclipse is checking already");
+                    log("update check skipped: another instance is checking already");
                     if (lock != null) {
                         lock.close();
                     }

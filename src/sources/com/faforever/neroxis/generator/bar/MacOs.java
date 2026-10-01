@@ -32,7 +32,7 @@ import java.util.stream.Stream;
 final class MacOs {
     static final String DATA_FOLDER = "Beyond-All-Reason-mac";
     static final String PORT_URL = "https://github.com/Vandomas/RecoilEngine-AppleSilicon/releases/latest";
-    private static final String MARKER = ".eclipse-wrapper";
+    private static final String MARKER = ".studio-wrapper";
     static final String ENGINE_APP = "Recoil Engine.app";
     private static final String[] APP_NAMES = {"BAR Launcher.app", ENGINE_APP, "Beyond All Reason.app"};
 
@@ -119,7 +119,7 @@ final class MacOs {
     }
 
     static String noEngine() {
-        return "No BAR engine on this Mac: this Eclipse package has none inside, and none was downloaded. Get the Mac package of Eclipse again, or install the Apple Silicon port of Beyond All Reason (https://github.com/Vandomas/RecoilEngine-AppleSilicon/releases/latest).";
+        return "No BAR engine on this Mac: this BAR Map Studio package has none inside, and none was downloaded. Get the Mac package of BAR Map Studio again, or install the Apple Silicon port of Beyond All Reason (https://github.com/Vandomas/RecoilEngine-AppleSilicon/releases/latest).";
     }
 
     static String engineMissing(String version) {
@@ -133,7 +133,7 @@ final class MacOs {
         if (have.isEmpty()) {
             return noEngine();
         }
-        return "This Mac has the engine " + String.join(", ", have) + ", this room runs " + version + ", and there is no Mac build of " + version + " on the Eclipse server yet.";
+        return "This Mac has the engine " + String.join(", ", have) + ", this room runs " + version + ", and there is no Mac build of " + version + " on the server yet.";
     }
 
     static Map<String, Path> apps(Path data) {
@@ -236,7 +236,7 @@ final class MacOs {
                 HttpClient http = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).connectTimeout(Duration.ofSeconds(15L)).build();
                 HttpResponse<InputStream> response = http.send(HttpRequest.newBuilder(URI.create(url)).build(), HttpResponse.BodyHandlers.ofInputStream());
                 if (response.statusCode() == 404) {
-                    String str = "no Mac build of the engine " + version + " on the Eclipse server yet";
+                    String str = "no Mac build of the engine " + version + " on the server yet";
                     if (archive != null) {
                         try {
                             Files.deleteIfExists(archive);
@@ -375,12 +375,12 @@ final class MacOs {
 
     static String engineScript(Path app) {
         String bundle = shellQuote(app.toAbsolutePath().toString());
-        return "#!/bin/sh\n# Written by Eclipse: runs the Recoil engine of the Apple Silicon port with the environment its own\n# launcher sets. Rewritten at every start of Eclipse, edits are lost.\nAPP=%s\nRES=\"$APP/Contents/Resources\"\nif [ ! -x \"$APP/Contents/MacOS/spring\" ]; then\n  echo \"The engine is missing at $APP\" >&2\n  exit 127\nfi\n# OpenGL 4.6 through Mesa zink on Vulkan: KosmicKrisp needs Metal 4 (macOS 26), MoltenVK works everywhere\nKK=\"$RES/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json\"\nMVK=\"$RES/vulkan/icd.d/moltenvk_icd.json\"\nOS_MAJOR=\"$(sw_vers -productVersion 2>/dev/null | cut -d. -f1)\"\ncase \"${BAR_VULKAN_DRIVER:-}\" in\n  kk) ICD=\"$KK\" ;;\n  mvk) ICD=\"$MVK\" ;;\n  *) if [ \"${OS_MAJOR:-0}\" -ge 26 ] && [ -f \"$KK\" ]; then ICD=\"$KK\"; else ICD=\"$MVK\"; fi ;;\nesac\n[ -f \"$ICD\" ] || ICD=\"$MVK\"\n[ -f \"$ICD\" ] || ICD=\"$KK\"\nif [ \"$ICD\" = \"$MVK\" ]; then\n  export MVK_CONFIG_USE_COMMAND_POOLING=0\n  export MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS=0\n  export MVK_EXIT_ON_DEVICE_LOSS=1\n  export MVK_CONFIG_DEBUG=1\nfi\nexport EGL_PLATFORM=surfaceless\nexport VK_ICD_FILENAMES=\"$ICD\"\nexport VK_DRIVER_FILES=\"$ICD\"\nexport GALLIUM_DRIVER=zink\nexport MESA_LOADER_DRIVER_OVERRIDE=zink\nexport MESA_GL_VERSION_OVERRIDE=4.6\nexport MVK_CONFIG_LOG_LEVEL=1\nexport DYLD_FALLBACK_LIBRARY_PATH=\"$APP/Contents/Frameworks\"\n# the engine's own content (base archives, AIs, fonts) is in the app: with --isolation the engine\n# reads the write dir and this folder, nothing else\nexport SPRING_ISOLATED=\"$RES\"\nexec \"$APP/Contents/MacOS/spring\" \"$@\"\n".formatted(bundle);
+        return "#!/bin/sh\n# Written by BAR Map Studio: runs the Recoil engine of the Apple Silicon port with the environment its own\n# launcher sets. Rewritten at every start of BAR Map Studio, edits are lost.\nAPP=%s\nRES=\"$APP/Contents/Resources\"\nif [ ! -x \"$APP/Contents/MacOS/spring\" ]; then\n  echo \"The engine is missing at $APP\" >&2\n  exit 127\nfi\n# OpenGL 4.6 through Mesa zink on Vulkan: KosmicKrisp needs Metal 4 (macOS 26), MoltenVK works everywhere\nKK=\"$RES/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json\"\nMVK=\"$RES/vulkan/icd.d/moltenvk_icd.json\"\nOS_MAJOR=\"$(sw_vers -productVersion 2>/dev/null | cut -d. -f1)\"\ncase \"${BAR_VULKAN_DRIVER:-}\" in\n  kk) ICD=\"$KK\" ;;\n  mvk) ICD=\"$MVK\" ;;\n  *) if [ \"${OS_MAJOR:-0}\" -ge 26 ] && [ -f \"$KK\" ]; then ICD=\"$KK\"; else ICD=\"$MVK\"; fi ;;\nesac\n[ -f \"$ICD\" ] || ICD=\"$MVK\"\n[ -f \"$ICD\" ] || ICD=\"$KK\"\nif [ \"$ICD\" = \"$MVK\" ]; then\n  export MVK_CONFIG_USE_COMMAND_POOLING=0\n  export MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS=0\n  export MVK_EXIT_ON_DEVICE_LOSS=1\n  export MVK_CONFIG_DEBUG=1\nfi\nexport EGL_PLATFORM=surfaceless\nexport VK_ICD_FILENAMES=\"$ICD\"\nexport VK_DRIVER_FILES=\"$ICD\"\nexport GALLIUM_DRIVER=zink\nexport MESA_LOADER_DRIVER_OVERRIDE=zink\nexport MESA_GL_VERSION_OVERRIDE=4.6\nexport MVK_CONFIG_LOG_LEVEL=1\nexport DYLD_FALLBACK_LIBRARY_PATH=\"$APP/Contents/Frameworks\"\n# the engine's own content (base archives, AIs, fonts) is in the app: with --isolation the engine\n# reads the write dir and this folder, nothing else\nexport SPRING_ISOLATED=\"$RES\"\nexec \"$APP/Contents/MacOS/spring\" \"$@\"\n".formatted(bundle);
     }
 
     static String programScript(Path app, String program) {
         String bundle = shellQuote(app.toAbsolutePath().toString());
-        return "#!/bin/sh\n# Written by Eclipse: runs %s of the Apple Silicon port. Rewritten at every start of Eclipse.\nAPP=%s\nexport DYLD_FALLBACK_LIBRARY_PATH=\"$APP/Contents/Frameworks\"\nexec \"$APP/Contents/MacOS/%s\" \"$@\"\n".formatted(program, bundle, program);
+        return "#!/bin/sh\n# Written by BAR Map Studio: runs %s of the Apple Silicon port. Rewritten at every start of BAR Map Studio.\nAPP=%s\nexport DYLD_FALLBACK_LIBRARY_PATH=\"$APP/Contents/Frameworks\"\nexec \"$APP/Contents/MacOS/%s\" \"$@\"\n".formatted(program, bundle, program);
     }
 
     private static void writeScript(Path file, String text) throws IOException {

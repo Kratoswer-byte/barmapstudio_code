@@ -51,8 +51,9 @@ final class Dxt1Encoder {
         int c0 = to565(maxR - insetR, maxG - insetG, maxB - insetB);
         int c1 = to565(minR + insetR, minG + insetG, minB + insetB);
         if (c0 < c1) {
+            int tmp = c0;
             c0 = c1;
-            c1 = c0;
+            c1 = tmp;
         }
         long indices = 0;
         if (c0 != c1) {

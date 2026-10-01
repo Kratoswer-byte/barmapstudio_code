@@ -36,7 +36,7 @@ import javax.imageio.ImageIO;
 
 /* JADX INFO: loaded from: app_classes.zip:com/faforever/neroxis/generator/bar/Trophy.class */
 final class Trophy {
-    static final String[] NAMES = {"Sunrise", "Comet", "Nova", "Solstice", "Aurora", "Transit", "Blood Moon", "Supernova", "Diamond Ring", "Eclipse"};
+    static final String[] NAMES = {"Sunrise", "Comet", "Nova", "Solstice", "Aurora", "Transit", "Blood Moon", "Supernova", "Diamond Ring", "Apex"};
     static final String[] GRADES = {"Bronze", "Silver", "Gold"};
     private static final Color[][] METAL = {new Color[]{new Color(240, 184, 132), new Color(184, 112, 58), new Color(96, 52, 22)}, new Color[]{new Color(248, 250, 253), new Color(172, 180, 192), new Color(84, 90, 102)}, new Color[]{new Color(255, 240, 160), new Color(236, 178, 52), new Color(132, 84, 12)}};
     static final Color[] GRADE_COLOURS = {new Color(205, GeneratedMapNameEncoder.NUM_BINS, 50), new Color(192, 199, 210), new Color(245, 196, 64)};

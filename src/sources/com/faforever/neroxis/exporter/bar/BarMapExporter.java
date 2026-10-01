@@ -30,9 +30,11 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.IntStream;
 import java.util.zip.ZipEntry;
@@ -63,8 +65,10 @@ public final class BarMapExporter {
     private static final float GEO_MARK_RADIUS = 34.0f;
     private static final float RECLAIM_METAL_PER_PLAYER = 600.0f;
     private final SCMap map;
-    private final BarExportOptions options;
+    private BarExportOptions options;
     private final int faSize;
+    private final int faWidth;
+    private final int faHeight;
     private final int mapX;
     private final int mapY;
     private final int textureWidth;
@@ -73,7 +77,8 @@ public final class BarMapExporter {
     private final float waterElevation;
     private float[] faHeights;
     private final float[][] layerWeights;
-    private final int layerSize;
+    private final int layerWidth;
+    private final int layerHeight;
     private final float[][] layerColors;
     private final float[] heights;
     private final float[] noise;
@@ -84,7 +89,7 @@ public final class BarMapExporter {
     private float lowGround;
     private float minHeight;
     private float maxHeight;
-    public static final String GENERATED_PREFIX = "Eclipse_Mapgen_";
+    public static final String GENERATED_PREFIX = "Map_";
     public static final String OLD_GENERATED_PREFIX = "Neroxis_";
     private static final String[] SMALL_WRECKS = {"armstump_dead", "corraid_dead", "armpw_dead", "corak_dead", "armflash_dead", "corgator_dead", "armham_dead", "corthud_dead"};
     private static final String[] MEDIUM_WRECKS = {"armbull_dead", "correap_dead", "armzeus_dead", "corcan_dead"};
@@ -104,78 +109,28 @@ public final class BarMapExporter {
     private float highGround = 1.0f;
 
     /* JADX INFO: loaded from: app_classes.zip:com/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature.class */
-    private static final class ReclaimFeature extends Record {
-        private final String name;
-        private final float x;
-        private final float z;
-        private final float rotation;
-        private final int metal;
-        private final float order;
-
-        private ReclaimFeature(String name, float x, float z, float rotation, int metal, float order) {
-            this.name = name;
-            this.x = x;
-            this.z = z;
-            this.rotation = rotation;
-            this.metal = metal;
-            this.order = order;
-        }
-
-        @Override // java.lang.Record
-        public final String toString() {
-            return (String) ObjectMethods.bootstrap(MethodHandles.lookup(), "toString", MethodType.methodType(String.class, ReclaimFeature.class), ReclaimFeature.class, "name;x;z;rotation;metal;order", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->name:Ljava/lang/String;", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->x:F", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->z:F", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->rotation:F", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->metal:I", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->order:F").dynamicInvoker().invoke(this) /* invoke-custom */;
-        }
-
-        @Override // java.lang.Record
-        public final int hashCode() {
-            return (int) ObjectMethods.bootstrap(MethodHandles.lookup(), "hashCode", MethodType.methodType(Integer.TYPE, ReclaimFeature.class), ReclaimFeature.class, "name;x;z;rotation;metal;order", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->name:Ljava/lang/String;", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->x:F", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->z:F", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->rotation:F", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->metal:I", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->order:F").dynamicInvoker().invoke(this) /* invoke-custom */;
-        }
-
-        @Override // java.lang.Record
-        public final boolean equals(Object o) {
-            return (boolean) ObjectMethods.bootstrap(MethodHandles.lookup(), "equals", MethodType.methodType(Boolean.TYPE, ReclaimFeature.class, Object.class), ReclaimFeature.class, "name;x;z;rotation;metal;order", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->name:Ljava/lang/String;", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->x:F", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->z:F", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->rotation:F", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->metal:I", "FIELD:Lcom/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature;->order:F").dynamicInvoker().invoke(this, o) /* invoke-custom */;
-        }
-
-        public String name() {
-            return this.name;
-        }
-
-        public float x() {
-            return this.x;
-        }
-
-        public float z() {
-            return this.z;
-        }
-
-        public float rotation() {
-            return this.rotation;
-        }
-
-        public int metal() {
-            return this.metal;
-        }
-
-        public float order() {
-            return this.order;
-        }
-    }
+    private static record ReclaimFeature(String name, float x, float z, float rotation, int metal, float order) {}
 
     private BarMapExporter(SCMap map, BarExportOptions options) {
         this.map = map;
         this.options = options;
         this.faSize = map.getSize();
-        this.mapX = this.faSize * options.squaresPerCell();
-        this.mapY = this.mapX;
-        if (this.mapX % 128 != 0) {
-            throw new IllegalArgumentException("The map size %d can not be converted to a BAR map, size * %d must be a multiple of 128".formatted(Integer.valueOf(this.faSize), Integer.valueOf(options.squaresPerCell())));
+        int fW = map.getWidth();
+        int fH = map.getHeight();
+        this.faWidth = fW > 0 ? fW : this.faSize;
+        this.faHeight = fH > 0 ? fH : this.faSize;
+        this.mapX = this.faWidth * options.squaresPerCell();
+        this.mapY = this.faHeight * options.squaresPerCell();
+        if (this.mapX % 128 != 0 || this.mapY % 128 != 0) {
+            throw new IllegalArgumentException("The map size %dx%d can not be converted to a BAR map, size * %d must be a multiple of 128".formatted(Integer.valueOf(this.faWidth), Integer.valueOf(this.faHeight), Integer.valueOf(options.squaresPerCell())));
         }
         this.textureWidth = this.mapX * 8;
         this.textureHeight = this.mapY * 8;
         this.elmosPerCell = 8 * options.squaresPerCell();
         this.waterElevation = map.getBiome().waterSettings().waterPresent() ? map.getBiome().waterSettings().elevation() : Float.NaN;
         this.faHeights = readHeights(map.getHeightmap(), map.getHeightMapScale());
-        this.layerSize = map.getTextureMasksLow().getWidth();
+        this.layerWidth = map.getTextureMasksLow().getWidth();
+        this.layerHeight = map.getTextureMasksLow().getHeight();
         this.layerWeights = readLayerWeights(map.getTextureMasksLow(), map.getTextureMasksHigh());
         this.layerColors = readLayerColors();
         boolean pbr = String.valueOf(map.getBiome().name()).equalsIgnoreCase("sunset");
@@ -299,8 +254,8 @@ public final class BarMapExporter {
             float bottom = 0.0f;
             for (int i6 = 0; i6 < spawns.size(); i6++) {
                 if (allyTeams[i6] == allyTeam) {
-                    float x = spawns.get(i6).getPosition().x() / this.faSize;
-                    float z = spawns.get(i6).getPosition().z() / this.faSize;
+                    float x = spawns.get(i6).getPosition().x() / this.faWidth;
+                    float z = spawns.get(i6).getPosition().z() / this.faHeight;
                     left = Math.min(left, x);
                     right = Math.max(right, x);
                     top = Math.min(top, z);
@@ -323,6 +278,29 @@ public final class BarMapExporter {
         });
         mergeCloseMetalSpots();
         assignMetalValues();
+        float maxFound = this.options.maxMetal();
+        for (float[] mex : this.mexPositions) {
+            maxFound = Math.max(maxFound, mex[2]);
+        }
+        if (maxFound > this.options.maxMetal()) {
+            this.options = new BarExportOptions(
+                this.options.squaresPerCell(),
+                this.options.heightScale(),
+                this.options.baseMetal(),
+                this.options.minMetal(),
+                maxFound,
+                this.options.uniformMetal(),
+                this.options.numTeams(),
+                this.options.mapName(),
+                this.options.mapVersion(),
+                this.options.author(),
+                this.options.reclaim(),
+                this.options.featuresRepository(),
+                this.options.minWind(),
+                this.options.maxWind(),
+                this.options.tidal()
+            );
+        }
         this.map.getHydros().forEach(hydro -> {
             this.geoPositions.add(toElmos(hydro));
         });
@@ -377,12 +355,25 @@ public final class BarMapExporter {
             zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_edge.dds"));
             zip.write(buildEdgeTexture(minimapImage));
             zip.closeEntry();
-            zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_preview.png"));
+            BufferedImage previewImage = renderPreview(minimapImage);
             ByteArrayOutputStream previewBytes = new ByteArrayOutputStream();
-            ImageIO.write(renderPreview(minimapImage), "png", previewBytes);
-            zip.write(previewBytes.toByteArray());
+            ImageIO.write(previewImage, "png", previewBytes);
+            byte[] previewPngBytes = previewBytes.toByteArray();
+
+            zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_preview.png"));
+            zip.write(previewPngBytes);
             zip.closeEntry();
+
+            zip.putNextEntry(new ZipEntry("preview.png"));
+            zip.write(previewPngBytes);
+            zip.closeEntry();
+
+            zip.putNextEntry(new ZipEntry("minimap.png"));
+            zip.write(previewPngBytes);
+            zip.closeEntry();
+
             zip.close();
+            saveLobbyMinimaps(folderPath, archiveName, getDisplayName(), previewImage, previewPngBytes);
             System.out.printf(Locale.ROOT, "BAR map: %dx%d, heights %.0f to %.0f, %d metal spots, %d geo vents, %d features%n", Integer.valueOf(this.mapX / 64), Integer.valueOf(this.mapY / 64), Float.valueOf(this.minHeight), Float.valueOf(this.maxHeight), Integer.valueOf(this.mexPositions.size()), Integer.valueOf(this.geoPositions.size()), Integer.valueOf(features.size()));
             System.out.println("Metal spot incomes: " + describeMetal());
             return archivePath;
@@ -410,8 +401,9 @@ public final class BarMapExporter {
     }
 
     private void buildHeights() {
-        int faWidth = this.faSize + 1;
-        this.faHeights = cleanHeights(this.faHeights, faWidth);
+        int faW = this.faWidth + 1;
+        int faH = this.faHeight + 1;
+        this.faHeights = cleanHeights(this.faHeights, faW, faH);
         float lowest = Float.MAX_VALUE;
         for (float faHeight : this.faHeights) {
             lowest = Math.min(lowest, faHeight);
@@ -420,10 +412,10 @@ public final class BarMapExporter {
         float verticalScale = this.elmosPerCell * this.options.heightScale();
         int squaresPerCell = this.options.squaresPerCell();
         IntStream.rangeClosed(0, this.mapY).parallel().forEach(y -> {
-            float fy = y / squaresPerCell;
+            float fy = y / (float) squaresPerCell;
             for (int x = 0; x <= this.mapX; x++) {
-                float fx = x / squaresPerCell;
-                this.heights[(y * (this.mapX + 1)) + x] = (sampleCubic(this.faHeights, faWidth, fx, fy) - seaLevel) * verticalScale;
+                float fx = x / (float) squaresPerCell;
+                this.heights[(y * (this.mapX + 1)) + x] = (sampleCubic(this.faHeights, faW, faH, fx, fy) - seaLevel) * verticalScale;
             }
         });
         sharpenCliffs();
@@ -452,9 +444,9 @@ public final class BarMapExporter {
         this.maxHeight = (float) Math.ceil(this.maxHeight);
     }
 
-    private static float[] cleanHeights(float[] heights, int width) {
+    private static float[] cleanHeights(float[] heights, int width, int height) {
         float[] median = new float[heights.length];
-        IntStream.range(0, width).parallel().forEach(y -> {
+        IntStream.range(0, height).parallel().forEach(y -> {
             float[] window = new float[9];
             for (int x = 0; x < width; x++) {
                 int n = 0;
@@ -462,7 +454,7 @@ public final class BarMapExporter {
                     for (int dx = -1; dx <= 1; dx++) {
                         int i = n;
                         n++;
-                        window[i] = heights[(clamp(y + dy, width) * width) + clamp(x + dx, width)];
+                        window[i] = heights[(clamp(y + dy, height) * width) + clamp(x + dx, width)];
                     }
                 }
                 Arrays.sort(window);
@@ -474,14 +466,14 @@ public final class BarMapExporter {
         for (int pass = 0; pass < 2; pass++) {
             float[] input = source;
             float[] output = new float[heights.length];
-            IntStream.range(0, width).parallel().forEach(y2 -> {
+            IntStream.range(0, height).parallel().forEach(y2 -> {
                 for (int x = 0; x < width; x++) {
                     float center = input[(y2 * width) + x];
                     float sum = 0.0f;
                     float weights = 0.0f;
                     for (int dy = -2; dy <= 2; dy++) {
                         for (int dx = -2; dx <= 2; dx++) {
-                            float value = input[(clamp(y2 + dy, width) * width) + clamp(x + dx, width)];
+                            float value = input[(clamp(y2 + dy, height) * width) + clamp(x + dx, width)];
                             float difference = value - center;
                             float weight = (float) StrictMath.exp(((-((dx * dx) + (dy * dy))) / 3.4f) - ((difference * difference) / 1.3f));
                             sum += value * weight;
@@ -495,12 +487,12 @@ public final class BarMapExporter {
         }
         float[] input2 = source;
         float[] result = new float[heights.length];
-        IntStream.range(0, width).parallel().forEach(y3 -> {
+        IntStream.range(0, height).parallel().forEach(y3 -> {
             for (int x = 0; x < width; x++) {
                 float sum = 0.0f;
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dx = -1; dx <= 1; dx++) {
-                        sum += input2[(clamp(y3 + dy, width) * width) + clamp(x + dx, width)] * (2 - Math.abs(dx)) * (2 - Math.abs(dy));
+                        sum += input2[(clamp(y3 + dy, height) * width) + clamp(x + dx, width)] * (2 - Math.abs(dx)) * (2 - Math.abs(dy));
                     }
                 }
                 result[(y3 * width) + x] = sum / 16.0f;
@@ -599,18 +591,18 @@ public final class BarMapExporter {
         return (z * this.mapX) + x;
     }
 
-    private static float sampleCubic(float[] values, int width, float x, float y) {
+    private static float sampleCubic(float[] values, int width, int height, float x, float y) {
         int x1 = (int) Math.floor(x);
         int y1 = (int) Math.floor(y);
         float tx = x - x1;
         float ty = y - y1;
         if (tx == SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT && ty == SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-            return values[(clamp(y1, width) * width) + clamp(x1, width)];
+            return values[(clamp(y1, height) * width) + clamp(x1, width)];
         }
         float result = 0.0f;
         for (int j = -1; j <= 2; j++) {
             float wy = catmullRom(j - ty);
-            int row = clamp(y1 + j, width) * width;
+            int row = clamp(y1 + j, height) * width;
             float rowSum = 0.0f;
             for (int i = -1; i <= 2; i++) {
                 rowSum += values[row + clamp(x1 + i, width)] * catmullRom(i - tx);
@@ -649,7 +641,17 @@ public final class BarMapExporter {
     }
 
     private float[] toElmos(Marker marker) {
-        return new float[]{marker.getPosition().x() * this.elmosPerCell, marker.getPosition().z() * this.elmosPerCell, this.options.baseMetal(), 1.0f};
+        float metal = this.options.baseMetal();
+        String id = marker.getId();
+        if (id != null && id.contains("_val_")) {
+            try {
+                int start = id.indexOf("_val_") + 5;
+                int end = id.indexOf('_', start);
+                String valStr = (end != -1) ? id.substring(start, end) : id.substring(start);
+                metal = Float.parseFloat(valStr);
+            } catch (Exception ignored) {}
+        }
+        return new float[]{marker.getPosition().x() * this.elmosPerCell, marker.getPosition().z() * this.elmosPerCell, metal, 1.0f};
     }
 
     private void mergeCloseMetalSpots() {
@@ -676,16 +678,19 @@ public final class BarMapExporter {
         for (int i3 = 0; i3 < spotCount; i3++) {
             float x = 0.0f;
             float z = 0.0f;
+            float metalSum = 0.0f;
             int count = 0;
             for (int j2 = 0; j2 < spotCount; j2++) {
                 if (group[j2] == i3) {
                     x += this.mexPositions.get(j2)[0];
                     z += this.mexPositions.get(j2)[1];
+                    metalSum += this.mexPositions.get(j2)[2];
                     count++;
                 }
             }
             if (count > 0) {
-                merged.add(new float[]{Math.round((x / count) / 16.0f) * 16.0f, Math.round((z / count) / 16.0f) * 16.0f, this.options.baseMetal(), count});
+                float avgMetal = metalSum / count;
+                merged.add(new float[]{Math.round((x / count) / 16.0f) * 16.0f, Math.round((z / count) / 16.0f) * 16.0f, avgMetal, count});
             }
         }
         this.mexPositions.clear();
@@ -693,6 +698,17 @@ public final class BarMapExporter {
     }
 
     private void assignMetalValues() {
+        boolean hasCustomMexes = false;
+        for (Marker m : this.map.getMexes()) {
+            if (m.getId() != null && m.getId().contains("_val_")) {
+                hasCustomMexes = true;
+                break;
+            }
+        }
+        if (hasCustomMexes) {
+            // Respect custom metal values chosen by user in Map Studio
+            return;
+        }
         if (this.options.uniformMetal() || this.mexPositions.isEmpty()) {
             for (float[] mex : this.mexPositions) {
                 mex[2] = Math.min(this.options.maxMetal(), this.options.baseMetal() * (1.0f + (0.5f * (mex[3] - 1.0f))));
@@ -1025,21 +1041,22 @@ public final class BarMapExporter {
     }
 
     private static float[][] readLayerWeights(BufferedImage low, BufferedImage high) {
-        int size = low.getWidth();
-        if (high.getWidth() != size || low.getHeight() != size || high.getHeight() != size) {
-            throw new IllegalArgumentException("Texture masks have different sizes");
+        int width = low.getWidth();
+        int height = low.getHeight();
+        if (high.getWidth() != width || high.getHeight() != height) {
+            throw new IllegalArgumentException("Texture masks have different sizes: low=" + width + "x" + height + ", high=" + high.getWidth() + "x" + high.getHeight());
         }
-        float[][] weights = new float[8][size * size];
+        float[][] weights = new float[8][width * height];
         int[] pixel = new int[4];
         int image = 0;
         while (image < 2) {
             WritableRaster raster = (image == 0 ? low : high).getRaster();
-            for (int y = 0; y < size; y++) {
-                for (int x = 0; x < size; x++) {
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
                     raster.getPixel(x, y, pixel);
                     for (int band = 0; band < 4; band++) {
                         int raw = pixel[band];
-                        weights[(image * 4) + band][(y * size) + x] = raw > 0 ? Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, (raw - 128) / 127.0f) : SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT;
+                        weights[(image * 4) + band][(y * width) + x] = raw > 0 ? Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, (raw - 128) / 127.0f) : SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT;
                     }
                 }
             }
@@ -1468,15 +1485,15 @@ public final class BarMapExporter {
     }
 
     private float[] blendLayers(float x, float z, float medium, float fine, float slope) {
-        float lx = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(this.layerSize - 1.001f, ((x / this.elmosPerCell) * (this.layerSize - 1)) / this.faSize));
-        float lz = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(this.layerSize - 1.001f, ((z / this.elmosPerCell) * (this.layerSize - 1)) / this.faSize));
+        float lx = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(this.layerWidth - 1.001f, ((x / this.elmosPerCell) * (this.layerWidth - 1)) / this.faWidth));
+        float lz = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(this.layerHeight - 1.001f, ((z / this.elmosPerCell) * (this.layerHeight - 1)) / this.faHeight));
         int x0 = (int) lx;
         int z0 = (int) lz;
         float tx = lx - x0;
         float tz = lz - z0;
-        int i00 = (z0 * this.layerSize) + x0;
+        int i00 = (z0 * this.layerWidth) + x0;
         int i01 = i00 + 1;
-        int i10 = i00 + this.layerSize;
+        int i10 = i00 + this.layerWidth;
         int i11 = i10 + 1;
         float w00 = (1.0f - tx) * (1.0f - tz);
         float w01 = tx * (1.0f - tz);
@@ -1751,15 +1768,10 @@ public final class BarMapExporter {
                         }
                         int offset = tileX * 680;
                         int[] mip = tile;
-                        int i2 = tileSize;
-                        while (true) {
-                            int size = i2;
-                            if (size >= 4) {
-                                offset += Dxt1Encoder.compress(mip, size, size, rowBytes, offset);
-                                if (size > 4) {
-                                    mip = Dxt1Encoder.downsample(mip, size, size);
-                                }
-                                i2 = size / 2;
+                        for (int size = tileSize; size >= 4; size /= 2) {
+                            offset += Dxt1Encoder.compress(mip, size, size, rowBytes, offset);
+                            if (size > 4) {
+                                mip = Dxt1Encoder.downsample(mip, size, size);
                             }
                         }
                     }
@@ -1776,15 +1788,16 @@ public final class BarMapExporter {
     }
 
     private BufferedImage renderPreview(BufferedImage minimapImage) {
-        int size = minimapImage.getWidth();
-        int[] pixels = minimapImage.getRGB(0, 0, size, size, (int[]) null, 0, size);
-        float scaleX = this.textureWidth / size;
-        float scaleZ = this.textureHeight / size;
+        int width = minimapImage.getWidth();
+        int height = minimapImage.getHeight();
+        int[] pixels = minimapImage.getRGB(0, 0, width, height, (int[]) null, 0, width);
+        float scaleX = this.textureWidth / (float) width;
+        float scaleZ = this.textureHeight / (float) height;
         float lightX = -0.6f;
         float lightY = 0.64f;
         float lightZ = -0.48f;
-        IntStream.range(0, size).parallel().forEach(y -> {
-            for (int x = 0; x < size; x++) {
+        IntStream.range(0, height).parallel().forEach(y -> {
+            for (int x = 0; x < width; x++) {
                 float wx = (x + 0.5f) * scaleX;
                 float wz = (y + 0.5f) * scaleZ;
                 float slopeX = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, heightAt(wx + scaleX, wz)) - Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, heightAt(wx - scaleX, wz));
@@ -1795,15 +1808,15 @@ public final class BarMapExporter {
                 float length = (float) StrictMath.sqrt((nx * nx) + (ny * ny) + (nz * nz));
                 float light = (((nx * lightX) + (ny * lightY)) + (nz * lightZ)) / length;
                 float factor = Math.max(0.5f, Math.min(1.45f, 1.0f + ((light - lightY) * 1.7f)));
-                int rgb = pixels[(y * size) + x];
+                int rgb = pixels[(y * width) + x];
                 int r = Math.min(255, Math.round(((rgb >> 16) & 255) * factor));
                 int g = Math.min(255, Math.round(((rgb >> 8) & 255) * factor));
                 int b = Math.min(255, Math.round((rgb & 255) * factor));
-                pixels[(y * size) + x] = (r << 16) | (g << 8) | b;
+                pixels[(y * width) + x] = (r << 16) | (g << 8) | b;
             }
         });
-        BufferedImage preview = new BufferedImage(size, size, 1);
-        preview.setRGB(0, 0, size, size, pixels, 0, size);
+        BufferedImage preview = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        preview.setRGB(0, 0, width, height, pixels, 0, width);
         return preview;
     }
 
@@ -1864,26 +1877,28 @@ public final class BarMapExporter {
     }
 
     private byte[] buildNormalsTexture() {
-        int size = Math.min(DDSHeader.CUBEMAP_NEGATIVEX_FLAG, this.mapX * 2);
-        float texelSize = (this.mapX * 8.0f) / size;
-        int[] argb = new int[size * size];
-        IntStream.range(0, size).parallel().forEach(py -> {
-            float z = (py + 0.5f) * texelSize;
-            for (int px = 0; px < size; px++) {
-                float x = (px + 0.5f) * texelSize;
+        int sizeX = Math.min(DDSHeader.CUBEMAP_NEGATIVEX_FLAG, this.mapX * 2);
+        int sizeY = Math.min(DDSHeader.CUBEMAP_NEGATIVEX_FLAG, this.mapY * 2);
+        float texelSizeX = (this.mapX * 8.0f) / sizeX;
+        float texelSizeZ = (this.mapY * 8.0f) / sizeY;
+        int[] argb = new int[sizeX * sizeY];
+        IntStream.range(0, sizeY).parallel().forEach(py -> {
+            float z = (py + 0.5f) * texelSizeZ;
+            for (int px = 0; px < sizeX; px++) {
+                float x = (px + 0.5f) * texelSizeX;
                 float slope = Math.min(1.0f, slopeAt(x, z) / 0.5f);
                 float strength = 0.5f + (slope * 2.4f);
-                float dx = ((relief(x + texelSize, z) - relief(x - texelSize, z)) / (2.0f * texelSize)) * strength;
-                float dz = ((relief(x, z + texelSize) - relief(x, z - texelSize)) / (2.0f * texelSize)) * strength;
+                float dx = ((relief(x + texelSizeX, z) - relief(x - texelSizeX, z)) / (2.0f * texelSizeX)) * strength;
+                float dz = ((relief(x, z + texelSizeZ) - relief(x, z - texelSizeZ)) / (2.0f * texelSizeZ)) * strength;
                 float length = (float) StrictMath.sqrt((dx * dx) + (dz * dz) + 1.0f);
                 int red = toByte((((-dx) / length) * 0.5f) + 0.5f);
                 int green = toByte((((-dz) / length) * 0.5f) + 0.5f);
                 int blue = toByte(((1.0f / length) * 0.5f) + 0.5f);
                 int alpha = toByte(heightAt(x, z) < -20.0f ? 0.25f : 0.45f + (slope * MAX_SATURATION));
-                argb[(py * size) + px] = (alpha << 24) | (red << 16) | (green << 8) | blue;
+                argb[(py * sizeX) + px] = (alpha << 24) | (red << 16) | (green << 8) | blue;
             }
         });
-        return DetailTextures.encodeTga(argb, size, size);
+        return DetailTextures.encodeTga(argb, sizeX, sizeY);
     }
 
     private float relief(float x, float z) {
@@ -1898,13 +1913,14 @@ public final class BarMapExporter {
     }
 
     private byte[] buildSpecularTexture() {
-        int size = this.mapX;
+        int sizeX = this.mapX;
+        int sizeY = this.mapY;
         float texelSize = 8.0f;
         boolean snow = getSplatMaterials()[2] == DetailTextures.Material.SNOW;
-        int[] argb = new int[size * size];
-        IntStream.range(0, size).parallel().forEach(py -> {
+        int[] argb = new int[sizeX * sizeY];
+        IntStream.range(0, sizeY).parallel().forEach(py -> {
             float z = (py + 0.5f) * texelSize;
-            for (int px = 0; px < size; px++) {
+            for (int px = 0; px < sizeX; px++) {
                 float x = (px + 0.5f) * texelSize;
                 float height = heightAt(x, z);
                 float rock = smoothStep(0.2f, VEHICLE_MAX_GRADIENT, slopeAt(x, z));
@@ -1915,10 +1931,10 @@ public final class BarMapExporter {
                 int green = toByte(specular);
                 int blue = toByte(specular * (1.0f + (wet * 0.2f)));
                 int alpha = toByte(0.35f + (wet * 0.4f) + (rock * 0.1f));
-                argb[(py * size) + px] = (alpha << 24) | (red << 16) | (green << 8) | blue;
+                argb[(py * sizeX) + px] = (alpha << 24) | (red << 16) | (green << 8) | blue;
             }
         });
-        return Dxt1Encoder.createDxt5Dds(argb, size, size);
+        return Dxt1Encoder.createDxt5Dds(argb, sizeX, sizeY);
     }
 
     private static int toByte(float value) {
@@ -1926,8 +1942,9 @@ public final class BarMapExporter {
     }
 
     private byte[] buildEdgeTexture(BufferedImage minimapImage) {
-        int size = minimapImage.getWidth();
-        int[] pixels = minimapImage.getRGB(0, 0, size, size, (int[]) null, 0, size);
+        int width = minimapImage.getWidth();
+        int height = minimapImage.getHeight();
+        int[] pixels = minimapImage.getRGB(0, 0, width, height, (int[]) null, 0, width);
         for (int i = 0; i < pixels.length; i++) {
             int r = (pixels[i] >> 16) & 255;
             int g = (pixels[i] >> 8) & 255;
@@ -1938,7 +1955,7 @@ public final class BarMapExporter {
             int nb = Math.round((grey + ((b - grey) * 0.35f)) * 0.5f);
             pixels[i] = (-16777216) | (nr << 16) | (ng << 8) | nb;
         }
-        return Dxt1Encoder.createDxt5Dds(pixels, size, size);
+        return Dxt1Encoder.createDxt5Dds(pixels, width, height);
     }
 
     private static byte[] compressWithMips(BufferedImage image, int levels) {
@@ -2006,7 +2023,7 @@ public final class BarMapExporter {
         objArr[21] = Float.valueOf(sun[2] * 0.85f);
         objArr[22] = this.minHeight < SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT ? "true" : "false";
         objArr[23] = teams;
-        String info = String.format(locale, "-- Generated by the Neroxis Map Generator (BAR export)\nlocal mapinfo = {\n\tname = \"%s\",\n\tshortname = \"%s\",\n\tdescription = \"%s\",\n\tauthor = \"@AUTHOR@\",\n\tversion = \"@VERSION@\",\n\tmapfile = \"maps/%s.smf\",\n\tmodtype = 3,\n\tdepend = {\"Map Helper v1\"},\n\n\tmaphardness = 300,\n\tnotDeformable = false,\n\tgravity = 100,\n\ttidalStrength = @TIDAL@,\n\tmaxMetal = %.4f,\n\textractorRadius = 100,\n\tvoidWater = false,\n\tvoidGround = false,\n\tautoShowMetal = true,\n\n\tsmf = {\n\t\tminheight = %.1f,\n\t\tmaxheight = %.1f,\n\t},\n\n\tresources = {\n\t\tgrassShadingTex = \"@BASE@_edge.dds\",\n\t\tdetailNormalTex = \"@BASE@_normals.tga\",\n\t\tspecularTex = \"@BASE@_specular.dds\",\n\t\tsplatDetailNormalDiffuseAlpha = 1,\n\t\tsplatDetailNormalTex1 = \"@BASE@_dnts1.tga\",\n\t\tsplatDetailNormalTex2 = \"@BASE@_dnts2.tga\",\n\t\tsplatDetailNormalTex3 = \"@BASE@_dnts3.tga\",\n\t\tsplatDetailNormalTex4 = \"@BASE@_dnts4.tga\",\n\t\tsplatDistrTex = \"@BASE@_splats.dds\",\n\t},\n\n\tsplats = {\n\t\ttexScales = {0.0045, 0.0071, 0.0062, 0.0058},\n\t\ttexMults = {0.6, 0.7, 0.65, 0.6},\n\t},\n\n\tatmosphere = {\n\t\tminWind = @MINWIND@,\n\t\tmaxWind = @MAXWIND@,\n\t\tfogStart = 0.6,\n\t\tfogEnd = 1.0,\n\t\tfogColor = {%.3f, %.3f, %.3f},\n\t\tskyColor = {0.42, 0.55, 0.72},\n\t\tsunColor = {%.3f, %.3f, %.3f},\n\t\tcloudColor = {0.9, 0.9, 0.9},\n\t\tcloudDensity = 0.4,\n\t},\n\n\tlighting = {\n\t\tsunDir = {%.3f, %.3f, %.3f},\n\t\tgroundAmbientColor = {0.52, 0.52, 0.55},\n\t\tgroundDiffuseColor = {%.3f, %.3f, %.3f},\n\t\tgroundSpecularColor = {0.05, 0.05, 0.05},\n\t\tgroundShadowDensity = 0.75,\n\t\tunitAmbientColor = {0.6, 0.6, 0.6},\n\t\tunitDiffuseColor = {%.3f, %.3f, %.3f},\n\t\tunitSpecularColor = {0.8, 0.8, 0.8},\n\t\tunitShadowDensity = 0.75,\n\t\tspecularExponent = 100.0,\n\t},\n\n\twater = {\n\t\tdamage = 0,\n\t\tabsorb = {0.06, 0.025, 0.012},\n\t\tbaseColor = {0.75, 0.9, 0.95},\n\t\tminColor = {0.05, 0.12, 0.2},\n\t\tsurfaceColor = {0.6, 0.75, 0.85},\n\t\tsurfaceAlpha = 0.25,\n\t\tplaneColor = {0.02, 0.1, 0.16},\n\t\tfresnelMin = 0.2,\n\t\tfresnelMax = 0.8,\n\t\tfresnelPower = 4.0,\n\t\tshoreWaves = true,\n\t\tforceRendering = false,\n\t\thasWaterPlane = %s,\n\t},\n\n\tteams = {\n%s\t},\n\n\tterrainTypes = {\n\t\t[0] = {\n\t\t\tname = \"Default\",\n\t\t\thardness = 1.0,\n\t\t\treceiveTracks = true,\n\t\t\tmoveSpeeds = {\n\t\t\t\ttank = 1.0,\n\t\t\t\tkbot = 1.0,\n\t\t\t\thover = 1.0,\n\t\t\t\tship = 1.0,\n\t\t\t},\n\t\t},\n\t},\n\n\tgrass = {\n\t\tbladeWaveScale = 1.0,\n\t\tbladeWidth = 0.4,\n\t\tbladeHeight = 4.0,\n\t\tbladeAngle = 1.57,\n\t\tbladeColor = {0.55, 0.6, 0.3},\n\t},\n\n\tcustom = {\n\t\tgenerator = \"neroxis\",\n\t\t-- the grass shading texture is used to darken the map edge extension, the grass\n\t\t-- takes its colour from the minimap instead\n\t\tgrassconfig = {\n\t\t\tmapGrassColorModTex = \"$minimap\",\n\t\t\tgrassMinSize = 0.6,\n\t\t\tgrassMaxSize = 1.2,\n\t\t\tgrassShaderParams = {\n\t\t\t\tMAPCOLORFACTOR = 0.5,\n\t\t\t\tMAPCOLORBASE = 0.9,\n\t\t\t},\n\t\t},\n\t},\n}\n\nreturn mapinfo\n", objArr).replace("@BASE@", toFileName(getDisplayName())).replace("@AUTHOR@", this.options.author()).replace("@VERSION@", this.options.mapName() != null ? this.options.mapVersion() : "") + "\n--[[skirmish\n" + buildGameScript(List.of("Player"), true, false, null) + "]]\n";
+        String info = String.format(locale, "-- Generated by the Neroxis Map Generator (BAR export)\nlocal mapinfo = {\n\tname = \"%s\",\n\tshortname = \"%s\",\n\tdescription = \"%s\",\n\tauthor = \"@AUTHOR@\",\n\tversion = \"@VERSION@\",\n\tmapfile = \"maps/%s.smf\",\n\tmodtype = 3,\n\tdepend = {\"Map Helper v1\"},\n\n\tmaphardness = 300,\n\tnotDeformable = false,\n\tgravity = 100,\n\ttidalStrength = @TIDAL@,\n\tmaxMetal = %.4f,\n\textractorRadius = 100,\n\tvoidWater = false,\n\tvoidGround = false,\n\tautoShowMetal = true,\n\n\tsmf = {\n\t\tminheight = %.1f,\n\t\tmaxheight = %.1f,\n\t\tsmtFileName0 = \"maps/@BASE@.smt\",\n\t\tminimapTex = \"maps/@BASE@_preview.png\",\n\t},\n\n\tresources = {\n\t\tgrassShadingTex = \"@BASE@_edge.dds\",\n\t\tdetailNormalTex = \"@BASE@_normals.tga\",\n\t\tspecularTex = \"@BASE@_specular.dds\",\n\t\tsplatDetailNormalDiffuseAlpha = 1,\n\t\tsplatDetailNormalTex1 = \"@BASE@_dnts1.tga\",\n\t\tsplatDetailNormalTex2 = \"@BASE@_dnts2.tga\",\n\t\tsplatDetailNormalTex3 = \"@BASE@_dnts3.tga\",\n\t\tsplatDetailNormalTex4 = \"@BASE@_dnts4.tga\",\n\t\tsplatDistrTex = \"@BASE@_splats.dds\",\n\t},\n\n\tsplats = {\n\t\ttexScales = {0.0045, 0.0071, 0.0062, 0.0058},\n\t\ttexMults = {0.6, 0.7, 0.65, 0.6},\n\t},\n\n\tatmosphere = {\n\t\tminWind = @MINWIND@,\n\t\tmaxWind = @MAXWIND@,\n\t\tfogStart = 0.6,\n\t\tfogEnd = 1.0,\n\t\tfogColor = {%.3f, %.3f, %.3f},\n\t\tskyColor = {0.42, 0.55, 0.72},\n\t\tsunColor = {%.3f, %.3f, %.3f},\n\t\tcloudColor = {0.9, 0.9, 0.9},\n\t\tcloudDensity = 0.4,\n\t},\n\n\tlighting = {\n\t\tsunDir = {%.3f, %.3f, %.3f},\n\t\tgroundAmbientColor = {0.52, 0.52, 0.55},\n\t\tgroundDiffuseColor = {%.3f, %.3f, %.3f},\n\t\tgroundSpecularColor = {0.05, 0.05, 0.05},\n\t\tgroundShadowDensity = 0.75,\n\t\tunitAmbientColor = {0.6, 0.6, 0.6},\n\t\tunitDiffuseColor = {%.3f, %.3f, %.3f},\n\t\tunitSpecularColor = {0.8, 0.8, 0.8},\n\t\tunitShadowDensity = 0.75,\n\t\tspecularExponent = 100.0,\n\t},\n\n\twater = {\n\t\tdamage = 0,\n\t\tabsorb = {0.06, 0.025, 0.012},\n\t\tbaseColor = {0.75, 0.9, 0.95},\n\t\tminColor = {0.05, 0.12, 0.2},\n\t\tsurfaceColor = {0.6, 0.75, 0.85},\n\t\tsurfaceAlpha = 0.25,\n\t\tplaneColor = {0.02, 0.1, 0.16},\n\t\tfresnelMin = 0.2,\n\t\tfresnelMax = 0.8,\n\t\tfresnelPower = 4.0,\n\t\tshoreWaves = true,\n\t\tforceRendering = false,\n\t\thasWaterPlane = %s,\n\t},\n\n\tteams = {\n%s\t},\n\n\tterrainTypes = {\n\t\t[0] = {\n\t\t\tname = \"Default\",\n\t\t\thardness = 1.0,\n\t\t\treceiveTracks = true,\n\t\t\tmoveSpeeds = {\n\t\t\t\ttank = 1.0,\n\t\t\t\tkbot = 1.0,\n\t\t\t\thover = 1.0,\n\t\t\t\tship = 1.0,\n\t\t\t},\n\t\t},\n\t},\n\n\tgrass = {\n\t\tbladeWaveScale = 1.0,\n\t\tbladeWidth = 0.4,\n\t\tbladeHeight = 4.0,\n\t\tbladeAngle = 1.57,\n\t\tbladeColor = {0.55, 0.6, 0.3},\n\t},\n\n\tcustom = {\n\t\tgenerator = \"neroxis\",\n\t\t-- the grass shading texture is used to darken the map edge extension, the grass\n\t\t-- takes its colour from the minimap instead\n\t\tgrassconfig = {\n\t\t\tmapGrassColorModTex = \"$minimap\",\n\t\t\tgrassMinSize = 0.6,\n\t\t\tgrassMaxSize = 1.2,\n\t\t\tgrassShaderParams = {\n\t\t\t\tMAPCOLORFACTOR = 0.5,\n\t\t\t\tMAPCOLORBASE = 0.9,\n\t\t\t},\n\t\t},\n\t},\n}\n\nreturn mapinfo\n", objArr).replace("@BASE@", toFileName(getDisplayName())).replace("@AUTHOR@", this.options.author()).replace("@VERSION@", this.options.mapName() != null ? this.options.mapVersion() : "") + "\n--[[skirmish\n" + buildGameScript(List.of("Player"), true, false, null) + "]]\n";
         return info.replace("@TIDAL@", String.valueOf(this.options.tidal())).replace("@MINWIND@", String.valueOf(this.options.minWind())).replace("@MAXWIND@", String.valueOf(this.options.maxWind()));
     }
 
@@ -2022,7 +2039,8 @@ public final class BarMapExporter {
         if (numTeams < 2 || distinctIds == numTeams || spawns.size() % numTeams != 0) {
             return teams;
         }
-        float center = this.faSize / 2.0f;
+        float centerX = this.faWidth / 2.0f;
+        float centerZ = this.faHeight / 2.0f;
         if (numTeams == 2) {
             float[][] directions = {new float[]{1.0f, SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT}, new float[]{SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, 1.0f}, new float[]{0.7071f, 0.7071f}, new float[]{0.7071f, -0.7071f}};
             float bestGap = 0.0f;
@@ -2031,7 +2049,7 @@ public final class BarMapExporter {
                 int positive = 0;
                 float gap = Float.MAX_VALUE;
                 for (Spawn spawn2 : spawns) {
-                    float projection = ((spawn2.getPosition().x() - center) * direction[0]) + ((spawn2.getPosition().z() - center) * direction[1]);
+                    float projection = ((spawn2.getPosition().x() - centerX) * direction[0]) + ((spawn2.getPosition().z() - centerZ) * direction[1]);
                     positive += projection > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT ? 1 : 0;
                     gap = Math.min(gap, Math.abs(projection));
                 }
@@ -2042,14 +2060,14 @@ public final class BarMapExporter {
             }
             if (best != null) {
                 for (Spawn spawn3 : spawns) {
-                    teams.put(spawn3, Integer.valueOf(((spawn3.getPosition().x() - center) * best[0]) + ((spawn3.getPosition().z() - center) * best[1]) > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT ? 1 : 0));
+                    teams.put(spawn3, Integer.valueOf(((spawn3.getPosition().x() - centerX) * best[0]) + ((spawn3.getPosition().z() - centerZ) * best[1]) > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT ? 1 : 0));
                 }
             }
             return teams;
         }
         List<Spawn> byAngle = new ArrayList<>(spawns);
         byAngle.sort(Comparator.comparingDouble(spawn4 -> {
-            return StrictMath.atan2(spawn4.getPosition().z() - center, spawn4.getPosition().x() - center);
+            return StrictMath.atan2(spawn4.getPosition().z() - centerZ, spawn4.getPosition().x() - centerX);
         }));
         int teamSize = spawns.size() / numTeams;
         for (int i = 0; i < byAngle.size(); i++) {
@@ -2072,8 +2090,8 @@ public final class BarMapExporter {
             int count = 0;
             for (Spawn spawn : spawns) {
                 if (teams.getOrDefault(spawn, -1).intValue() == teamId) {
-                    x += spawn.getPosition().x() / this.faSize;
-                    z += spawn.getPosition().z() / this.faSize;
+                    x += spawn.getPosition().x() / this.faWidth;
+                    z += spawn.getPosition().z() / this.faHeight;
                     count++;
                 }
             }
@@ -2111,9 +2129,64 @@ public final class BarMapExporter {
         }
         String name = this.map.getName();
         if (!name.startsWith("neroxis_map_generator_") || (versionEnd = name.indexOf(95, "neroxis_map_generator_".length())) <= 0 || versionEnd >= name.length() - 1) {
-            return name.isBlank() ? "Eclipse_Mapgen_map" : name;
+            return name.isBlank() ? "Map_map" : name;
         }
-        return "Eclipse_Mapgen_" + name.substring(versionEnd + 1);
+        return "Map_" + name.substring(versionEnd + 1);
+    }
+
+    private static void saveLobbyMinimaps(Path folderPath, String archiveName, String displayName, BufferedImage previewImage, byte[] previewPngBytes) {
+        Set<Path> dataDirs = new LinkedHashSet<>();
+        if (folderPath != null) {
+            Path parent = folderPath.getParent();
+            if (parent != null && "maps".equalsIgnoreCase(folderPath.getFileName().toString())) {
+                dataDirs.add(parent);
+            }
+        }
+        String progFiles = System.getenv("ProgramFiles");
+        if (progFiles != null && !progFiles.isBlank()) {
+            dataDirs.add(Path.of(progFiles, "Beyond-All-Reason", "data"));
+        }
+        dataDirs.add(Path.of("C:\\Program Files\\Beyond-All-Reason\\data"));
+        String localAppData = System.getenv("LOCALAPPDATA");
+        if (localAppData != null && !localAppData.isBlank()) {
+            dataDirs.add(Path.of(localAppData, "Programs", "Beyond-All-Reason", "data"));
+        }
+
+        String chobbyName = displayName.replace(" ", "_");
+        ByteArrayOutputStream jpgBytes = new ByteArrayOutputStream();
+        byte[] previewJpgBytes = null;
+        try {
+            ImageIO.write(previewImage, "jpg", jpgBytes);
+            previewJpgBytes = jpgBytes.toByteArray();
+        } catch (Throwable ignored) {
+        }
+
+        for (Path dataDir : dataDirs) {
+            if (!Files.isDirectory(dataDir)) {
+                continue;
+            }
+            try {
+                Path thumbDir = dataDir.resolve("LuaMenu/configs/gameconfig/byar/minimapthumbnail");
+                Path overrideDir = dataDir.resolve("LuaMenu/configs/gameconfig/byar/minimapoverride");
+                Path imagesMinimapsDir = dataDir.resolve("LuaMenu/Images/Minimaps");
+
+                Files.createDirectories(thumbDir);
+                Files.createDirectories(overrideDir);
+                Files.createDirectories(imagesMinimapsDir);
+
+                String[] names = {chobbyName, archiveName, displayName};
+                for (String n : names) {
+                    Files.write(thumbDir.resolve(n + ".png"), previewPngBytes);
+                    if (previewJpgBytes != null) {
+                        Files.write(overrideDir.resolve(n + ".jpg"), previewJpgBytes);
+                        Files.write(imagesMinimapsDir.resolve(n + ".jpg"), previewJpgBytes);
+                    }
+                    Files.write(imagesMinimapsDir.resolve(n + ".png"), previewPngBytes);
+                }
+            } catch (Throwable t) {
+                System.err.println("Warning: Could not save lobby minimap preview: " + t.getMessage());
+            }
+        }
     }
 
     private static String toFileName(String name) {

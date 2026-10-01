@@ -72,7 +72,7 @@ final class StartScreen {
         card.setPreferredSize(new Dimension(620, 380));
         JLabel logo = new JLabel();
         try {
-            InputStream stream = StartScreen.class.getResourceAsStream("eclipse.png");
+            InputStream stream = StartScreen.class.getResourceAsStream("barmapstudio.png");
             if (stream != null) {
                 try {
                     BufferedImage image = ImageIO.read(stream);
@@ -95,7 +95,7 @@ final class StartScreen {
             }
         } catch (IOException e) {
         }
-        JLabel title = new JLabel("ECLIPSE");
+        JLabel title = new JLabel("BAR MAP STUDIO");
         title.setForeground(BarLauncher.ACCENT);
         title.setFont(title.getFont().deriveFont(1, 30.0f));
         JLabel subtitle = new JLabel("for Beyond All Reason");
@@ -279,11 +279,11 @@ final class StartScreen {
                 this.launcherText.setText((LauncherUpdater.appStore() ? "Updates come from the App Store" : "Up to date") + " (build " + LauncherUpdater.runningCommit() + ")");
                 break;
             case "ready":
-                this.launcherText.setText("A new version is downloaded: it starts the next time you open Eclipse");
+                this.launcherText.setText("A new version is downloaded: it starts the next time you open BAR Map Studio");
                 break;
             case "installing":
                 this.installing = true;
-                this.launcherText.setText("Installing the new version, Eclipse restarts...");
+                this.launcherText.setText("Installing the new version, BAR Map Studio restarts...");
                 this.start.setEnabled(false);
                 this.start.setText("Updating...");
                 break;
@@ -317,7 +317,7 @@ final class StartScreen {
     }
 
     private void readLog() {
-        Path log = this.data.get().resolve("eclipse-game-refresh.log");
+        Path log = this.data.get().resolve("barmapstudio-game-refresh.log");
         if (!Files.isRegularFile(log, new LinkOption[0])) {
             return;
         }

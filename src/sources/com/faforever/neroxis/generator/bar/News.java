@@ -56,7 +56,7 @@ import javax.swing.UIManager;
 
 /* JADX INFO: loaded from: app_classes.zip:com/faforever/neroxis/generator/bar/News.class */
 final class News {
-    private static final String SITE = "https://eclipseforeverbeyond.com";
+    private static final String SITE = "https://www.beyondallreason.info";
     private static final String DISCORD = "https://discord.gg/EXAQBeseS";
     private static final Color TILE = new Color(34, 37, 45);
     private static final Color TILE_HOVER = new Color(42, 46, 56);
@@ -266,7 +266,7 @@ final class News {
         this.openPrime = openPrime;
         this.reportBug = reportBug;
         try {
-            URL resource = BarLauncher.class.getResource("eclipse.png");
+            URL resource = BarLauncher.class.getResource("barmapstudio.png");
             this.logo = resource != null ? ImageIO.read(resource) : null;
         } catch (Exception e) {
             this.logo = null;
@@ -527,7 +527,7 @@ final class News {
 
     static Extras defaultExtras() {
         List<Link> social = List.of(new Link("DISCORD", DISCORD, "", new Color(88, 101, 242)), new Link("WEBSITE", SITE, "", new Color(196, 110, 30)));
-        List<Column> columns = List.of(new Column("NEW PLAYERS", List.of(new Link("Download", "https://eclipseforeverbeyond.com/download", "", null), new Link("First steps", "https://eclipseforeverbeyond.com/download#steps", "", null))), new Column("COMMUNITY", List.of(new Link("Discord", DISCORD, "", null), new Link("Maps", "https://eclipseforeverbeyond.com/maps", "", null))), new Column("HELP", List.of(new Link("Report a bug", "", "bug", null), new Link("Trouble starting a game", "https://eclipseforeverbeyond.com/download#trouble", "", null))));
+        List<Column> columns = List.of(new Column("NEW PLAYERS", List.of(new Link("Download", "https://www.beyondallreason.info/download", "", null), new Link("First steps", "https://www.beyondallreason.info/guide", "", null))), new Column("COMMUNITY", List.of(new Link("Discord", DISCORD, "", null), new Link("Maps", "https://www.beyondallreason.info/maps", "", null))), new Column("HELP", List.of(new Link("Report a bug", "", "bug", null), new Link("Trouble starting a game", "https://www.beyondallreason.info/download", "", null))));
         return new Extras(social, columns, List.of());
     }
 
@@ -863,7 +863,7 @@ final class News {
             }));
         }
         this.side.add(row, "North");
-        this.side.add(new Tile(this, DEEP, "SUPPORT ECLIPSE", "PRIME", 26.0f, this.openPrime), "Center");
+        this.side.add(new Tile(this, DEEP, "MAP STUDIO", "STUDIO", 26.0f, this.openPrime), "Center");
         Tile bug = new Tile(this, HEAD, "Report a Bug", "", 18.0f, this.reportBug);
         bug.setPreferredSize(new Dimension(340, 50));
         this.side.add(bug, "South");

@@ -489,10 +489,10 @@ final class KeybindEditor {
             return profile;
         }
         String base = String.valueOf(profile.get("name"));
-        String name = base + " (Eclipse)";
+        String name = base + " (Studio)";
         int number = 2;
         while (find(name) != null) {
-            name = base + " (Eclipse " + number + ")";
+            name = base + " (Studio " + number + ")";
             number++;
         }
         Map<String, Object> fork = copy(profile);
@@ -545,7 +545,7 @@ final class KeybindEditor {
                     case "`":
                         strArr = new String[]{"sc_`", "`", "sc_backquote", "backquote"};
                         break;
-                    case "\":
+                    case "\\":
                         strArr = new String[]{"sc_\\", "\\", "sc_backslash", "backslash"};
                         break;
                     default:
