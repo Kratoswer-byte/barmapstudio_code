@@ -96,7 +96,7 @@
 - [x] Overlay popup flyout per Scorciatoie e Hotkeys: riquadro a 2 colonne con tutte le scorciatoie di Map Studio ([S], [M], [G], [P], [R], [T], [W], [E], [DEL], [Spazio], [X], [Ctrl+Z/Y], [L], rotellina zoom, drag destro)
 - [x] Posizionamento dinamico verso l'alto degli overlay popup (offset Y negativo rispetto al footer) per evitare clipping oltre il bordo dello schermo
 
-### 11. Risoluzione Taglio Pannello Sinistro e Ridimensionamento Finestra in Altezza
+### 11. Risoluzione Taglio Pannello Sinistro e Ridimensionamento Finestra in Altezza [Commit: d296cec]
 - [x] Risolto taglio laterale all'avvio su `MapStudioPanel`: allocata larghezza iniziale di 380px per la sidebar sinistra (`leftSplit.setDividerLocation(380)`)
 - [x] Aggiunto listener reattivo `ComponentListener` su `leftSplit` e `mainSplit` che garantisce e blocca l'apertura a 380px ed evita che la finestra all'avvio comprima la sidebar a 240px
 - [x] Aumentata la dimensione minima consentita per la sidebar sinistra (`setMinimumSize(340, 100)`) così che né il layout automatico né l'utente possano schiacciare i controlli oltre il limite di leggibilità
