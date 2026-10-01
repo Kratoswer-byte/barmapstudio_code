@@ -27,6 +27,7 @@
 | `0da6da3` | `feat` | 01/10/2026 15:16 | Finestra AssetSpecsDialog (guida requisiti asset) e supporto texture custom |
 | `3146ec6` | `fix/feat` | 01/10/2026 15:58 | Icone vettoriali specs (no tofu), apertura allo start, specs button su slope map e sidebar responsive con margini |
 | `0a5ebc4` | `feat` | 01/10/2026 16:55 | Modulo Texture Studio (PBR Seamless 4D, Splatting Multi-Materiale RGBA e nuova tab TEXTURES) |
+| `d94997d` | `feat/fix` | 01/10/2026 17:40 | Riprogettazione Texture Studio: layout compatto 240px, default Metodo B (file maschera) e fallback Metodo A |
 
 ---
 
@@ -170,4 +171,12 @@
 - [x] Salvataggio ed Esportazione: tasti dedicati `Salva Texture`, `Esporta Normal Map` e `Apri Cartella Textures` (in `custom_assets/textures/`)
 - [x] Navigazione Superiore in `BarMapStudio.java`: aggiunta la voce `TEXTURES` posizionata tra `MAPS` e `UNITS`, corredata da nuova icona vettoriale della tavolozza artistica Java2D
 - [x] Collegamento rapido nell'Editor: aggiunto pulsante `Apri Texture Studio (Splatting)...` nella sidebar sinistra di `MapStudioPanel`
+
+### 18. Riprogettazione Texture Studio: Layout Compatto 240px e Default Metodo B (File Maschera) [Commit: d94997d]
+- [x] Risoluzione radicale dell'ingombro a schermo: sidebar laterale snellita da mezza schermata a soli 240px-260px, lasciando oltre l'80% dello schermo per il canvas della mappa
+- [x] Implementato `ScrollableTrackWidthPanel` con vincolo rigido della larghezza al viewport del `JScrollPane`, azzerando qualsiasi overflow o forzatura orizzontale
+- [x] Attivato di **Default il Metodo B (Caricamento Maschere da File)** per ciascuna delle 4 Zone: ogni zona offre in prima evidenza il pulsante `Carica Maschera` con visualizzazione immediata del file PNG/BMP caricato
+- [x] Mantenuto il **Metodo A (Regola Automatica da Heightmap)** come fallback intelligente: se per una zona non viene caricato un file, il programma calcola in automatico le pendenze e le quote dalla mappa, evitando schermate rotte o vuote
+- [x] Schede di Zona compatte a righe verticali separate: riga 1 (titolo + indicatore a pallino colorato), riga 2 (pulsante maschera + nome file), riga 3 (selettore materiale preset + caricamento texture personale)
+- [x] Barra divisore impostata a 275px con limite minimo a 220px, garantendo massima flessibilità sia in modalità finestra che a schermo intero
 

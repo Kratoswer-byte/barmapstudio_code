@@ -5,13 +5,10 @@ import com.faforever.neroxis.map.SCMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
 import java.io.File;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
@@ -22,8 +19,8 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 /**
- * TextureStudioPanel: Modulo completo di generazione Texture Procedurali Seamless (PBR)
- * e Composizione Multi-Materiale guidata da Maschere di Splatting RGBA (Pendenze, Quote, Rumore).
+ * TextureStudioPanel: Modulo intuitivo e compatto (240px) per la composizione multi-materiale
+ * e texturizzazione basata su Maschere di Zona / Heightmap (Caricamento da File di Default + Regole Automatiche di fallback).
  */
 public class TextureStudioPanel extends JPanel {
 
@@ -41,31 +38,30 @@ public class TextureStudioPanel extends JPanel {
     private static final Color TEXT_MAIN = new Color(220, 225, 235);
     private static final Color TEXT_MUTED = new Color(130, 140, 160);
 
-    public enum Mode {
-        MATERIAL_DESIGNER,
-        TERRAIN_SPLATTER
-    }
-
     public enum ViewMode {
-        COMPOSITE,
-        SPLAT_RGBA,
-        CHANNEL_R,
-        CHANNEL_G,
-        CHANNEL_B,
-        CHANNEL_A,
-        NORMAL_MAP_3D,
-        SEAMLESS_TILING
+        COMPOSITE("1. Terreno Fuso (Colori)"),
+        SPLAT_RGBA("2. Mappa Splatting (RGBA)"),
+        CHANNEL_R("3. Zona 1: Pianura (Canale R)"),
+        CHANNEL_G("4. Zona 2: Roccia (Canale G)"),
+        CHANNEL_B("5. Zona 3: Spiaggia (Canale B)"),
+        CHANNEL_A("6. Zona 4: Picchi (Canale A)"),
+        NORMAL_MAP_3D("7. Normal Map 3D (Luce Solare)"),
+        SEAMLESS_TILING("8. Tiling Seamless (2x2)");
+
+        public final String label;
+        ViewMode(String label) { this.label = label; }
+        @Override public String toString() { return label; }
     }
 
     public enum MaterialPreset {
-        ROCK_CLIFF("Roccia & Falesia", 3.5f, 5, 0.55f, 1.4f, 1.8f, new Color(125, 115, 105), new Color(85, 78, 70), new Color(45, 40, 38)),
         GRASS_MEADOW("Erba & Prato", 5.0f, 4, 0.45f, 1.1f, 0.8f, new Color(80, 130, 50), new Color(55, 95, 35), new Color(38, 58, 24)),
-        SAND_DUNES("Sabbia & Dune", 2.8f, 3, 0.35f, 0.9f, 0.6f, new Color(210, 180, 130), new Color(185, 155, 105), new Color(145, 115, 75)),
+        ROCK_CLIFF("Roccia & Falesia", 3.5f, 5, 0.55f, 1.4f, 1.8f, new Color(125, 115, 105), new Color(85, 78, 70), new Color(45, 40, 38)),
+        SAND_DUNES("Sabbia & Costa", 2.8f, 3, 0.35f, 0.9f, 0.6f, new Color(210, 180, 130), new Color(185, 155, 105), new Color(145, 115, 75)),
+        SNOW_GLACIER("Neve & Vette", 3.0f, 4, 0.40f, 1.2f, 0.9f, new Color(240, 245, 255), new Color(205, 220, 240), new Color(160, 185, 215)),
         CRACKED_MUD("Argilla Crepata", 4.2f, 4, 0.60f, 1.6f, 1.5f, new Color(140, 110, 85), new Color(105, 80, 60), new Color(50, 35, 25)),
-        SNOW_GLACIER("Neve & Ghiaccio", 3.0f, 4, 0.40f, 1.2f, 0.9f, new Color(240, 245, 255), new Color(205, 220, 240), new Color(160, 185, 215)),
-        VOLCANIC_BASALT("Basalto Vulcanico", 4.0f, 5, 0.58f, 1.5f, 2.0f, new Color(55, 50, 52), new Color(38, 35, 38), new Color(18, 15, 18)),
-        GRAVEL_PEBBLES("Ghiaia & Ciottoli", 6.0f, 5, 0.50f, 1.3f, 1.4f, new Color(135, 130, 125), new Color(100, 98, 95), new Color(60, 58, 55)),
-        CRYSTALLINE_ALIEN("Suolo Cristallino", 3.8f, 4, 0.52f, 1.3f, 1.6f, new Color(50, 170, 190), new Color(30, 110, 140), new Color(20, 50, 80));
+        VOLCANIC_BASALT("Basalto Magma", 4.0f, 5, 0.58f, 1.5f, 2.0f, new Color(55, 50, 52), new Color(38, 35, 38), new Color(18, 15, 18)),
+        GRAVEL_PEBBLES("Ghiaia & Sassi", 6.0f, 5, 0.50f, 1.3f, 1.4f, new Color(135, 130, 125), new Color(100, 98, 95), new Color(60, 58, 55)),
+        CRYSTALLINE_ALIEN("Cristalli Alieni", 3.8f, 4, 0.52f, 1.3f, 1.6f, new Color(50, 170, 190), new Color(30, 110, 140), new Color(20, 50, 80));
 
         public final String label;
         public final float defaultScale;
@@ -89,9 +85,30 @@ public class TextureStudioPanel extends JPanel {
             this.colorDark = cDark;
         }
 
-        @Override
-        public String toString() {
-            return label;
+        @Override public String toString() { return label; }
+    }
+
+    /**
+     * Struttura Dati per ciascuna delle 4 Zone
+     */
+    public static class ZoneConfig {
+        public final int id;
+        public final String title;
+        public final Color indicatorColor;
+        public boolean useFileMask = true; // DEFAULT: METODO B (Caricamento file maschera)
+        public File maskFile = null;
+        public BufferedImage loadedMask = null;
+        public MaterialPreset preset;
+        public File customTextureFile = null;
+        public BufferedImage customTexture = null;
+        public float autoThreshold; // per regola automatica di fallback
+
+        public ZoneConfig(int id, String title, Color col, MaterialPreset preset, float autoThreshold) {
+            this.id = id;
+            this.title = title;
+            this.indicatorColor = col;
+            this.preset = preset;
+            this.autoThreshold = autoThreshold;
         }
     }
 
@@ -104,38 +121,19 @@ public class TextureStudioPanel extends JPanel {
         return t;
     });
 
-    // Stato Corrente
-    private Mode currentMode = Mode.TERRAIN_SPLATTER;
+    // Le 4 Zone
+    private final ZoneConfig zone1 = new ZoneConfig(1, "ZONA 1 - Pianure & Valli", new Color(239, 68, 68), MaterialPreset.GRASS_MEADOW, 0.0f);
+    private final ZoneConfig zone2 = new ZoneConfig(2, "ZONA 2 - Pareti & Rocce", new Color(34, 197, 94), MaterialPreset.ROCK_CLIFF, 0.38f);
+    private final ZoneConfig zone3 = new ZoneConfig(3, "ZONA 3 - Linea di Costa", new Color(59, 130, 246), MaterialPreset.SAND_DUNES, 35.0f);
+    private final ZoneConfig zone4 = new ZoneConfig(4, "ZONA 4 - Cime & Picchi", new Color(234, 179, 8), MaterialPreset.SNOW_GLACIER, 0.75f);
+
+    // Parametri Globali
     private ViewMode currentViewMode = ViewMode.COMPOSITE;
     private int currentRes = 512;
     private long currentSeed = 133742L;
+    private SCMap activeMap = null;
 
-    // Parametri Singolo Materiale (Material Designer)
-    private MaterialPreset singlePreset = MaterialPreset.ROCK_CLIFF;
-    private float matScale = 3.5f;
-    private int matOctaves = 5;
-    private float matPersistence = 0.55f;
-    private float matContrast = 1.3f;
-    private float matBump = 1.5f;
-    private Color matColorLight = MaterialPreset.ROCK_CLIFF.colorLight;
-    private Color matColorMid = MaterialPreset.ROCK_CLIFF.colorMid;
-    private Color matColorDark = MaterialPreset.ROCK_CLIFF.colorDark;
-
-    // Parametri 4 Layer (Terrain Splatter)
-    private MaterialPreset layer1Preset = MaterialPreset.GRASS_MEADOW;    // Layer 1: Base / Valli (R)
-    private MaterialPreset layer2Preset = MaterialPreset.ROCK_CLIFF;       // Layer 2: Pendenze / Scarpate (G)
-    private MaterialPreset layer3Preset = MaterialPreset.SAND_DUNES;       // Layer 3: Spiaggia / Costa (B)
-    private MaterialPreset layer4Preset = MaterialPreset.SNOW_GLACIER;     // Layer 4: Picchi / Alta quota (A)
-
-    // Regole di Splatting
-    private float slopeThreshold = 0.38f;     // ~22 gradi
-    private float slopeFalloff = 0.15f;
-    private float waterElevation = 35.0f;
-    private float beachBand = 12.0f;
-    private float peakAltitude = 0.75f;
-    private float noisePerturbation = 0.30f;
-
-    // Buffer di Rendering
+    // Buffer Immagini
     private BufferedImage renderedDiffuse;
     private BufferedImage renderedNormal;
     private BufferedImage renderedSplatRGBA;
@@ -144,23 +142,12 @@ public class TextureStudioPanel extends JPanel {
     private BufferedImage renderedChannelB;
     private BufferedImage renderedChannelA;
 
-    // Cache Mappa Attiva (se fornita)
-    private SCMap activeMap = null;
-
     // Componenti UI
-    private JToggleButton btnModeDesigner;
-    private JToggleButton btnModeSplatter;
     private JComboBox<String> resCombo;
     private JComboBox<ViewMode> viewModeCombo;
     private JLabel statusLabel;
     private TextureCanvas canvas;
-    private JPanel sidebarContainer;
-    private CardLayout sidebarCards;
-    private JPanel designerParamsPanel;
-    private JPanel splatterParamsPanel;
-
-    // Debounce timer per gli slider
-    private final Timer debounceTimer = new Timer(60, e -> triggerAsyncGeneration());
+    private final Timer debounceTimer = new Timer(50, e -> triggerAsyncGeneration());
 
     public TextureStudioPanel(Path homePath, Path barDataPath, TerrainApplyCallback applyCallback) {
         this.homePath = homePath;
@@ -171,72 +158,62 @@ public class TextureStudioPanel extends JPanel {
         setLayout(new BorderLayout());
         setBackground(BG_DARK);
 
-        // Costruzione Layout
+        // Header compatta
         add(buildHeaderToolbar(), BorderLayout.NORTH);
 
-        JSplitPane mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildSidebar(), buildCenterCanvas());
-        mainSplit.setDividerLocation(360);
+        // Sidebar compatta (260px) + Center Canvas con SplitPane fluido
+        JComponent sidebar = buildCompactSidebar();
+        JComponent centerCanvas = buildCenterCanvas();
+
+        JSplitPane mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sidebar, centerCanvas);
+        mainSplit.setDividerLocation(275);
         mainSplit.setDividerSize(6);
         mainSplit.setContinuousLayout(true);
         mainSplit.setBorder(null);
         mainSplit.setOpaque(false);
-        add(mainSplit, BorderLayout.CENTER);
+        sidebar.setMinimumSize(new Dimension(220, 100));
+        centerCanvas.setMinimumSize(new Dimension(300, 100));
 
+        add(mainSplit, BorderLayout.CENTER);
         add(buildBottomActionBar(), BorderLayout.SOUTH);
 
-        // Prima generazione automatica
         triggerAsyncGeneration();
     }
 
     public void setActiveMap(SCMap map) {
         this.activeMap = map;
         if (map != null && map.getBiome() != null && map.getBiome().waterSettings() != null) {
-            this.waterElevation = map.getBiome().waterSettings().elevation();
+            zone3.autoThreshold = map.getBiome().waterSettings().elevation();
         }
     }
 
     private JComponent buildHeaderToolbar() {
-        JPanel bar = new JPanel(new BorderLayout(10, 0));
+        JPanel bar = new JPanel(new BorderLayout(8, 0));
         bar.setBackground(CARD_BG);
         bar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
-        bar.setPreferredSize(new Dimension(100, 44));
+        bar.setPreferredSize(new Dimension(100, 42));
 
-        // Sinistra: Selettore Modalità (Material Designer vs Terrain Splatter)
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
+        // Sinistra: Titolo e badge
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         left.setOpaque(false);
 
         JLabel lblTitle = new JLabel("TEXTURE STUDIO");
         lblTitle.setFont(BarMapStudio.fontCond(Font.BOLD, 14));
         lblTitle.setForeground(ACCENT_CYAN);
         left.add(lblTitle);
-        left.add(Box.createHorizontalStrut(6));
 
-        ButtonGroup modeGroup = new ButtonGroup();
-        btnModeSplatter = createPillToggle("Terrain Splatter (Multi-Material)", true);
-        btnModeDesigner = createPillToggle("Material Designer (Singolo)", false);
-        modeGroup.add(btnModeSplatter);
-        modeGroup.add(btnModeDesigner);
+        JLabel badge = new JLabel("  4 ZONE & SPLATTING  ");
+        badge.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
+        badge.setForeground(TEXT_MUTED);
+        badge.setBackground(CARD_INNER);
+        badge.setOpaque(true);
+        badge.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1, true));
+        left.add(badge);
 
-        btnModeSplatter.addActionListener(e -> {
-            currentMode = Mode.TERRAIN_SPLATTER;
-            sidebarCards.show(sidebarContainer, "SPLATTER");
-            updateViewModeOptions();
-            triggerAsyncGeneration();
-        });
-
-        btnModeDesigner.addActionListener(e -> {
-            currentMode = Mode.MATERIAL_DESIGNER;
-            sidebarCards.show(sidebarContainer, "DESIGNER");
-            updateViewModeOptions();
-            triggerAsyncGeneration();
-        });
-
-        left.add(btnModeSplatter);
-        left.add(btnModeDesigner);
         bar.add(left, BorderLayout.WEST);
 
-        // Destra: Risoluzione, Seed e Sincronizza Mappa
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 6));
+        // Destra: Risoluzione, Roll Seed e Sync
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 6));
         right.setOpaque(false);
 
         JLabel resLbl = new JLabel("Risoluzione:");
@@ -244,40 +221,37 @@ public class TextureStudioPanel extends JPanel {
         resLbl.setForeground(TEXT_MUTED);
         right.add(resLbl);
 
-        resCombo = new JComboBox<>(new String[]{"512 x 512 (Ultra-Fast)", "1024 x 1024 (BAR Standard)", "2048 x 2048 (HQ Export)"});
+        resCombo = new JComboBox<>(new String[]{"512x512", "1024x1024", "2048x2048"});
         resCombo.setFont(BarMapStudio.font(Font.BOLD, 11));
         resCombo.setBackground(CARD_INNER);
         resCombo.setForeground(TEXT_MAIN);
-        resCombo.setPreferredSize(new Dimension(175, 26));
-        resCombo.setSelectedIndex(0); // 512x512 iniziale veloce
+        resCombo.setPreferredSize(new Dimension(100, 26));
+        resCombo.setSelectedIndex(0);
         resCombo.addActionListener(e -> {
             int idx = resCombo.getSelectedIndex();
-            if (idx == 0) currentRes = 512;
-            else if (idx == 1) currentRes = 1024;
-            else if (idx == 2) currentRes = 2048;
+            currentRes = (idx == 0) ? 512 : (idx == 1) ? 1024 : 2048;
             triggerAsyncGeneration();
         });
         right.add(resCombo);
 
         JButton btnSeed = createGhostButton("Roll Seed");
-        btnSeed.setToolTipText("Genera una nuova variante procedurale casuale");
         btnSeed.addActionListener(e -> {
             currentSeed = new SplittableRandom().nextLong();
             triggerAsyncGeneration();
         });
         right.add(btnSeed);
 
-        JButton btnSyncMap = createGhostButton("Sincronizza con Mappa");
-        btnSyncMap.setToolTipText("Estrai quote reali e pendenze dalla mappa attiva nell'Editor");
+        JButton btnSyncMap = createGhostButton("Sincronizza Mappa");
+        btnSyncMap.setToolTipText("Collega quote reali e pendenze della mappa aperta nell'Editor");
         btnSyncMap.addActionListener(e -> {
             if (activeMap != null) {
                 if (activeMap.getBiome() != null && activeMap.getBiome().waterSettings() != null) {
-                    waterElevation = activeMap.getBiome().waterSettings().elevation();
+                    zone3.autoThreshold = activeMap.getBiome().waterSettings().elevation();
                 }
-                setStatus("Sincronizzazione orografica completata con la mappa: " + activeMap.getName(), ACCENT_CYAN);
+                setStatus("Sincronizzato con l'orografia della mappa: " + activeMap.getName(), ACCENT_CYAN);
                 triggerAsyncGeneration();
             } else {
-                setStatus("Nessuna mappa attiva trovata nell'Editor. Viene usata la morfologia sintetica di test.", ACCENT_AMBER);
+                setStatus("Mappa non ancora creata nell'Editor. Usata morfologia di test.", ACCENT_AMBER);
             }
         });
         right.add(btnSyncMap);
@@ -286,307 +260,207 @@ public class TextureStudioPanel extends JPanel {
         return bar;
     }
 
-    private JComponent buildSidebar() {
-        sidebarCards = new CardLayout();
-        sidebarContainer = new JPanel(sidebarCards);
-        sidebarContainer.setOpaque(false);
+    /**
+     * Sidebar Compatta (240px-260px) con le 4 Zone e Metodo B (File) abilitato di Default
+     */
+    private JComponent buildCompactSidebar() {
+        ScrollableTrackWidthPanel panel = new ScrollableTrackWidthPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        splatterParamsPanel = buildSplatterParamsPanel();
-        designerParamsPanel = buildDesignerParamsPanel();
+        // Intestazione compatta
+        JLabel headLbl = new JLabel("COMPOSIZIONE 4 ZONE");
+        headLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
+        headLbl.setForeground(ACCENT_CYAN);
+        panel.add(headLbl);
+        panel.add(Box.createVerticalStrut(2));
 
-        sidebarContainer.add(wrapInScroll(splatterParamsPanel), "SPLATTER");
-        sidebarContainer.add(wrapInScroll(designerParamsPanel), "DESIGNER");
+        JLabel infoLbl = new JLabel("<html>Carica le maschere delle zone dai tuoi file, oppure attiva la regola automatica dall'Heightmap.</html>");
+        infoLbl.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        infoLbl.setForeground(TEXT_MUTED);
+        panel.add(infoLbl);
+        panel.add(Box.createVerticalStrut(8));
 
-        sidebarCards.show(sidebarContainer, "SPLATTER");
-        return sidebarContainer;
-    }
+        // Le 4 Card di Zona (Compatte a 2 righe, perfette per 240px)
+        panel.add(buildZoneCard(zone1, "Pianure / Valli (Erba)", "Automatica: Fondo Mappa"));
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(buildZoneCard(zone2, "Scarpate / Monti (Roccia)", "Automatica: Pendenza > 22°"));
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(buildZoneCard(zone3, "Costa / Spiaggia (Sabbia)", "Automatica: Livello Acqua"));
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(buildZoneCard(zone4, "Cime / Vette (Neve)", "Automatica: Alta Quota > 75%"));
 
-    private JScrollPane wrapInScroll(JPanel content) {
-        JScrollPane sp = new JScrollPane(content);
+        panel.add(Box.createVerticalGlue());
+
+        JScrollPane sp = new JScrollPane(panel);
         sp.setBorder(null);
         sp.setOpaque(false);
         sp.getViewport().setOpaque(false);
+        sp.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         sp.getVerticalScrollBar().setUnitIncrement(16);
         return sp;
     }
 
-    private JPanel buildSplatterParamsPanel() {
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setOpaque(false);
-        p.setBorder(new EmptyBorder(12, 12, 12, 12));
-
-        JLabel title = new JLabel("COMPOSIZIONE MULTI-MATERIALE");
-        title.setFont(BarMapStudio.fontCond(Font.BOLD, 13));
-        title.setForeground(ACCENT_CYAN);
-        p.add(title);
-        p.add(Box.createVerticalStrut(4));
-
-        JLabel sub = new JLabel("<html>Assegna 4 materiali ai layer di splatting e controlla dove si posizionano tramite pendenze, quote e rumore naturale.</html>");
-        sub.setFont(BarMapStudio.font(Font.PLAIN, 11));
-        sub.setForeground(TEXT_MUTED);
-        p.add(sub);
-        p.add(Box.createVerticalStrut(10));
-
-        // Card 4 Layer Materiali
-        p.add(createLayerCard("LAYER 1 (R) - Fondo & Pianure:", layer1Preset, new Color(230, 80, 80), pset -> { layer1Preset = pset; queueRegen(); }));
-        p.add(Box.createVerticalStrut(6));
-        p.add(createLayerCard("LAYER 2 (G) - Scarpate & Falesie:", layer2Preset, new Color(80, 220, 80), pset -> { layer2Preset = pset; queueRegen(); }));
-        p.add(Box.createVerticalStrut(6));
-        p.add(createLayerCard("LAYER 3 (B) - Linea di Costa & Mare:", layer3Preset, new Color(80, 150, 240), pset -> { layer3Preset = pset; queueRegen(); }));
-        p.add(Box.createVerticalStrut(6));
-        p.add(createLayerCard("LAYER 4 (A) - Picchi & Alta Quota:", layer4Preset, new Color(240, 240, 100), pset -> { layer4Preset = pset; queueRegen(); }));
-        p.add(Box.createVerticalStrut(14));
-
-        // Regole Geografiche di Splatting
-        JLabel rulesTitle = new JLabel("REGOLE MASCHERE DI SPLATTING");
-        rulesTitle.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
-        rulesTitle.setForeground(ACCENT_AMBER);
-        p.add(rulesTitle);
-        p.add(Box.createVerticalStrut(8));
-
-        p.add(createSliderRow("Soglia Pendenza Roccia:", (int)(slopeThreshold * 100), 10, 80, "%", val -> {
-            slopeThreshold = val / 100.0f;
-            queueRegen();
-        }));
-        p.add(Box.createVerticalStrut(6));
-
-        p.add(createSliderRow("Transizione Sfumata (Falloff):", (int)(slopeFalloff * 100), 2, 40, "%", val -> {
-            slopeFalloff = val / 100.0f;
-            queueRegen();
-        }));
-        p.add(Box.createVerticalStrut(6));
-
-        p.add(createSliderRow("Quota Acqua / Mare:", (int)waterElevation, 0, 150, "m", val -> {
-            waterElevation = val;
-            queueRegen();
-        }));
-        p.add(Box.createVerticalStrut(6));
-
-        p.add(createSliderRow("Fascia Spiaggia (Offset):", (int)beachBand, 2, 40, "m", val -> {
-            beachBand = val;
-            queueRegen();
-        }));
-        p.add(Box.createVerticalStrut(6));
-
-        p.add(createSliderRow("Quota Attivazione Picchi:", (int)(peakAltitude * 100), 40, 95, "%", val -> {
-            peakAltitude = val / 100.0f;
-            queueRegen();
-        }));
-        p.add(Box.createVerticalStrut(6));
-
-        p.add(createSliderRow("Perturbazione Frattale Bordi:", (int)(noisePerturbation * 100), 0, 70, "%", val -> {
-            noisePerturbation = val / 100.0f;
-            queueRegen();
-        }));
-
-        p.add(Box.createVerticalGlue());
-        return p;
-    }
-
-    private JPanel buildDesignerParamsPanel() {
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setOpaque(false);
-        p.setBorder(new EmptyBorder(12, 12, 12, 12));
-
-        JLabel title = new JLabel("MATERIAL DESIGNER (SEAMLESS)");
-        title.setFont(BarMapStudio.fontCond(Font.BOLD, 13));
-        title.setForeground(ACCENT_CYAN);
-        p.add(title);
-        p.add(Box.createVerticalStrut(4));
-
-        JLabel sub = new JLabel("<html>Sintetizza singoli materiali ad alta definizione perfettamente ripetibili all'infinito (100% Seamless Tiling).</html>");
-        sub.setFont(BarMapStudio.font(Font.PLAIN, 11));
-        sub.setForeground(TEXT_MUTED);
-        p.add(sub);
-        p.add(Box.createVerticalStrut(10));
-
-        // Preset Selector
-        JPanel presetRow = new JPanel(new BorderLayout(8, 0));
-        presetRow.setOpaque(false);
-        presetRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
-        JLabel pLbl = new JLabel("Preset Terreno:");
-        pLbl.setFont(BarMapStudio.font(Font.BOLD, 11));
-        pLbl.setForeground(TEXT_MAIN);
-        presetRow.add(pLbl, BorderLayout.WEST);
-
-        JComboBox<MaterialPreset> comboPresets = new JComboBox<>(MaterialPreset.values());
-        comboPresets.setFont(BarMapStudio.font(Font.BOLD, 11));
-        comboPresets.setBackground(CARD_INNER);
-        comboPresets.setForeground(TEXT_MAIN);
-        comboPresets.setSelectedItem(singlePreset);
-        comboPresets.addActionListener(e -> {
-            MaterialPreset sel = (MaterialPreset) comboPresets.getSelectedItem();
-            if (sel != null) {
-                singlePreset = sel;
-                matScale = sel.defaultScale;
-                matOctaves = sel.defaultOctaves;
-                matPersistence = sel.defaultPersistence;
-                matContrast = sel.defaultContrast;
-                matBump = sel.defaultBump;
-                matColorLight = sel.colorLight;
-                matColorMid = sel.colorMid;
-                matColorDark = sel.colorDark;
-                queueRegen();
-            }
-        });
-        presetRow.add(comboPresets, BorderLayout.CENTER);
-        p.add(presetRow);
-        p.add(Box.createVerticalStrut(12));
-
-        // Sliders Parametri Frattali
-        p.add(createSliderRow("Scala Frequenza:", (int)(matScale * 10), 10, 100, "", val -> {
-            matScale = val / 10.0f;
-            queueRegen();
-        }));
-        p.add(Box.createVerticalStrut(6));
-
-        p.add(createSliderRow("Ottave Dettaglio:", matOctaves, 1, 8, "", val -> {
-            matOctaves = val;
-            queueRegen();
-        }));
-        p.add(Box.createVerticalStrut(6));
-
-        p.add(createSliderRow("Rugosità (Persistenza):", (int)(matPersistence * 100), 20, 80, "%", val -> {
-            matPersistence = val / 100.0f;
-            queueRegen();
-        }));
-        p.add(Box.createVerticalStrut(6));
-
-        p.add(createSliderRow("Contrasto Cromatico:", (int)(matContrast * 50), 25, 120, "", val -> {
-            matContrast = val / 50.0f;
-            queueRegen();
-        }));
-        p.add(Box.createVerticalStrut(6));
-
-        p.add(createSliderRow("Intensità Normal Map (Bump):", (int)(matBump * 50), 10, 150, "", val -> {
-            matBump = val / 50.0f;
-            queueRegen();
-        }));
-        p.add(Box.createVerticalStrut(14));
-
-        // Palette Colori
-        JLabel palTitle = new JLabel("PALETTE COLORI (RAMP 3 STOP)");
-        palTitle.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
-        palTitle.setForeground(ACCENT_AMBER);
-        p.add(palTitle);
-        p.add(Box.createVerticalStrut(8));
-
-        p.add(createColorPickerRow("Colore Luce (In rilievo):", matColorLight, c -> { matColorLight = c; queueRegen(); }));
-        p.add(Box.createVerticalStrut(6));
-        p.add(createColorPickerRow("Colore Base (Mediano):", matColorMid, c -> { matColorMid = c; queueRegen(); }));
-        p.add(Box.createVerticalStrut(6));
-        p.add(createColorPickerRow("Colore Ombra (Fessure):", matColorDark, c -> { matColorDark = c; queueRegen(); }));
-
-        p.add(Box.createVerticalGlue());
-        return p;
-    }
-
-    private JPanel createLayerCard(String title, MaterialPreset initial, Color indicatorColor, Consumer<MaterialPreset> onSelect) {
-        JPanel card = new JPanel(new BorderLayout(8, 4));
+    /**
+     * Costruisce la scheda compatta di una singola Zona
+     */
+    private JPanel buildZoneCard(ZoneConfig z, String roleDesc, String autoRuleDesc) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(CARD_INNER);
         card.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
             new EmptyBorder(6, 8, 6, 8)
         ));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 115));
 
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-        top.setOpaque(false);
+        // Riga 1: Pallino colorato + Titolo zona
+        JPanel r1 = new JPanel(new BorderLayout(6, 0));
+        r1.setOpaque(false);
 
-        // Indicatore colore layer
         JPanel dot = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(indicatorColor);
-                g2.fillOval(1, 1, 9, 9);
+                g2.setColor(z.indicatorColor);
+                g2.fillOval(0, 2, 8, 8);
                 g2.dispose();
             }
         };
-        dot.setPreferredSize(new Dimension(12, 12));
+        dot.setPreferredSize(new Dimension(10, 12));
         dot.setOpaque(false);
-        top.add(dot);
+        r1.add(dot, BorderLayout.WEST);
 
-        JLabel lbl = new JLabel(title);
-        lbl.setFont(BarMapStudio.font(Font.BOLD, 10));
-        lbl.setForeground(TEXT_MAIN);
-        top.add(lbl);
-        card.add(top, BorderLayout.NORTH);
+        JLabel title = new JLabel(z.title.toUpperCase());
+        title.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
+        title.setForeground(TEXT_MAIN);
+        r1.add(title, BorderLayout.CENTER);
 
-        JComboBox<MaterialPreset> combo = new JComboBox<>(MaterialPreset.values());
-        combo.setFont(BarMapStudio.font(Font.PLAIN, 11));
-        combo.setBackground(CARD_BG);
-        combo.setForeground(TEXT_MAIN);
-        combo.setSelectedItem(initial);
-        combo.addActionListener(e -> {
-            MaterialPreset sel = (MaterialPreset) combo.getSelectedItem();
-            if (sel != null) onSelect.accept(sel);
-        });
-        card.add(combo, BorderLayout.CENTER);
+        card.add(r1);
+        card.add(Box.createVerticalStrut(4));
 
-        return card;
-    }
+        // Riga 2: Scelta Maschera (Pulsante File + Badge stato)
+        JPanel r2 = new JPanel(new BorderLayout(4, 0));
+        r2.setOpaque(false);
 
-    private JPanel createSliderRow(String label, int initialValue, int min, int max, String unit, Consumer<Integer> onChange) {
-        JPanel row = new JPanel(new BorderLayout(6, 0));
-        row.setOpaque(false);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+        JLabel maskStatusBadge = new JLabel(z.maskFile != null ? z.maskFile.getName() : "Auto (" + autoRuleDesc + ")");
+        maskStatusBadge.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        maskStatusBadge.setForeground(z.maskFile != null ? ACCENT_GREEN : TEXT_MUTED);
 
-        JLabel l = new JLabel(label);
-        l.setFont(BarMapStudio.font(Font.PLAIN, 11));
-        l.setForeground(TEXT_MUTED);
-        l.setPreferredSize(new Dimension(170, 20));
-        row.add(l, BorderLayout.WEST);
-
-        JSlider slider = new JSlider(min, max, initialValue);
-        slider.setOpaque(false);
-        slider.setBackground(CARD_BG);
-        slider.setForeground(ACCENT_CYAN);
-
-        JLabel valLbl = new JLabel(initialValue + unit);
-        valLbl.setFont(BarMapStudio.font(Font.BOLD, 11));
-        valLbl.setForeground(TEXT_MAIN);
-        valLbl.setPreferredSize(new Dimension(45, 20));
-        valLbl.setHorizontalAlignment(SwingConstants.RIGHT);
-
-        slider.addChangeListener(e -> {
-            valLbl.setText(slider.getValue() + unit);
-            onChange.accept(slider.getValue());
-        });
-
-        row.add(slider, BorderLayout.CENTER);
-        row.add(valLbl, BorderLayout.EAST);
-        return row;
-    }
-
-    private JPanel createColorPickerRow(String label, Color initial, Consumer<Color> onPick) {
-        JPanel row = new JPanel(new BorderLayout(8, 0));
-        row.setOpaque(false);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-
-        JLabel l = new JLabel(label);
-        l.setFont(BarMapStudio.font(Font.PLAIN, 11));
-        l.setForeground(TEXT_MUTED);
-        row.add(l, BorderLayout.WEST);
-
-        JButton btnColor = new JButton();
-        btnColor.setPreferredSize(new Dimension(48, 22));
-        btnColor.setBackground(initial);
-        btnColor.setBorder(BorderFactory.createLineBorder(Color.WHITE, 1));
-        btnColor.setFocusPainted(false);
-        btnColor.addActionListener(e -> {
-            Color chosen = JColorChooser.showDialog(this, "Scegli " + label, btnColor.getBackground());
-            if (chosen != null) {
-                btnColor.setBackground(chosen);
-                onPick.accept(chosen);
+        JButton btnLoadMask = createGhostButton(z.maskFile != null ? "Cambia File" : "Carica Maschera");
+        btnLoadMask.setPreferredSize(new Dimension(105, 22));
+        btnLoadMask.setFont(BarMapStudio.font(Font.BOLD, 9));
+        btnLoadMask.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser("custom_assets/textures");
+            chooser.setDialogTitle("Seleziona Maschera in Bianco e Nero per " + z.title);
+            chooser.setFileFilter(new FileNameExtensionFilter("Immagini Maschera (*.png, *.jpg, *.bmp)", "png", "jpg", "jpeg", "bmp"));
+            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                try {
+                    File f = chooser.getSelectedFile();
+                    BufferedImage img = ImageIO.read(f);
+                    if (img != null) {
+                        z.maskFile = f;
+                        z.loadedMask = img;
+                        z.useFileMask = true;
+                        maskStatusBadge.setText(f.getName());
+                        maskStatusBadge.setForeground(ACCENT_GREEN);
+                        btnLoadMask.setText("Cambia File");
+                        queueRegen();
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Errore caricamento maschera:\n" + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
-        row.add(btnColor, BorderLayout.EAST);
 
-        return row;
+        // Pulsantino reset / switch su regola automatica se c'è un file
+        JButton btnResetAuto = new JButton() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? new Color(239, 68, 68) : TEXT_MUTED);
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.drawLine(4, 4, 10, 10);
+                g2.drawLine(10, 4, 4, 10);
+                g2.dispose();
+            }
+        };
+        btnResetAuto.setPreferredSize(new Dimension(14, 14));
+        btnResetAuto.setContentAreaFilled(false);
+        btnResetAuto.setBorderPainted(false);
+        btnResetAuto.setFocusPainted(false);
+        btnResetAuto.setToolTipText("Rimuovi file e usa la regola automatica dall'Heightmap");
+        btnResetAuto.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnResetAuto.addActionListener(e -> {
+            z.maskFile = null;
+            z.loadedMask = null;
+            z.useFileMask = false;
+            maskStatusBadge.setText("Auto (" + autoRuleDesc + ")");
+            maskStatusBadge.setForeground(TEXT_MUTED);
+            btnLoadMask.setText("Carica Maschera");
+            queueRegen();
+        });
+
+        JPanel maskBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
+        maskBtns.setOpaque(false);
+        maskBtns.add(btnLoadMask);
+        maskBtns.add(btnResetAuto);
+
+        r2.add(maskStatusBadge, BorderLayout.WEST);
+        r2.add(maskBtns, BorderLayout.EAST);
+        card.add(r2);
+        card.add(Box.createVerticalStrut(4));
+
+        // Riga 3: Texture / Materiale (Menu a tendina compatto)
+        JPanel r3 = new JPanel(new BorderLayout(4, 0));
+        r3.setOpaque(false);
+
+        JComboBox<MaterialPreset> combo = new JComboBox<>(MaterialPreset.values());
+        combo.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        combo.setBackground(CARD_BG);
+        combo.setForeground(TEXT_MAIN);
+        combo.setSelectedItem(z.preset);
+        combo.setPreferredSize(new Dimension(140, 22));
+        combo.addActionListener(e -> {
+            MaterialPreset sel = (MaterialPreset) combo.getSelectedItem();
+            if (sel != null) {
+                z.preset = sel;
+                z.customTexture = null;
+                z.customTextureFile = null;
+                queueRegen();
+            }
+        });
+        r3.add(combo, BorderLayout.CENTER);
+
+        JButton btnTexFile = createGhostButton("+ File");
+        btnTexFile.setPreferredSize(new Dimension(50, 22));
+        btnTexFile.setFont(BarMapStudio.font(Font.BOLD, 9));
+        btnTexFile.setToolTipText("Carica un file texture personale (PNG/JPG) per questa zona");
+        btnTexFile.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser("custom_assets/textures");
+            chooser.setDialogTitle("Seleziona Texture per " + z.title);
+            chooser.setFileFilter(new FileNameExtensionFilter("Immagini Texture (*.png, *.jpg, *.bmp)", "png", "jpg", "jpeg", "bmp"));
+            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                try {
+                    File f = chooser.getSelectedFile();
+                    BufferedImage img = ImageIO.read(f);
+                    if (img != null) {
+                        z.customTextureFile = f;
+                        z.customTexture = img;
+                        queueRegen();
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Errore caricamento texture:\n" + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        r3.add(btnTexFile, BorderLayout.EAST);
+
+        card.add(r3);
+        return card;
     }
 
     private JComponent buildCenterCanvas() {
@@ -594,7 +468,7 @@ public class TextureStudioPanel extends JPanel {
         p.setBackground(CARD_INNER);
         p.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, BORDER_COLOR));
 
-        // Sub-toolbar Canvas: Modalità di visualizzazione e zoom
+        // Sub-toolbar Canvas
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(CARD_BG);
         bar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
@@ -603,17 +477,16 @@ public class TextureStudioPanel extends JPanel {
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         left.setOpaque(false);
 
-        JLabel vLbl = new JLabel("VISTA CANVAS:");
+        JLabel vLbl = new JLabel("ISPEZIONE VISTA:");
         vLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         vLbl.setForeground(ACCENT_CYAN);
         left.add(vLbl);
 
-        viewModeCombo = new JComboBox<>();
-        updateViewModeOptions();
+        viewModeCombo = new JComboBox<>(ViewMode.values());
         viewModeCombo.setFont(BarMapStudio.font(Font.BOLD, 11));
         viewModeCombo.setBackground(CARD_INNER);
         viewModeCombo.setForeground(TEXT_MAIN);
-        viewModeCombo.setPreferredSize(new Dimension(200, 24));
+        viewModeCombo.setPreferredSize(new Dimension(220, 24));
         viewModeCombo.addActionListener(e -> {
             ViewMode vm = (ViewMode) viewModeCombo.getSelectedItem();
             if (vm != null) {
@@ -647,34 +520,14 @@ public class TextureStudioPanel extends JPanel {
         return p;
     }
 
-    private void updateViewModeOptions() {
-        if (viewModeCombo == null) return;
-        viewModeCombo.removeAllItems();
-        if (currentMode == Mode.TERRAIN_SPLATTER) {
-            viewModeCombo.addItem(ViewMode.COMPOSITE);
-            viewModeCombo.addItem(ViewMode.SPLAT_RGBA);
-            viewModeCombo.addItem(ViewMode.CHANNEL_R);
-            viewModeCombo.addItem(ViewMode.CHANNEL_G);
-            viewModeCombo.addItem(ViewMode.CHANNEL_B);
-            viewModeCombo.addItem(ViewMode.CHANNEL_A);
-            viewModeCombo.addItem(ViewMode.NORMAL_MAP_3D);
-        } else {
-            viewModeCombo.addItem(ViewMode.COMPOSITE);
-            viewModeCombo.addItem(ViewMode.SEAMLESS_TILING);
-            viewModeCombo.addItem(ViewMode.NORMAL_MAP_3D);
-        }
-        viewModeCombo.setSelectedIndex(0);
-        currentViewMode = (ViewMode) viewModeCombo.getSelectedItem();
-    }
-
     private JComponent buildBottomActionBar() {
         JPanel bar = new JPanel(new BorderLayout(10, 0));
         bar.setBackground(CARD_BG);
         bar.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER_COLOR));
-        bar.setPreferredSize(new Dimension(100, 48));
-        bar.setBorder(new EmptyBorder(6, 12, 6, 12));
+        bar.setPreferredSize(new Dimension(100, 46));
+        bar.setBorder(new EmptyBorder(4, 12, 4, 12));
 
-        statusLabel = new JLabel("Texture Studio pronto.");
+        statusLabel = new JLabel("Texture Studio pronto. Carica maschere o genera la composizione.");
         statusLabel.setFont(BarMapStudio.font(Font.PLAIN, 11));
         statusLabel.setForeground(TEXT_MUTED);
         bar.add(statusLabel, BorderLayout.WEST);
@@ -686,13 +539,11 @@ public class TextureStudioPanel extends JPanel {
         btnOpenFolder.addActionListener(e -> openCustomFolder());
         actions.add(btnOpenFolder);
 
-        JButton btnSaveDiffuse = createGhostButton("Salva Texture");
-        btnSaveDiffuse.setToolTipText("Salva l'immagine della texture generata in custom_assets/textures/");
+        JButton btnSaveDiffuse = createGhostButton("Salva Immagine Fusa");
         btnSaveDiffuse.addActionListener(e -> saveCurrentTexture(false));
         actions.add(btnSaveDiffuse);
 
         JButton btnSaveNormal = createGhostButton("Esporta Normal Map");
-        btnSaveNormal.setToolTipText("Esporta la mappa delle normali 3D (tangent-space)");
         btnSaveNormal.addActionListener(e -> saveCurrentTexture(true));
         actions.add(btnSaveNormal);
 
@@ -736,241 +587,201 @@ public class TextureStudioPanel extends JPanel {
         });
     }
 
+    /**
+     * Generazione e Composizione Asincrona
+     */
     private void triggerAsyncGeneration() {
-        setStatus("Generazione procedurale in corso...", ACCENT_AMBER);
+        setStatus("Generazione ed elaborazione maschere in corso...", ACCENT_AMBER);
         final int res = currentRes;
         final long seed = currentSeed;
-        final Mode mode = currentMode;
 
         genPool.submit(() -> {
             long t0 = System.currentTimeMillis();
             try {
-                if (mode == Mode.MATERIAL_DESIGNER) {
-                    generateSingleMaterial(res, seed);
+                // 1. Preparazione matrici di quota e pendenza
+                float[][] heightmap = new float[res][res];
+                float[][] slopeMap = new float[res][res];
+
+                if (activeMap != null && activeMap.getHeightmap() != null) {
+                    BufferedImage mapHm = activeMap.getHeightmap();
+                    int hmW = mapHm.getWidth();
+                    int hmH = mapHm.getHeight();
+                    for (int y = 0; y < res; y++) {
+                        int sy = Math.min(hmH - 1, (y * hmH) / res);
+                        for (int x = 0; x < res; x++) {
+                            int sx = Math.min(hmW - 1, (x * hmW) / res);
+                            heightmap[y][x] = ((mapHm.getRGB(sx, sy) & 0xFF) / 255.0f) * 120.0f;
+                        }
+                    }
                 } else {
-                    generateTerrainSplatter(res, seed);
+                    for (int y = 0; y < res; y++) {
+                        float ny = (float) y / res;
+                        for (int x = 0; x < res; x++) {
+                            float nx = (float) x / res;
+                            float base = (float) (Math.sin(nx * Math.PI) * Math.sin(ny * Math.PI) * 90.0);
+                            float ridge = fbm2D(nx * 4f, ny * 4f, 4, 0.5f, seed + 10) * 45.0f;
+                            heightmap[y][x] = Math.max(0f, base + ridge);
+                        }
+                    }
                 }
+
+                for (int y = 0; y < res; y++) {
+                    int yPrev = (y - 1 + res) % res;
+                    int yNext = (y + 1) % res;
+                    for (int x = 0; x < res; x++) {
+                        int xPrev = (x - 1 + res) % res;
+                        int xNext = (x + 1) % res;
+                        float dx = heightmap[y][xNext] - heightmap[y][xPrev];
+                        float dy = heightmap[yNext][x] - heightmap[yPrev][x];
+                        slopeMap[y][x] = Math.min(1.0f, (float) Math.sqrt(dx * dx + dy * dy) * 0.15f);
+                    }
+                }
+
+                // 2. Calcolo dei pesi delle 4 Maschere (File o Regola Automatica)
+                float[][] maskR = computeZoneMask(zone1, heightmap, slopeMap, res, 1, seed);
+                float[][] maskG = computeZoneMask(zone2, heightmap, slopeMap, res, 2, seed);
+                float[][] maskB = computeZoneMask(zone3, heightmap, slopeMap, res, 3, seed);
+                float[][] maskA = computeZoneMask(zone4, heightmap, slopeMap, res, 4, seed);
+
+                // Normalizza pesi pixel per pixel
+                for (int y = 0; y < res; y++) {
+                    for (int x = 0; x < res; x++) {
+                        float sum = maskR[y][x] + maskG[y][x] + maskB[y][x] + maskA[y][x];
+                        if (sum <= 0.0001f) sum = 1.0f;
+                        maskR[y][x] /= sum;
+                        maskG[y][x] /= sum;
+                        maskB[y][x] /= sum;
+                        maskA[y][x] /= sum;
+                    }
+                }
+
+                // 3. Sintesi o caricamento delle 4 Texture
+                BufferedImage tex1 = getOrGenerateTexture(zone1, res, seed + 1);
+                BufferedImage tex2 = getOrGenerateTexture(zone2, res, seed + 2);
+                BufferedImage tex3 = getOrGenerateTexture(zone3, res, seed + 3);
+                BufferedImage tex4 = getOrGenerateTexture(zone4, res, seed + 4);
+
+                // 4. Composizione Finale e Maschere RGBA
+                BufferedImage composite = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage splatRGBA = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage chR = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage chG = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage chB = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage chA = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
+
+                for (int y = 0; y < res; y++) {
+                    for (int x = 0; x < res; x++) {
+                        float wR = maskR[y][x];
+                        float wG = maskG[y][x];
+                        float wB = maskB[y][x];
+                        float wA = maskA[y][x];
+
+                        int rgb1 = tex1.getRGB(x % tex1.getWidth(), y % tex1.getHeight());
+                        int rgb2 = tex2.getRGB(x % tex2.getWidth(), y % tex2.getHeight());
+                        int rgb3 = tex3.getRGB(x % tex3.getWidth(), y % tex3.getHeight());
+                        int rgb4 = tex4.getRGB(x % tex4.getWidth(), y % tex4.getHeight());
+
+                        int red = (int) ((((rgb1 >> 16) & 0xFF) * wR) + (((rgb2 >> 16) & 0xFF) * wG) + (((rgb3 >> 16) & 0xFF) * wB) + (((rgb4 >> 16) & 0xFF) * wA));
+                        int green = (int) ((((rgb1 >> 8) & 0xFF) * wR) + (((rgb2 >> 8) & 0xFF) * wG) + (((rgb3 >> 8) & 0xFF) * wB) + (((rgb4 >> 8) & 0xFF) * wA));
+                        int blue = (int) (((rgb1 & 0xFF) * wR) + ((rgb2 & 0xFF) * wG) + ((rgb3 & 0xFF) * wB) + ((rgb4 & 0xFF) * wA));
+
+                        red = Math.min(255, Math.max(0, red));
+                        green = Math.min(255, Math.max(0, green));
+                        blue = Math.min(255, Math.max(0, blue));
+
+                        composite.setRGB(x, y, (0xFF << 24) | (red << 16) | (green << 8) | blue);
+
+                        int sR = Math.min(255, (int)(wR * 255));
+                        int sG = Math.min(255, (int)(wG * 255));
+                        int sB = Math.min(255, (int)(wB * 255));
+                        int sA = Math.min(255, (int)(wA * 255));
+                        splatRGBA.setRGB(x, y, (0xFF << 24) | (sR << 16) | (sG << 8) | sB);
+
+                        chR.setRGB(x, y, (0xFF << 24) | (sR << 16) | (sR << 8) | sR);
+                        chG.setRGB(x, y, (0xFF << 24) | (sG << 16) | (sG << 8) | sG);
+                        chB.setRGB(x, y, (0xFF << 24) | (sB << 16) | (sB << 8) | sB);
+                        chA.setRGB(x, y, (0xFF << 24) | (sA << 16) | (sA << 8) | sA);
+                    }
+                }
+
+                BufferedImage normal = createNormalMap(heightmap, res, 1.2f);
+
+                this.renderedDiffuse = composite;
+                this.renderedNormal = normal;
+                this.renderedSplatRGBA = splatRGBA;
+                this.renderedChannelR = chR;
+                this.renderedChannelG = chG;
+                this.renderedChannelB = chB;
+                this.renderedChannelA = chA;
+
                 long elapsed = System.currentTimeMillis() - t0;
-                setStatus("Generato con successo in " + elapsed + " ms (" + res + "x" + res + " px)", ACCENT_GREEN);
+                setStatus("Composizione pronta in " + elapsed + " ms (" + res + "x" + res + " px)", ACCENT_GREEN);
                 SwingUtilities.invokeLater(() -> canvas.repaint());
+
             } catch (Throwable t) {
                 t.printStackTrace();
-                setStatus("Errore durante la generazione: " + t.getMessage(), Color.RED);
+                setStatus("Errore elaborazione: " + t.getMessage(), Color.RED);
             }
         });
     }
 
     /**
-     * Generazione Singolo Materiale Seamless (Toroidal 4D Mapping)
+     * Calcola la maschera di una zona: usa il file caricato (Metodo B) o la regola automatica (Metodo A)
      */
-    private void generateSingleMaterial(int res, long seed) {
-        float[][] height = new float[res][res];
-        float minH = Float.MAX_VALUE;
-        float maxH = -Float.MAX_VALUE;
+    private float[][] computeZoneMask(ZoneConfig z, float[][] heightmap, float[][] slopeMap, int res, int zoneIndex, long seed) {
+        float[][] mask = new float[res][res];
 
-        // Campionamento su toroide 4D per seamless al 100%
-        float radius = matScale;
-        for (int y = 0; y < res; y++) {
-            double vAngle = (2.0 * Math.PI * y) / res;
-            float z = (float) (Math.cos(vAngle) * radius);
-            float w = (float) (Math.sin(vAngle) * radius);
-
-            for (int x = 0; x < res; x++) {
-                double uAngle = (2.0 * Math.PI * x) / res;
-                float nx = (float) (Math.cos(uAngle) * radius);
-                float ny = (float) (Math.sin(uAngle) * radius);
-
-                float val = fbm4D(nx, ny, z, w, matOctaves, matPersistence, seed);
-                height[y][x] = val;
-                if (val < minH) minH = val;
-                if (val > maxH) maxH = val;
-            }
-        }
-
-        float range = Math.max(0.0001f, maxH - minH);
-
-        // Diffuse Map (Color Ramp a 3 punti con contrasto)
-        BufferedImage diffuse = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-        for (int y = 0; y < res; y++) {
-            for (int x = 0; x < res; x++) {
-                float norm = (height[y][x] - minH) / range;
-                // Applica contrasto
-                norm = (float) Math.pow(norm, matContrast);
-                norm = Math.max(0f, Math.min(1f, norm));
-
-                Color c;
-                if (norm < 0.5f) {
-                    float t = norm * 2.0f;
-                    c = lerpColor(matColorDark, matColorMid, t);
-                } else {
-                    float t = (norm - 0.5f) * 2.0f;
-                    c = lerpColor(matColorMid, matColorLight, t);
-                }
-                diffuse.setRGB(x, y, c.getRGB());
-            }
-        }
-
-        // Normal Map (Sobel tangent-space con wrapping seamless ai bordi)
-        BufferedImage normal = createNormalMap(height, res, matBump);
-
-        this.renderedDiffuse = diffuse;
-        this.renderedNormal = normal;
-        this.renderedSplatRGBA = null;
-    }
-
-    /**
-     * Generazione Multi-Materiale con Maschere di Splatting
-     */
-    private void generateTerrainSplatter(int res, long seed) {
-        // 1. Sintesi o recupero dell'Heightmap e delle Pendenze
-        float[][] heightmap = new float[res][res];
-        float[][] slopeMap = new float[res][res];
-
-        if (activeMap != null && activeMap.getHeightmap() != null) {
-            // Estrai dalla vera mappa attiva
-            BufferedImage mapHm = activeMap.getHeightmap();
-            int hmW = mapHm.getWidth();
-            int hmH = mapHm.getHeight();
+        // METODO B: Se c'è un'immagine caricata dall'utente, usa i pixel del file!
+        if (z.useFileMask && z.loadedMask != null) {
+            BufferedImage fileImg = z.loadedMask;
+            int fw = fileImg.getWidth();
+            int fh = fileImg.getHeight();
             for (int y = 0; y < res; y++) {
-                int sy = Math.min(hmH - 1, (y * hmH) / res);
+                int sy = Math.min(fh - 1, (y * fh) / res);
                 for (int x = 0; x < res; x++) {
-                    int sx = Math.min(hmW - 1, (x * hmW) / res);
-                    int rgb = mapHm.getRGB(sx, sy);
-                    heightmap[y][x] = (rgb & 0xFF) / 255.0f * 120.0f;
+                    int sx = Math.min(fw - 1, (x * fw) / res);
+                    int rgb = fileImg.getRGB(sx, sy);
+                    int val = ((rgb >> 16) & 0xFF + (rgb >> 8) & 0xFF + (rgb & 0xFF)) / 3;
+                    mask[y][x] = val / 255.0f;
                 }
             }
-        } else {
-            // Genera morfologia sintetica di test (montagne, colline, coste)
-            for (int y = 0; y < res; y++) {
-                float ny = (float) y / res;
-                for (int x = 0; x < res; x++) {
-                    float nx = (float) x / res;
-                    float base = (float) (Math.sin(nx * Math.PI) * Math.sin(ny * Math.PI) * 90.0);
-                    float ridge = fbm2D(nx * 4f, ny * 4f, 4, 0.5f, seed + 10) * 45.0f;
-                    heightmap[y][x] = Math.max(0f, base + ridge);
-                }
-            }
+            return mask;
         }
 
-        // Calcola pendenze Sobel normalizzate
-        for (int y = 0; y < res; y++) {
-            int yPrev = (y - 1 + res) % res;
-            int yNext = (y + 1) % res;
-            for (int x = 0; x < res; x++) {
-                int xPrev = (x - 1 + res) % res;
-                int xNext = (x + 1) % res;
-
-                float dx = heightmap[y][xNext] - heightmap[y][xPrev];
-                float dy = heightmap[yNext][x] - heightmap[yPrev][x];
-                float s = (float) Math.sqrt(dx * dx + dy * dy) * 0.15f;
-                slopeMap[y][x] = Math.min(1.0f, s);
-            }
-        }
-
-        // 2. Calcolo Maschere di Splatting a 4 Canali (R, G, B, A)
-        float[][] maskR = new float[res][res]; // Layer 1: Base / Prato
-        float[][] maskG = new float[res][res]; // Layer 2: Roccia / Pendenze
-        float[][] maskB = new float[res][res]; // Layer 3: Sabbia / Costa
-        float[][] maskA = new float[res][res]; // Layer 4: Neve / Picchi
-
+        // METODO A: Regole automatiche da Heightmap e pendenze
         for (int y = 0; y < res; y++) {
             float ny = (float) y / res;
             for (int x = 0; x < res; x++) {
                 float nx = (float) x / res;
                 float h = heightmap[y][x];
                 float s = slopeMap[y][x];
+                float nPerturb = (fbm2D(nx * 8f, ny * 8f, 3, 0.5f, seed + 50) - 0.5f) * 0.25f;
 
-                // Perturbazione rumore
-                float nPerturb = (fbm2D(nx * 8f, ny * 8f, 3, 0.5f, seed + 50) - 0.5f) * noisePerturbation;
-
-                // Regola Pendenze (Roccia / G)
-                float slopeFactor = smoothstep(slopeThreshold - slopeFalloff, slopeThreshold + slopeFalloff, s + nPerturb);
-
-                // Regola Acqua / Sabbia (B)
-                float distFromWater = Math.abs(h - waterElevation);
-                float beachFactor = 1.0f - smoothstep(0f, beachBand, distFromWater);
-                beachFactor = Math.max(0f, beachFactor * (1.0f - slopeFactor));
-
-                // Regola Picchi / Neve (A)
-                float peakFactor = smoothstep(peakAltitude * 90.0f, 90.0f, h + nPerturb * 10f);
-                peakFactor = Math.max(0f, peakFactor * (1.0f - slopeFactor * 0.5f));
-
-                // Regola Terreno Base (R): ciò che non è roccia, spiaggia o neve
-                float baseFactor = Math.max(0f, 1.0f - (slopeFactor + beachFactor + peakFactor));
-
-                // Normalizzazione pesi
-                float total = baseFactor + slopeFactor + beachFactor + peakFactor;
-                if (total <= 0.0001f) total = 1.0f;
-
-                maskR[y][x] = baseFactor / total;
-                maskG[y][x] = slopeFactor / total;
-                maskB[y][x] = beachFactor / total;
-                maskA[y][x] = peakFactor / total;
+                if (zoneIndex == 2) {
+                    // Zona 2: Roccia su pendenze > 22°
+                    mask[y][x] = smoothstep(0.25f, 0.45f, s + nPerturb);
+                } else if (zoneIndex == 3) {
+                    // Zona 3: Spiaggia / Costa vicino all'acqua
+                    float dist = Math.abs(h - z.autoThreshold);
+                    float b = 1.0f - smoothstep(0f, 12f, dist);
+                    mask[y][x] = Math.max(0f, b * (1.0f - s));
+                } else if (zoneIndex == 4) {
+                    // Zona 4: Neve / Picchi ad alta quota
+                    mask[y][x] = smoothstep(z.autoThreshold * 90f, 90f, h + nPerturb * 10f);
+                } else {
+                    // Zona 1: Pianure / Fondo (Default)
+                    mask[y][x] = Math.max(0.05f, 1.0f - s);
+                }
             }
         }
+        return mask;
+    }
 
-        // 3. Generazione o sintesi dei 4 Materiali Primari
-        BufferedImage texL1 = generateFastMaterial(layer1Preset, res, seed + 1);
-        BufferedImage texL2 = generateFastMaterial(layer2Preset, res, seed + 2);
-        BufferedImage texL3 = generateFastMaterial(layer3Preset, res, seed + 3);
-        BufferedImage texL4 = generateFastMaterial(layer4Preset, res, seed + 4);
-
-        // 4. Composizione Finale Pixel-per-Pixel
-        BufferedImage composite = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-        BufferedImage splatRGBA = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-        BufferedImage chR = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-        BufferedImage chG = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-        BufferedImage chB = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-        BufferedImage chA = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-
-        for (int y = 0; y < res; y++) {
-            for (int x = 0; x < res; x++) {
-                float wR = maskR[y][x];
-                float wG = maskG[y][x];
-                float wB = maskB[y][x];
-                float wA = maskA[y][x];
-
-                // Campiona i 4 colori
-                int rgb1 = texL1.getRGB(x, y);
-                int rgb2 = texL2.getRGB(x, y);
-                int rgb3 = texL3.getRGB(x, y);
-                int rgb4 = texL4.getRGB(x, y);
-
-                int red = (int) ((((rgb1 >> 16) & 0xFF) * wR) + (((rgb2 >> 16) & 0xFF) * wG) + (((rgb3 >> 16) & 0xFF) * wB) + (((rgb4 >> 16) & 0xFF) * wA));
-                int green = (int) ((((rgb1 >> 8) & 0xFF) * wR) + (((rgb2 >> 8) & 0xFF) * wG) + (((rgb3 >> 8) & 0xFF) * wB) + (((rgb4 >> 8) & 0xFF) * wA));
-                int blue = (int) (((rgb1 & 0xFF) * wR) + ((rgb2 & 0xFF) * wG) + ((rgb3 & 0xFF) * wB) + ((rgb4 & 0xFF) * wA));
-
-                red = Math.min(255, Math.max(0, red));
-                green = Math.min(255, Math.max(0, green));
-                blue = Math.min(255, Math.max(0, blue));
-
-                composite.setRGB(x, y, (0xFF << 24) | (red << 16) | (green << 8) | blue);
-
-                // Mappa Splatting RGBA
-                int sR = Math.min(255, (int)(wR * 255));
-                int sG = Math.min(255, (int)(wG * 255));
-                int sB = Math.min(255, (int)(wB * 255));
-                int sA = Math.min(255, (int)(wA * 255));
-                splatRGBA.setRGB(x, y, (0xFF << 24) | (sR << 16) | (sG << 8) | sB);
-
-                // Singoli Canali (B&W)
-                chR.setRGB(x, y, (0xFF << 24) | (sR << 16) | (sR << 8) | sR);
-                chG.setRGB(x, y, (0xFF << 24) | (sG << 16) | (sG << 8) | sG);
-                chB.setRGB(x, y, (0xFF << 24) | (sB << 16) | (sB << 8) | sB);
-                chA.setRGB(x, y, (0xFF << 24) | (sA << 16) | (sA << 8) | sA);
-            }
+    private BufferedImage getOrGenerateTexture(ZoneConfig z, int res, long seed) {
+        if (z.customTexture != null) {
+            return z.customTexture;
         }
-
-        // Normal Map Blended
-        BufferedImage normal = createNormalMap(heightmap, res, 1.2f);
-
-        this.renderedDiffuse = composite;
-        this.renderedNormal = normal;
-        this.renderedSplatRGBA = splatRGBA;
-        this.renderedChannelR = chR;
-        this.renderedChannelG = chG;
-        this.renderedChannelB = chB;
-        this.renderedChannelA = chA;
+        return generateFastMaterial(z.preset, res, seed);
     }
 
     private BufferedImage generateFastMaterial(MaterialPreset pset, int res, long seed) {
@@ -1030,13 +841,11 @@ public class TextureStudioPanel extends JPanel {
 
     private void doApplyToActiveMap() {
         if (renderedDiffuse == null) {
-            JOptionPane.showMessageDialog(this, "Nessuna texture generata al momento!", "Attenzione", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Nessuna texture pronta da applicare.", "Attenzione", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         if (applyCallback != null) {
-            // Costruisci le maschere tLow e tHigh conformi allo standard di BarMapExporter:
-            // Formula inversa pesi BAR: raw = Math.round(weight * 127.0f) + 128
             int res = renderedDiffuse.getWidth();
             BufferedImage splatLow = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
             BufferedImage splatHigh = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
@@ -1048,7 +857,6 @@ public class TextureStudioPanel extends JPanel {
                     int cB = (renderedChannelB != null) ? (renderedChannelB.getRGB(x, y) & 0xFF) : 0;
                     int cA = (renderedChannelA != null) ? (renderedChannelA.getRGB(x, y) & 0xFF) : 0;
 
-                    // Calibra secondo le specifiche Recoil / BarMapExporter
                     int b0 = Math.min(255, Math.round((cR / 255.0f) * 127.0f) + 128);
                     int b1 = Math.min(255, Math.round((cG / 255.0f) * 127.0f) + 128);
                     int b2 = Math.min(255, Math.round((cB / 255.0f) * 127.0f) + 128);
@@ -1059,8 +867,7 @@ public class TextureStudioPanel extends JPanel {
                 }
             }
 
-            String name = (currentMode == Mode.TERRAIN_SPLATTER) ? "Terreno Splat Multi-Materiale" : singlePreset.label;
-            applyCallback.applyToMap(renderedDiffuse, splatLow, splatHigh, name);
+            applyCallback.applyToMap(renderedDiffuse, splatLow, splatHigh, "Terreno 4 Zone");
         }
     }
 
@@ -1076,7 +883,7 @@ public class TextureStudioPanel extends JPanel {
 
         String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String suffix = saveNormal ? "_normal.png" : "_diffuse.png";
-        String baseName = (currentMode == Mode.MATERIAL_DESIGNER ? singlePreset.name().toLowerCase() : "terrain_splat") + "_" + stamp + suffix;
+        String baseName = "terrain_4zone_" + stamp + suffix;
 
         File f = new File(targetDir, baseName);
         try {
@@ -1085,7 +892,7 @@ public class TextureStudioPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Texture salvata con successo in:\n" + f.getAbsolutePath(), "Salvataggio Completato", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
             ex.printStackTrace();
-            setStatus("Errore durante il salvataggio del file: " + ex.getMessage(), Color.RED);
+            setStatus("Errore salvataggio: " + ex.getMessage(), Color.RED);
         }
     }
 
@@ -1099,7 +906,6 @@ public class TextureStudioPanel extends JPanel {
         }
     }
 
-    // --- Helpers Matematici e Frattali ---
     private static float smoothstep(float edge0, float edge1, float x) {
         float t = Math.max(0.0f, Math.min(1.0f, (x - edge0) / (edge1 - edge0)));
         return t * t * (3.0f - 2.0f * t);
@@ -1141,7 +947,6 @@ public class TextureStudioPanel extends JPanel {
         return total / maxVal;
     }
 
-    // Simplex Noise 4D puro in Java (veloce, privo di dipendenze esterne)
     private static float simplex4D(float x, float y, float z, float w, long seed) {
         int s = (int) seed;
         double n0 = Math.sin(x * 1.31 + y * 1.57 + z * 1.73 + w * 1.91 + s);
@@ -1154,7 +959,7 @@ public class TextureStudioPanel extends JPanel {
         private double zoom = 1.0;
         private Point pan = new Point(0, 0);
         private Point dragStart = null;
-        private float sunLightAngle = 0.8f; // Radianti per rotazione luce solare
+        private float sunLightAngle = 0.8f;
 
         public TextureCanvas() {
             setOpaque(true);
@@ -1166,7 +971,6 @@ public class TextureStudioPanel extends JPanel {
                     if (SwingUtilities.isRightMouseButton(e) || SwingUtilities.isMiddleMouseButton(e)) {
                         dragStart = e.getPoint();
                     } else if (SwingUtilities.isLeftMouseButton(e) && currentViewMode == ViewMode.NORMAL_MAP_3D) {
-                        // Ruota la luce solare
                         sunLightAngle = (float) ((e.getX() / (double) getWidth()) * Math.PI * 2.0);
                         repaint();
                     }
@@ -1229,7 +1033,7 @@ public class TextureStudioPanel extends JPanel {
             if (toDraw == null) {
                 g2.setColor(TEXT_MUTED);
                 g2.setFont(BarMapStudio.font(Font.PLAIN, 12));
-                g2.drawString("Elaborazione texture procedurale...", getWidth() / 2 - 90, getHeight() / 2);
+                g2.drawString("Elaborazione texture in corso...", getWidth() / 2 - 90, getHeight() / 2);
                 g2.dispose();
                 return;
             }
@@ -1240,23 +1044,17 @@ public class TextureStudioPanel extends JPanel {
             int cy = (getHeight() - h) / 2 + pan.y;
 
             if (currentViewMode == ViewMode.SEAMLESS_TILING) {
-                // Griglia 2x2 per verificare visivamente l'assenza di giunzioni
                 int halfW = w / 2;
                 int halfH = h / 2;
                 g2.drawImage(toDraw, cx - halfW / 2, cy - halfH / 2, halfW, halfH, null);
                 g2.drawImage(toDraw, cx + halfW / 2, cy - halfH / 2, halfW, halfH, null);
                 g2.drawImage(toDraw, cx - halfW / 2, cy + halfH / 2, halfW, halfH, null);
                 g2.drawImage(toDraw, cx + halfW / 2, cy + halfH / 2, halfW, halfH, null);
-
-                // Linee guida griglia sottili
                 g2.setColor(new Color(0, 229, 255, 60));
                 g2.drawLine(cx + halfW / 2, cy - halfH / 2, cx + halfW / 2, cy + halfH + halfH / 2);
                 g2.drawLine(cx - halfW / 2, cy + halfH / 2, cx + halfW + halfW / 2, cy + halfH / 2);
             } else if (currentViewMode == ViewMode.NORMAL_MAP_3D) {
-                // Disegna la Normal Map con illuminazione solare direzionale
                 g2.drawImage(toDraw, cx, cy, w, h, null);
-
-                // Disegna vettore solare interattivo
                 float lx = (float) Math.cos(sunLightAngle);
                 float ly = (float) Math.sin(sunLightAngle);
                 int sunX = cx + w - 40;
@@ -1266,16 +1064,26 @@ public class TextureStudioPanel extends JPanel {
                 g2.setColor(Color.WHITE);
                 g2.drawLine(sunX, sunY, (int)(sunX - lx * 25), (int)(sunY - ly * 25));
             } else {
-                // Vista standard
                 g2.drawImage(toDraw, cx, cy, w, h, null);
             }
 
-            // Bordo cornice attorno all'immagine
             g2.setColor(BORDER_COLOR);
             g2.drawRect(cx - 1, cy - 1, w + 1, h + 1);
 
-            // Overlay HUD Info in basso a sinistra della canvas
-            drawCanvasHud(g2);
+            // Overlay HUD Info
+            String info = "Vista: " + currentViewMode.label + " | Risoluzione: " + currentRes + "x" + currentRes + " | Zoom: " + Math.round(zoom * 100) + "%";
+            g2.setFont(BarMapStudio.font(Font.BOLD, 10));
+            FontMetrics fm = g2.getFontMetrics();
+            int strW = fm.stringWidth(info);
+
+            int hx = 12;
+            int hy = getHeight() - 28;
+            g2.setColor(new Color(11, 14, 20, 200));
+            g2.fillRoundRect(hx, hy, strW + 16, 20, 6, 6);
+            g2.setColor(new Color(0, 229, 255, 120));
+            g2.drawRoundRect(hx, hy, strW + 16, 20, 6, 6);
+            g2.setColor(TEXT_MAIN);
+            g2.drawString(info, hx + 8, hy + 14);
 
             g2.dispose();
         }
@@ -1291,56 +1099,15 @@ public class TextureStudioPanel extends JPanel {
                 default: return renderedDiffuse;
             }
         }
-
-        private void drawCanvasHud(Graphics2D g2) {
-            String info = "Vista: " + currentViewMode.name() + " | Risoluzione: " + currentRes + "x" + currentRes + " | Zoom: " + Math.round(zoom * 100) + "%";
-            g2.setFont(BarMapStudio.font(Font.BOLD, 10));
-            FontMetrics fm = g2.getFontMetrics();
-            int strW = fm.stringWidth(info);
-
-            int hx = 12;
-            int hy = getHeight() - 28;
-            g2.setColor(new Color(11, 14, 20, 200));
-            g2.fillRoundRect(hx, hy, strW + 16, 20, 6, 6);
-            g2.setColor(new Color(0, 229, 255, 120));
-            g2.drawRoundRect(hx, hy, strW + 16, 20, 6, 6);
-
-            g2.setColor(TEXT_MAIN);
-            g2.drawString(info, hx + 8, hy + 14);
-        }
     }
 
-    // --- Helpers grafici per i Pulsanti ---
-    private static JToggleButton createPillToggle(String text, boolean selected) {
-        JToggleButton btn = new JToggleButton(text, selected) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                if (isSelected()) {
-                    g2.setColor(new Color(0, 229, 255, 40));
-                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
-                    g2.setColor(ACCENT_CYAN);
-                    g2.setStroke(new BasicStroke(1.2f));
-                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 6, 6);
-                } else {
-                    g2.setColor(CARD_INNER);
-                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
-                    g2.setColor(BORDER_COLOR);
-                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 6, 6);
-                }
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        btn.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
-        btn.setForeground(selected ? ACCENT_CYAN : TEXT_MUTED);
-        btn.setContentAreaFilled(false);
-        btn.setFocusPainted(false);
-        btn.setBorder(new EmptyBorder(4, 12, 4, 12));
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.addActionListener(e -> btn.setForeground(btn.isSelected() ? ACCENT_CYAN : TEXT_MUTED));
-        return btn;
+    private static class ScrollableTrackWidthPanel extends JPanel implements Scrollable {
+        public ScrollableTrackWidthPanel() { super(); }
+        @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
+        @Override public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) { return 16; }
+        @Override public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) { return 32; }
+        @Override public boolean getScrollableTracksViewportWidth() { return true; }
+        @Override public boolean getScrollableTracksViewportHeight() { return false; }
     }
 
     private static JButton createGhostButton(String text) {
@@ -1350,18 +1117,18 @@ public class TextureStudioPanel extends JPanel {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getModel().isRollover() ? new Color(30, 38, 54) : CARD_INNER);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 4, 4);
                 g2.setColor(getModel().isRollover() ? ACCENT_CYAN : BORDER_COLOR);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 6, 6);
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 4, 4);
                 g2.dispose();
                 super.paintComponent(g);
             }
         };
-        btn.setFont(BarMapStudio.font(Font.BOLD, 11));
+        btn.setFont(BarMapStudio.font(Font.BOLD, 10));
         btn.setForeground(TEXT_MAIN);
         btn.setContentAreaFilled(false);
         btn.setFocusPainted(false);
-        btn.setBorder(new EmptyBorder(4, 10, 4, 10));
+        btn.setBorder(new EmptyBorder(3, 8, 3, 8));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         return btn;
     }
