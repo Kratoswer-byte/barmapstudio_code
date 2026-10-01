@@ -11,8 +11,8 @@
 | :--- | :---: | :---: | :--- |
 | `21df09b` | `chore` | 01/10/2026 09:47 | Baseline savepoint prima delle feature heightmap, pendenze e slope map |
 | `3eba201` | `feat` | 01/10/2026 09:51 | Motore di calcolo pendenze, rigenerazione ground e smooth slopes |
-| *Step 2* | `feat` | 01/10/2026 09:55 | Visualizzatore Slope Map in Canvas, HUD e ispezione quote/pendenza al cursore |
-| *Step 3* | `feat` | In attesa | Controlli GUI per MaxHeight, WaterLevel, Smooth Slopes e importazione da file |
+| `12d9cba` | `feat` | 01/10/2026 09:55 | Visualizzatore Slope Map in Canvas, HUD e ispezione quote/pendenza al cursore |
+| *Step 3* | `feat` | 01/10/2026 10:02 | Controlli GUI per MaxHeight, WaterLevel, Smooth Slopes e importazione da file |
 | *Step 4* | `build` | In attesa | Ricompilazione patch, iniezione launcher.jar e collaudo finale |
 
 ---
@@ -33,12 +33,12 @@
 - [x] Ispezione dinamica al mouse (quota in metri e pendenza in gradi/valore numerico live nel canvas HUD)
 
 ### 3. Controlli Pannello Studio (`MapStudioPanel.java`)
-- [ ] Slider e Spinner Quota Massima (`maxHeight`, 50m - 800m)
-- [ ] Slider e Spinner Livello Acqua (`waterLevel`, -50m - +150m)
-- [ ] Tasto "Rigenera Ground da Heightmap"
-- [ ] Tasto "Carica Heightmap da File..." (supporto immagini esterne PNG/JPG)
-- [ ] Tasto "Leviga Rampe / Smooth Slopes"
-- [ ] Tasto rapido e slider trasparenza per la Slope Map nella HUD
+- [x] Spinner Quota Massima (`maxHeight`, 20m - 1500m)
+- [x] Spinner Livello Acqua (`waterLevel`, -100m - +800m)
+- [x] Tasto "Rigenera Ground da Heightmap"
+- [x] Tasto "Carica Heightmap da File..." (supporto PNG, RAW 16-bit, BMP)
+- [x] Tasto "Leviga Pendenze Eccessive (Anti-Cliff)"
+- [x] Tasto rapido e slider trasparenza per la Slope Map nella Top Toolbar e hotkey [L]
 
 ### 4. Compilazione e Verifica Binari
 - [ ] Compilazione classi in `patch/`

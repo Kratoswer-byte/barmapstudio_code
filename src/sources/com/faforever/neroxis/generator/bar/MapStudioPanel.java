@@ -7,11 +7,15 @@ import com.faforever.neroxis.map.SCMap;
 import com.faforever.neroxis.map.Symmetry;
 import com.faforever.neroxis.map.SymmetrySettings;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -108,6 +112,15 @@ public final class MapStudioPanel extends JPanel {
     private final JTextField seedField = new JTextField();
     private final JButton rollSeedBtn = createGhostButton("Roll Seed");
     private final JButton genGroundBtn = createPrimaryButton("GENERA TERRENO", ACCENT_CYAN);
+
+    // Height, Water & Slope Controls
+    private final JSpinner maxHeightSpinner = new JSpinner(new SpinnerNumberModel(250.0, 20.0, 1500.0, 10.0));
+    private final JSpinner waterLevelSpinner = new JSpinner(new SpinnerNumberModel(25.0, -100.0, 800.0, 5.0));
+    private final JToggleButton slopeToggleBtn = new JToggleButton("Slope Map [L]", false);
+    private final JSlider slopeOpacitySlider = new JSlider(10, 100, 70);
+    private final JButton btnRegenGround = createPrimaryButton("RIGENERA DA HEIGHTMAP", ACCENT_AMBER);
+    private final JButton btnLoadHeightmap = createGhostButton("📁 Carica Heightmap PNG/RAW...");
+    private final JButton btnSmoothSlopes = createGhostButton("⚡ Leviga Pendenze Eccessive");
 
     private final java.util.Map<MapStudioCanvas.Tool, JToggleButton> toolButtons = new java.util.EnumMap<>(MapStudioCanvas.Tool.class);
     private JToggleButton symToggle;
@@ -224,6 +237,16 @@ public final class MapStudioPanel extends JPanel {
         genGroundBtn.addActionListener(e -> doGenerateGround());
         genFinalMapBtn.addActionListener(e -> doGenerateFinalMap(false));
         genAndPlayBtn.addActionListener(e -> doGenerateFinalMap(true));
+
+        btnRegenGround.addActionListener(e -> doRegenerateFromHeightmap(null));
+        btnLoadHeightmap.addActionListener(e -> doLoadHeightmapFile());
+        btnSmoothSlopes.addActionListener(e -> doSmoothSlopes());
+
+        canvas.setOnTerrainHover(info -> {
+            if (info != null && !info.isEmpty()) {
+                statusLabel.setText(info);
+            }
+        });
 
         sizeCombo.addActionListener(e -> {
             MapDimension sel = (MapDimension) sizeCombo.getSelectedItem();
@@ -387,7 +410,20 @@ public final class MapStudioPanel extends JPanel {
         bindKey(java.awt.event.KeyEvent.VK_4, 0, "mex_p4", () -> { if (!isTypingInText()) setPlacementMetalValue(4.0f, true, true); });
         bindKey(java.awt.event.KeyEvent.VK_NUMPAD4, 0, "mex_p4_np", () -> { if (!isTypingInText()) setPlacementMetalValue(4.0f, true, true); });
         bindKey(java.awt.event.KeyEvent.VK_5, 0, "mex_p5", () -> { if (!isTypingInText()) setPlacementMetalValue(5.0f, true, true); });
-        bindKey(java.awt.event.KeyEvent.VK_NUMPAD5, 0, "mex_p5_np", () -> { if (!isTypingInText()) setPlacementMetalValue(5.0f, true, true); });
+        // Slope Map toggle hotkey
+        bindKey(java.awt.event.KeyEvent.VK_L, 0, "toggle_slope_map", () -> { if (!isTypingInText()) toggleSlopeMap(); });
+    }
+
+    public void toggleSlopeMap() {
+        canvas.toggleSlopeMap();
+        updateSlopeButtonState();
+    }
+
+    public void updateSlopeButtonState() {
+        boolean active = canvas.isShowSlopeMap();
+        slopeToggleBtn.setSelected(active);
+        slopeToggleBtn.setText(active ? "Slope Map: ON [L]" : "Slope Map [L]");
+        slopeToggleBtn.setForeground(active ? ACCENT_AMBER : TEXT_MAIN);
     }
 
     private void setPlacementMetalValue(float val, boolean updateSpinner, boolean updateCombo) {
@@ -488,6 +524,26 @@ public final class MapStudioPanel extends JPanel {
         zoomReset.addActionListener(e -> canvas.resetZoom());
         bar.add(zoomReset);
 
+        bar.add(Box.createHorizontalStrut(10));
+        styleToggleButton(slopeToggleBtn);
+        slopeToggleBtn.setToolTipText("Attiva/Disattiva Overlay Pendenze (Slope Map) [Tasto L]");
+        slopeToggleBtn.addActionListener(e -> {
+            canvas.setShowSlopeMap(slopeToggleBtn.isSelected());
+            updateSlopeButtonState();
+        });
+        bar.add(slopeToggleBtn);
+
+        JLabel opacityLbl = new JLabel("Opacità:");
+        opacityLbl.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        opacityLbl.setForeground(TEXT_MUTED);
+        bar.add(opacityLbl);
+
+        slopeOpacitySlider.setPreferredSize(new Dimension(65, 22));
+        slopeOpacitySlider.setOpaque(false);
+        slopeOpacitySlider.setToolTipText("Regola l'opacità dello Slope Map Overlay");
+        slopeOpacitySlider.addChangeListener(e -> canvas.setSlopeOpacity(slopeOpacitySlider.getValue() / 100.0f));
+        bar.add(slopeOpacitySlider);
+
         return bar;
     }
 
@@ -515,25 +571,21 @@ public final class MapStudioPanel extends JPanel {
         JPanel side = new JPanel();
         side.setLayout(new BoxLayout(side, BoxLayout.Y_AXIS));
         side.setBackground(CARD_BG);
-        side.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR),
-            new EmptyBorder(14, 14, 14, 14)
-        ));
-        side.setPreferredSize(new Dimension(280, 0));
+        side.setBorder(new EmptyBorder(14, 14, 14, 14));
 
-        JLabel title = new JLabel("1. GENERATORE TERRENO");
+        JLabel title = new JLabel("1. GENERATORE PROCEDURALE");
         title.setFont(new Font("Segoe UI", Font.BOLD, 13));
         title.setForeground(ACCENT_CYAN);
         title.setAlignmentX(0f);
         side.add(title);
-        side.add(Box.createVerticalStrut(12));
+        side.add(Box.createVerticalStrut(10));
 
         side.add(createFieldRow("Dimensioni Mappa:", sizeCombo));
-        side.add(Box.createVerticalStrut(8));
+        side.add(Box.createVerticalStrut(6));
         side.add(createFieldRow("Stile Rilievo:", styleCombo));
-        side.add(Box.createVerticalStrut(8));
+        side.add(Box.createVerticalStrut(6));
         side.add(createFieldRow("Bioma / Texture:", biomeCombo));
-        side.add(Box.createVerticalStrut(8));
+        side.add(Box.createVerticalStrut(6));
         side.add(createFieldRow("Simmetria:", symmetryCombo));
         side.add(Box.createVerticalStrut(4));
 
@@ -542,7 +594,7 @@ public final class MapStudioPanel extends JPanel {
         sideAxisBtn.setAlignmentX(0f);
         sideAxisBtn.addActionListener(e -> cycleSymmetryMode());
         side.add(sideAxisBtn);
-        side.add(Box.createVerticalStrut(8));
+        side.add(Box.createVerticalStrut(6));
 
         // Seed with Roll
         JLabel seedLbl = new JLabel("Seed Terreno:");
@@ -564,12 +616,65 @@ public final class MapStudioPanel extends JPanel {
         seedRow.setAlignmentX(0f);
         side.add(seedRow);
 
-        side.add(Box.createVerticalStrut(18));
-        genGroundBtn.setMaximumSize(new Dimension(400, 38));
+        side.add(Box.createVerticalStrut(10));
+        genGroundBtn.setMaximumSize(new Dimension(400, 36));
         genGroundBtn.setAlignmentX(0f);
         side.add(genGroundBtn);
 
-        side.add(Box.createVerticalGlue());
+        side.add(Box.createVerticalStrut(14));
+
+        // Card 2: Rilievo & Pendenze (Heightmap)
+        JPanel heightCard = new JPanel();
+        heightCard.setLayout(new BoxLayout(heightCard, BoxLayout.Y_AXIS));
+        heightCard.setBackground(CARD_INNER);
+        heightCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(10, 10, 10, 10)
+        ));
+        heightCard.setAlignmentX(0f);
+        heightCard.setMaximumSize(new Dimension(400, 260));
+
+        JLabel heightCardTitle = new JLabel("2. RILIEVO & PENDENZE");
+        heightCardTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        heightCardTitle.setForeground(ACCENT_AMBER);
+        heightCardTitle.setAlignmentX(0f);
+        heightCard.add(heightCardTitle);
+        heightCard.add(Box.createVerticalStrut(8));
+
+        JPanel paramGrid = new JPanel(new GridLayout(2, 2, 6, 6));
+        paramGrid.setOpaque(false);
+        JLabel maxHLbl = new JLabel("Altezza Max (m):");
+        maxHLbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        maxHLbl.setForeground(TEXT_MUTED);
+        paramGrid.add(maxHLbl);
+        paramGrid.add(maxHeightSpinner);
+
+        JLabel waterLbl = new JLabel("Livello Acqua (m):");
+        waterLbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        waterLbl.setForeground(TEXT_MUTED);
+        paramGrid.add(waterLbl);
+        paramGrid.add(waterLevelSpinner);
+        paramGrid.setAlignmentX(0f);
+        paramGrid.setMaximumSize(new Dimension(400, 56));
+        heightCard.add(paramGrid);
+        heightCard.add(Box.createVerticalStrut(10));
+
+        btnRegenGround.setMaximumSize(new Dimension(400, 34));
+        btnRegenGround.setAlignmentX(0f);
+        heightCard.add(btnRegenGround);
+        heightCard.add(Box.createVerticalStrut(6));
+
+        btnSmoothSlopes.setMaximumSize(new Dimension(400, 28));
+        btnSmoothSlopes.setAlignmentX(0f);
+        heightCard.add(btnSmoothSlopes);
+        heightCard.add(Box.createVerticalStrut(6));
+
+        btnLoadHeightmap.setMaximumSize(new Dimension(400, 28));
+        btnLoadHeightmap.setAlignmentX(0f);
+        heightCard.add(btnLoadHeightmap);
+
+        side.add(heightCard);
+        side.add(Box.createVerticalStrut(12));
 
         // Info box
         JPanel infoBox = new JPanel(new BorderLayout());
@@ -578,15 +683,29 @@ public final class MapStudioPanel extends JPanel {
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
             new EmptyBorder(10, 10, 10, 10)
         ));
-        JLabel tip = new JLabel("<html><b style='color:#00E5FF'>Suggerimento:</b> Scegli stile e seed del terreno, poi premi <i>Genera Terreno</i>. Potrai quindi posizionare manualmente Mex, Geos, Spawns e Reclaim con specchiatura simmetrica!</html>");
+        JLabel tip = new JLabel("<html><b style='color:#00E5FF'>Slope Map [Tasto L]:</b><br/>" +
+            "Visualizza in tempo reale le pendenze Recoil/BAR:<br/>" +
+            "• <span style='color:#00FF88'>Verde (&lt;12°):</span> Veicoli & Costruibile<br/>" +
+            "• <span style='color:#FFFF00'>Giallo (12°-20°):</span> Veicoli lenti<br/>" +
+            "• <span style='color:#FF9F1C'>Arancio (20°-33°):</span> Solo Kbot / Bot<br/>" +
+            "• <span style='color:#FF3333'>Rosso (&gt;33°):</span> Rupi Invalicabili</html>");
         tip.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         tip.setForeground(TEXT_MUTED);
         infoBox.add(tip, BorderLayout.CENTER);
         infoBox.setAlignmentX(0f);
-        infoBox.setMaximumSize(new Dimension(400, 100));
+        infoBox.setMaximumSize(new Dimension(400, 130));
         side.add(infoBox);
 
-        return side;
+        side.add(Box.createVerticalGlue());
+
+        JScrollPane scroll = new JScrollPane(side);
+        scroll.setBackground(CARD_BG);
+        scroll.getViewport().setBackground(CARD_BG);
+        scroll.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR));
+        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        scroll.setPreferredSize(new Dimension(300, 0));
+        return scroll;
     }
 
     private JComponent buildRightSidebar() {
@@ -843,12 +962,14 @@ public final class MapStudioPanel extends JPanel {
                 );
 
                 SwingUtilities.invokeLater(() -> {
-                    canvas.setMapAndGround(res.map(), res.preview(), res.symmetrySettings());
+                    canvas.setMapAndGround(res.map(), res.preview(), res.slopeOverlay(), res.symmetrySettings());
                     if (res.symmetrySettings() != null) {
                         selectSymmetryInCombo(res.symmetrySettings().terrainSymmetry());
                         updateAxisToggleLabel(res.symmetrySettings().terrainSymmetry());
                     }
-                    statusLabel.setText("Terreno generato! Ora posiziona Mex e oggetti.");
+                    float wElev = res.map().getWaterElevation();
+                    waterLevelSpinner.setValue((double) Math.round(wElev));
+                    statusLabel.setText("Terreno generato! Premi [L] per visualizzare la Slope Map.");
                     progressBar.setVisible(false);
                     genGroundBtn.setEnabled(true);
                 });
@@ -861,6 +982,160 @@ public final class MapStudioPanel extends JPanel {
                 });
             }
         }, "ground-gen").start();
+    }
+
+    private void doRegenerateFromHeightmap(BufferedImage customHm) {
+        SCMap existing = canvas.getMap();
+        if (existing == null && customHm == null) {
+            JOptionPane.showMessageDialog(this,
+                "Prima genera un terreno iniziale o seleziona un file heightmap da importare!",
+                "Nessun Terreno Presente", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        MapDimension dim = (MapDimension) sizeCombo.getSelectedItem();
+        if (dim == null) dim = MAP_DIMENSIONS[2];
+        int width = dim.width();
+        int height = dim.height();
+        String biomeName = (String) biomeCombo.getSelectedItem();
+        SymmetryOption symOpt = (SymmetryOption) symmetryCombo.getSelectedItem();
+        Symmetry symmetry = symOpt != null ? symOpt.symmetry() : Symmetry.POINT2;
+
+        float maxHeight = ((Number) maxHeightSpinner.getValue()).floatValue();
+        float waterLevel = ((Number) waterLevelSpinner.getValue()).floatValue();
+
+        long seed;
+        try {
+            seed = Long.parseLong(seedField.getText().trim());
+        } catch (Exception e) {
+            seed = new Random().nextLong();
+        }
+
+        statusLabel.setText("Rigenerazione Ground da Heightmap (MaxH: " + (int) maxHeight + "m, Acqua: " + (int) waterLevel + "m)...");
+        progressBar.setIndeterminate(true);
+        progressBar.setVisible(true);
+        btnRegenGround.setEnabled(false);
+        btnLoadHeightmap.setEnabled(false);
+        btnSmoothSlopes.setEnabled(false);
+
+        long finalSeed = seed;
+        new Thread(() -> {
+            try {
+                GroundGenerator.GroundResult res = GroundGenerator.generateGroundFromHeightmap(
+                    existing,
+                    customHm,
+                    width,
+                    height,
+                    maxHeight,
+                    waterLevel,
+                    biomeName,
+                    symmetry,
+                    2,
+                    2,
+                    finalSeed
+                );
+
+                SwingUtilities.invokeLater(() -> {
+                    canvas.setMapAndGround(res.map(), res.preview(), res.slopeOverlay(), res.symmetrySettings());
+                    if (res.symmetrySettings() != null) {
+                        selectSymmetryInCombo(res.symmetrySettings().terrainSymmetry());
+                        updateAxisToggleLabel(res.symmetrySettings().terrainSymmetry());
+                    }
+                    statusLabel.setText("Ground rigenerato con successo da Heightmap! [L per Slope Map]");
+                    progressBar.setVisible(false);
+                    btnRegenGround.setEnabled(true);
+                    btnLoadHeightmap.setEnabled(true);
+                    btnSmoothSlopes.setEnabled(true);
+                });
+            } catch (Throwable ex) {
+                ex.printStackTrace();
+                SwingUtilities.invokeLater(() -> {
+                    statusLabel.setText("Errore rigenerazione: " + ex.getMessage());
+                    progressBar.setVisible(false);
+                    btnRegenGround.setEnabled(true);
+                    btnLoadHeightmap.setEnabled(true);
+                    btnSmoothSlopes.setEnabled(true);
+                    JOptionPane.showMessageDialog(this,
+                        "Errore durante la rigenerazione da heightmap:\n" + ex.getMessage(),
+                        "Errore", JOptionPane.ERROR_MESSAGE);
+                });
+            }
+        }, "heightmap-ground-regen").start();
+    }
+
+    private void doLoadHeightmapFile() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Seleziona File Heightmap (PNG, RAW, BMP)");
+        chooser.setFileFilter(new FileNameExtensionFilter("Immagini Heightmap (*.png, *.raw, *.bmp)", "png", "raw", "bmp"));
+        int ret = chooser.showOpenDialog(this);
+        if (ret == JFileChooser.APPROVE_OPTION) {
+            File f = chooser.getSelectedFile();
+            try {
+                BufferedImage loaded = ImageIO.read(f);
+                if (loaded == null) {
+                    byte[] bytes = Files.readAllBytes(f.toPath());
+                    int side = (int) Math.round(Math.sqrt(bytes.length / 2.0));
+                    if (side * side * 2 == bytes.length) {
+                        loaded = new BufferedImage(side, side, BufferedImage.TYPE_USHORT_GRAY);
+                        WritableRaster wr = loaded.getRaster();
+                        int idx = 0;
+                        int[] p = new int[1];
+                        for (int y = 0; y < side; y++) {
+                            for (int x = 0; x < side; x++) {
+                                int b1 = bytes[idx++] & 0xFF;
+                                int b2 = bytes[idx++] & 0xFF;
+                                p[0] = (b2 << 8) | b1;
+                                wr.setPixel(x, y, p);
+                            }
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Formato file non supportato o non riconosciuto.", "Errore Import", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                }
+                statusLabel.setText("Heightmap caricata: " + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + ")");
+                doRegenerateFromHeightmap(loaded);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Errore durante il caricamento del file:\n" + ex.getMessage(), "Errore File", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void doSmoothSlopes() {
+        SCMap m = canvas.getMap();
+        if (m == null) {
+            JOptionPane.showMessageDialog(this, "Nessuna mappa presente su cui levigare le pendenze!", "Attenzione", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        statusLabel.setText("Levigatura pendenze eccessive in corso...");
+        progressBar.setIndeterminate(true);
+        progressBar.setVisible(true);
+        btnSmoothSlopes.setEnabled(false);
+
+        new Thread(() -> {
+            try {
+                GroundGenerator.smoothSlopes(m, 0.40f, 2);
+                float waterElev = m.getWaterElevation();
+                BufferedImage newSlope = GroundGenerator.generateSlopeOverlayImage(m, waterElev);
+                SwingUtilities.invokeLater(() -> {
+                    canvas.setSlopeOverlay(newSlope);
+                    canvas.setShowSlopeMap(true);
+                    updateSlopeButtonState();
+                    statusLabel.setText("Pendenze ripide levigate! Rupi impraticabili ridotte. [Slope Map ON]");
+                    progressBar.setVisible(false);
+                    btnSmoothSlopes.setEnabled(true);
+                });
+            } catch (Throwable ex) {
+                ex.printStackTrace();
+                SwingUtilities.invokeLater(() -> {
+                    statusLabel.setText("Errore durante la levigatura: " + ex.getMessage());
+                    progressBar.setVisible(false);
+                    btnSmoothSlopes.setEnabled(true);
+                });
+            }
+        }, "smooth-slopes").start();
     }
 
     private void doGenerateFinalMap(boolean launchSkirmish) {
