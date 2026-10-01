@@ -18,7 +18,7 @@
 | `e48b38b` | `feat` | 01/10/2026 11:12 | Migrazione tipografia su Roboto & Roboto Condensed per tutti i pannelli UI e HUD Canvas |
 | `e8a561e` | `feat` | 01/10/2026 11:18 | Font geometrico rotondo e corposo Poppins Bold applicato a tutta la UI e canvas |
 | `d223c55` | `fix` | 01/10/2026 11:28 | Sostituzione completa emoji e simboli font con icone vettoriali native Java2D |
-| `b1e84a2` | `fix` | 01/10/2026 11:34 | Indicatore stato BAR con LED vettoriale antialiased luminescente (risolto tofu U+25CF) |
+| `2ad01b6` | `fix` | 01/10/2026 11:34 | Indicatore stato BAR con LED vettoriale antialiased luminescente (risolto tofu U+25CF) |
 
 ---
 
