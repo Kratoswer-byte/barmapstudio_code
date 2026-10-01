@@ -1274,7 +1274,8 @@ public final class MapStudioCanvas extends JPanel {
 
             g.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
             g.setColor(new Color(255, 159, 28));
-            g.drawString("⛰️ LEGENDA PENDENZE (BAR)", legX + 10, legY + 18);
+            drawMountainVector(g, legX + 12, legY + 8, 13, 10, new Color(255, 159, 28));
+            g.drawString("LEGENDA PENDENZE (BAR)", legX + 30, legY + 18);
 
             g.setFont(BarMapStudio.font(Font.BOLD, 10));
             int cy = legY + 36;
@@ -1313,5 +1314,24 @@ public final class MapStudioCanvas extends JPanel {
             g.setColor(new Color(240, 244, 250));
             g.drawString("Acqua / Subacqueo", legX + 30, cy);
         }
+    }
+
+    private void drawMountainVector(Graphics2D g, int x, int y, int w, int h, Color c) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setColor(c);
+        g2.setStroke(new BasicStroke(1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        Path2D.Float p1 = new Path2D.Float();
+        p1.moveTo(x, y + h);
+        p1.lineTo(x + w * 0.45f, y);
+        p1.lineTo(x + w * 0.75f, y + h);
+        p1.closePath();
+        g2.draw(p1);
+
+        Path2D.Float p2 = new Path2D.Float();
+        p2.moveTo(x + w * 0.45f, y + h);
+        p2.lineTo(x + w * 0.75f, y + h * 0.35f);
+        p2.lineTo(x + w, y + h);
+        g2.draw(p2);
+        g2.dispose();
     }
 }

@@ -339,8 +339,8 @@ public class BarMapStudio {
         center.setOpaque(false);
 
         ButtonGroup navGroup = new ButtonGroup();
-        JToggleButton mapsTab = createTopNavButton("🗺️  MAPS", true);
-        JToggleButton unitsTab = createTopNavButton("⚔️  UNITS", false);
+        JToggleButton mapsTab = createTopNavButton("MAPS", "MAP", true);
+        JToggleButton unitsTab = createTopNavButton("UNITS", "SWORDS", false);
 
         navGroup.add(mapsTab);
         navGroup.add(unitsTab);
@@ -374,13 +374,13 @@ public class BarMapStudio {
         JPanel windowBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         windowBtns.setOpaque(false);
 
-        JButton minBtn = createWindowControlButton("–", "Riduci a icona");
+        JButton minBtn = new WindowControlButton(WindowControlType.MIN, "Riduci a icona");
         minBtn.addActionListener(e -> frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED));
 
-        JButton maxBtn = createWindowControlButton("□", "Ingrandisci / Finestra");
+        JButton maxBtn = new WindowControlButton(WindowControlType.MAX, "Ingrandisci / Finestra");
         maxBtn.addActionListener(e -> toggleMaximize(frame));
 
-        JButton closeBtn = createWindowControlButton("✕", "Chiudi");
+        JButton closeBtn = new WindowControlButton(WindowControlType.CLOSE, "Chiudi");
         closeBtn.addActionListener(e -> frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING)));
 
         windowBtns.add(minBtn);
@@ -392,15 +392,18 @@ public class BarMapStudio {
         return header;
     }
 
-    private static JToggleButton createTopNavButton(String text, boolean selected) {
-        return new TopNavButton(text, selected);
+    private static JToggleButton createTopNavButton(String text, String iconType, boolean selected) {
+        return new TopNavButton(text, iconType, selected);
     }
 
     public static class TopNavButton extends JToggleButton {
-        public TopNavButton(String text, boolean selected) {
+        private final String iconType;
+
+        public TopNavButton(String text, String iconType, boolean selected) {
             super(text, selected);
+            this.iconType = iconType;
             setFont(fontCond(Font.BOLD, 13));
-            setPreferredSize(new Dimension(125, 34));
+            setPreferredSize(new Dimension(130, 34));
             setFocusPainted(false);
             setBorderPainted(false);
             setContentAreaFilled(false);
@@ -413,24 +416,26 @@ public class BarMapStudio {
             Graphics2D g = (Graphics2D) graphics.create();
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
 
             int w = getWidth();
             int h = getHeight();
 
+            Color fg;
             if (isSelected()) {
                 g.setColor(new Color(0, 229, 255, 30));
                 g.fillRoundRect(0, 0, w, h, 14, 14);
                 g.setColor(ACCENT_CYAN);
                 g.setStroke(new BasicStroke(1.4f));
                 g.drawRoundRect(0, 0, w - 1, h - 1, 14, 14);
-                g.setColor(ACCENT_CYAN);
+                fg = ACCENT_CYAN;
             } else {
                 if (getModel().isRollover()) {
                     g.setColor(new Color(255, 255, 255, 12));
                     g.fillRoundRect(0, 0, w, h, 14, 14);
-                    g.setColor(TEXT_WHITE);
+                    fg = TEXT_WHITE;
                 } else {
-                    g.setColor(TEXT_MUTED);
+                    fg = TEXT_MUTED;
                 }
             }
 
@@ -438,34 +443,119 @@ public class BarMapStudio {
             FontMetrics fm = g.getFontMetrics();
             int tw = fm.stringWidth(getText());
             int th = fm.getAscent();
-            g.drawString(getText(), (w - tw) / 2, (h + th) / 2 - 2);
+
+            int iconSize = 14;
+            int gap = 8;
+            int totalContentW = iconSize + gap + tw;
+            int startX = (w - totalContentW) / 2;
+            int iconY = (h - iconSize) / 2;
+
+            if ("MAP".equals(iconType)) {
+                drawMapVector(g, startX, iconY, iconSize, iconSize, fg);
+            } else if ("SWORDS".equals(iconType)) {
+                drawSwordsVector(g, startX, iconY, iconSize, iconSize, fg);
+            }
+
+            g.setColor(fg);
+            g.drawString(getText(), startX + iconSize + gap, (h + th) / 2 - 2);
 
             g.dispose();
         }
     }
 
-    private static JButton createWindowControlButton(String text, String tip) {
-        JButton btn = new JButton(text);
-        btn.setToolTipText(tip);
-        btn.setFont(font(Font.BOLD, 13));
-        btn.setForeground(TEXT_MUTED);
-        btn.setPreferredSize(new Dimension(32, 28));
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                btn.setForeground(text.equals("✕") ? new Color(255, 96, 84) : TEXT_WHITE);
+    public static void drawMapVector(Graphics2D g, int x, int y, int w, int h, Color c) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setColor(c);
+        g2.setStroke(new BasicStroke(1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        float p1 = w * 0.33f;
+        float p2 = w * 0.66f;
+        float drop = 2.0f;
+
+        java.awt.geom.Path2D.Float map = new java.awt.geom.Path2D.Float();
+        map.moveTo(x, y + drop);
+        map.lineTo(x + p1, y);
+        map.lineTo(x + p2, y + drop);
+        map.lineTo(x + w, y);
+        map.lineTo(x + w, y + h - drop);
+        map.lineTo(x + p2, y + h);
+        map.lineTo(x + p1, y + h - drop);
+        map.lineTo(x, y + h);
+        map.closePath();
+        g2.draw(map);
+
+        g2.drawLine(Math.round(x + p1), Math.round(y), Math.round(x + p1), Math.round(y + h - drop));
+        g2.drawLine(Math.round(x + p2), Math.round(y + drop), Math.round(x + p2), Math.round(y + h));
+        g2.dispose();
+    }
+
+    public static void drawSwordsVector(Graphics2D g, int x, int y, int w, int h, Color c) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setColor(c);
+        g2.setStroke(new BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(x + 2, y + h - 2, x + w - 2, y + 2);
+        g2.drawLine(x + w - 2, y + h - 2, x + 2, y + 2);
+        g2.drawLine(x + 1, y + h - 5, x + 5, y + h - 1);
+        g2.drawLine(x + w - 1, y + h - 5, x + w - 5, y + h - 1);
+        g2.dispose();
+    }
+
+    public enum WindowControlType { MIN, MAX, CLOSE }
+
+    public static class WindowControlButton extends JButton {
+        private final WindowControlType type;
+
+        public WindowControlButton(WindowControlType type, String tip) {
+            super();
+            this.type = type;
+            setToolTipText(tip);
+            setPreferredSize(new Dimension(32, 28));
+            setFocusPainted(false);
+            setBorderPainted(false);
+            setContentAreaFilled(false);
+            setOpaque(false);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            Graphics2D g = (Graphics2D) graphics.create();
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+
+            int w = getWidth();
+            int h = getHeight();
+            int cx = w / 2;
+            int cy = h / 2;
+
+            boolean hover = getModel().isRollover();
+            Color iconColor;
+            if (hover) {
+                if (type == WindowControlType.CLOSE) {
+                    g.setColor(new Color(239, 68, 68));
+                    g.fillRoundRect(2, 2, w - 4, h - 4, 6, 6);
+                    iconColor = Color.WHITE;
+                } else {
+                    g.setColor(new Color(255, 255, 255, 18));
+                    g.fillRoundRect(2, 2, w - 4, h - 4, 6, 6);
+                    iconColor = TEXT_WHITE;
+                }
+            } else {
+                iconColor = TEXT_MUTED;
             }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btn.setForeground(TEXT_MUTED);
+
+            g.setColor(iconColor);
+            g.setStroke(new BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            if (type == WindowControlType.MIN) {
+                g.drawLine(cx - 5, cy + 3, cx + 5, cy + 3);
+            } else if (type == WindowControlType.MAX) {
+                g.drawRect(cx - 5, cy - 5, 10, 10);
+            } else if (type == WindowControlType.CLOSE) {
+                g.drawLine(cx - 4, cy - 4, cx + 4, cy + 4);
+                g.drawLine(cx + 4, cy - 4, cx - 4, cy + 4);
             }
-        });
-        return btn;
+
+            g.dispose();
+        }
     }
 
     public static class WindowResizer extends MouseAdapter {

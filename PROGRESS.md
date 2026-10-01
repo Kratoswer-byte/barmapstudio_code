@@ -17,6 +17,7 @@
 | `50ee05f` | `feat/fix` | 01/10/2026 10:38 | Pannelli resizable con dual JSplitPane, fix glifi unrendered e layout spinner flessibile |
 | `e48b38b` | `feat` | 01/10/2026 11:12 | Migrazione tipografia su Roboto & Roboto Condensed per tutti i pannelli UI e HUD Canvas |
 | `e8a561e` | `feat` | 01/10/2026 11:18 | Font geometrico rotondo e corposo Poppins Bold applicato a tutta la UI e canvas |
+| `a65c91b` | `fix` | 01/10/2026 11:28 | Sostituzione completa emoji e simboli font con icone vettoriali native Java2D |
 
 ---
 
@@ -69,3 +70,12 @@
 - [x] Fallback graceful automatico a cascata: `Poppins` -> `Roboto` -> `Segoe UI`
 - [x] Adattamento larghezze sub-tab buttons a 205px per ospitare la spaziatura generosa di Poppins
 - [x] Ricompilazione e iniezione in `launcher.jar` con test di esecuzione completato con successo
+
+### 8. Icone Vettoriali Native Java2D (Risoluzione Glifi Mancanti ☒)
+- [x] Eliminazione completa dipendenza da emoji Unicode e caratteri speciali non supportati dal font Poppins
+- [x] Implementazione icone vettoriali per `TopNavButton` ("MAPS" con mappa 3D piegata a 3 ante, "UNITS" con spade incrociate)
+- [x] Implementazione icone vettoriali per `SubTabButton` ("EDITOR & GENERATORE" con chiavi/utensili, "LIBRERIA MAPPE" con cartella)
+- [x] Nuovo componente dedicato `WindowControlButton` che disegna a vettore minimizza (barra), massimizza (quadrato) e chiudi (X con highlight rosso all'hover)
+- [x] Icona montagna a doppio picco a vettore per la legenda `Slope Map` nel Canvas HUD
+- [x] Sostituzione frecce non visualizzabili in `shadeHint` con caratteri standard ASCII `<` e `>`
+- [x] Risoluzione definitiva di tutti i box quadrati vuoti con crocetta (tofu `☒`)

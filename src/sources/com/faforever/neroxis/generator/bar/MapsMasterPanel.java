@@ -40,8 +40,8 @@ public class MapsMasterPanel extends JPanel {
         leftGroup.add(sectionLbl);
 
         ButtonGroup group = new ButtonGroup();
-        editorBtn = createSubTab("🛠️  EDITOR & GENERATORE", true);
-        libraryBtn = createSubTab("📂  LIBRERIA MAPPE", false);
+        editorBtn = createSubTab("EDITOR & GENERATORE", "TOOLS", true);
+        libraryBtn = createSubTab("LIBRERIA MAPPE", "FOLDER", false);
 
         group.add(editorBtn);
         group.add(libraryBtn);
@@ -79,15 +79,18 @@ public class MapsMasterPanel extends JPanel {
         cards.show(cardPanel, "LIBRARY");
     }
 
-    private JToggleButton createSubTab(String text, boolean selected) {
-        return new SubTabButton(text, selected);
+    private JToggleButton createSubTab(String text, String iconType, boolean selected) {
+        return new SubTabButton(text, iconType, selected);
     }
 
     public static class SubTabButton extends JToggleButton {
-        public SubTabButton(String text, boolean selected) {
+        private final String iconType;
+
+        public SubTabButton(String text, String iconType, boolean selected) {
             super(text, selected);
+            this.iconType = iconType;
             setFont(BarMapStudio.fontCond(Font.BOLD, 12));
-            setPreferredSize(new Dimension(205, 30));
+            setPreferredSize(new Dimension(215, 30));
             setFocusPainted(false);
             setBorderPainted(false);
             setContentAreaFilled(false);
@@ -100,24 +103,26 @@ public class MapsMasterPanel extends JPanel {
             Graphics2D g = (Graphics2D) graphics.create();
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
 
             int w = getWidth();
             int h = getHeight();
 
+            Color fg;
             if (isSelected()) {
                 g.setColor(new Color(0, 229, 255, 35));
                 g.fillRoundRect(0, 0, w, h, 14, 14);
                 g.setColor(ACCENT_CYAN);
                 g.setStroke(new BasicStroke(1.2f));
                 g.drawRoundRect(0, 0, w - 1, h - 1, 14, 14);
-                g.setColor(ACCENT_CYAN);
+                fg = ACCENT_CYAN;
             } else {
                 if (getModel().isRollover()) {
                     g.setColor(new Color(255, 255, 255, 15));
                     g.fillRoundRect(0, 0, w, h, 14, 14);
-                    g.setColor(TEXT_WHITE);
+                    fg = TEXT_WHITE;
                 } else {
-                    g.setColor(TEXT_MUTED);
+                    fg = TEXT_MUTED;
                 }
             }
 
@@ -125,9 +130,51 @@ public class MapsMasterPanel extends JPanel {
             FontMetrics fm = g.getFontMetrics();
             int tw = fm.stringWidth(getText());
             int th = fm.getAscent();
-            g.drawString(getText(), (w - tw) / 2, (h + th) / 2 - 2);
+
+            int iconSize = 13;
+            int gap = 8;
+            int totalContentW = iconSize + gap + tw;
+            int startX = (w - totalContentW) / 2;
+            int iconY = (h - iconSize) / 2;
+
+            if ("TOOLS".equals(iconType)) {
+                drawToolsVector(g, startX, iconY, iconSize, iconSize, fg);
+            } else if ("FOLDER".equals(iconType)) {
+                drawFolderVector(g, startX, iconY, iconSize, iconSize, fg);
+            }
+
+            g.setColor(fg);
+            g.drawString(getText(), startX + iconSize + gap, (h + th) / 2 - 2);
 
             g.dispose();
         }
+    }
+
+    public static void drawToolsVector(Graphics2D g, int x, int y, int w, int h, Color c) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setColor(c);
+        g2.setStroke(new BasicStroke(1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(x + 2, y + h - 2, x + w - 3, y + 3);
+        g2.drawArc(x + w - 7, y, 7, 7, 45, 270);
+        g2.drawLine(x + w - 2, y + h - 2, x + 3, y + 3);
+        g2.drawLine(x + 1, y + 4, x + 5, y + 2);
+        g2.dispose();
+    }
+
+    public static void drawFolderVector(Graphics2D g, int x, int y, int w, int h, Color c) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setColor(c);
+        g2.setStroke(new BasicStroke(1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        java.awt.geom.Path2D.Float folder = new java.awt.geom.Path2D.Float();
+        folder.moveTo(x, y + 2);
+        folder.lineTo(x + w * 0.45f, y + 2);
+        folder.lineTo(x + w * 0.6f, y + 4);
+        folder.lineTo(x + w, y + 4);
+        folder.lineTo(x + w, y + h);
+        folder.lineTo(x, y + h);
+        folder.closePath();
+        g2.draw(folder);
+        g2.drawLine(x, Math.round(y + 6), x + w, Math.round(y + 6));
+        g2.dispose();
     }
 }

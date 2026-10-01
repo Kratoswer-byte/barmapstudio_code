@@ -825,7 +825,7 @@ public final class MapStudioPanel extends JPanel {
         mexMetalCard.add(presetRow);
         mexMetalCard.add(Box.createVerticalStrut(6));
 
-        JLabel shadeHint = new JLabel("◄ Chiaro (Povero)          Scuro (Ricco) ►");
+        JLabel shadeHint = new JLabel("< Chiaro (Povero)          Scuro (Ricco) >");
         shadeHint.setFont(BarMapStudio.font(Font.ITALIC, 10));
         shadeHint.setForeground(TEXT_MUTED);
         shadeHint.setAlignmentX(0.5f);
