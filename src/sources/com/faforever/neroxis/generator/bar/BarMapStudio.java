@@ -34,8 +34,16 @@ public class BarMapStudio {
     static {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         java.util.Set<String> set = new java.util.HashSet<>(java.util.Arrays.asList(ge.getAvailableFontFamilyNames()));
-        FONT_MAIN = set.contains("Roboto") ? "Roboto" : "Segoe UI";
-        FONT_COND = set.contains("Roboto Condensed") ? "Roboto Condensed" : FONT_MAIN;
+        if (set.contains("Poppins")) {
+            FONT_MAIN = "Poppins";
+            FONT_COND = "Poppins";
+        } else if (set.contains("Roboto")) {
+            FONT_MAIN = "Roboto";
+            FONT_COND = set.contains("Roboto Condensed") ? "Roboto Condensed" : "Roboto";
+        } else {
+            FONT_MAIN = "Segoe UI";
+            FONT_COND = "Segoe UI";
+        }
     }
 
     public static Font font(int style, int size) {

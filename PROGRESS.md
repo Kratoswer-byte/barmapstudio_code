@@ -16,6 +16,7 @@
 | `7f822c2` | `build` | 01/10/2026 10:04 | Ricompilazione patch, iniezione launcher.jar e collaudo finale |
 | `50ee05f` | `feat/fix` | 01/10/2026 10:38 | Pannelli resizable con dual JSplitPane, fix glifi unrendered e layout spinner flessibile |
 | `e48b38b` | `feat` | 01/10/2026 11:12 | Migrazione tipografia su Roboto & Roboto Condensed per tutti i pannelli UI e HUD Canvas |
+| `fd73a90` | `feat` | 01/10/2026 11:18 | Font geometrico rotondo e corposo Poppins Bold applicato a tutta la UI e canvas |
 
 ---
 
@@ -55,10 +56,16 @@
 - [x] `JScrollPane` non compresso con wrapping su `BorderLayout.NORTH`
 - [x] `JSplitPane` integrato anche per la vista Libreria Mappe in `BarMapStudio.java`
 
-### 6. Sistema Tipografico Moderno (Roboto & Roboto Condensed)
-- [x] Rilevamento automatico font con fallback trasparente su Segoe UI (`FONT_MAIN = Roboto`, `FONT_COND = Roboto Condensed`)
+### 6. Sistema Tipografico Moderno
+- [x] Rilevamento automatico font con fallback trasparente su Segoe UI
 - [x] Metodi helper centralizzati `font(...)` e `fontCond(...)` in `BarMapStudio.java`
-- [x] Configurazione UIManager globale con font Roboto e intestazioni/titoli con Roboto Condensed
+- [x] Configurazione UIManager globale con font tipografici
 - [x] Aggiornamento pulsanti di navigazione principale (`TopNavButton`), sub-nav (`SubTabButton`) e header
-- [x] Aggiornamento controlli laterali: titoli schede in Roboto Condensed BOLD, label e spinner in Roboto
-- [x] Aggiornamento indicatori Canvas: pill badges del metallo, HUD quote/pendenze live, cheatsheet tasti e legenda Slope Map in Roboto/Roboto Condensed
+- [x] Aggiornamento controlli laterali: titoli schede in BOLD, label e spinner coordinati
+- [x] Aggiornamento indicatori Canvas: pill badges del metallo, HUD quote/pendenze live, cheatsheet tasti e legenda Slope Map
+
+### 7. Tipografia Rotonda, Corposa e Geometrica (Poppins Bold)
+- [x] Integrazione font geometrico circolare `Poppins Bold` come scelta prioritaria
+- [x] Fallback graceful automatico a cascata: `Poppins` -> `Roboto` -> `Segoe UI`
+- [x] Adattamento larghezze sub-tab buttons a 205px per ospitare la spaziatura generosa di Poppins
+- [x] Ricompilazione e iniezione in `launcher.jar` con test di esecuzione completato con successo

@@ -87,7 +87,7 @@ public class MapsMasterPanel extends JPanel {
         public SubTabButton(String text, boolean selected) {
             super(text, selected);
             setFont(BarMapStudio.fontCond(Font.BOLD, 12));
-            setPreferredSize(new Dimension(190, 30));
+            setPreferredSize(new Dimension(205, 30));
             setFocusPainted(false);
             setBorderPainted(false);
             setContentAreaFilled(false);
