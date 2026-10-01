@@ -95,3 +95,12 @@
 - [x] Pulsante guida a vettore `[ ? ]` in basso a destra
 - [x] Overlay popup flyout per Scorciatoie e Hotkeys: riquadro a 2 colonne con tutte le scorciatoie di Map Studio ([S], [M], [G], [P], [R], [T], [W], [E], [DEL], [Spazio], [X], [Ctrl+Z/Y], [L], rotellina zoom, drag destro)
 - [x] Posizionamento dinamico verso l'alto degli overlay popup (offset Y negativo rispetto al footer) per evitare clipping oltre il bordo dello schermo
+
+### 11. Risoluzione Taglio Pannello Sinistro e Ridimensionamento Finestra in Altezza
+- [x] Risolto taglio laterale all'avvio su `MapStudioPanel`: allocata larghezza iniziale di 380px per la sidebar sinistra (`leftSplit.setDividerLocation(380)`)
+- [x] Aggiunto listener reattivo `ComponentListener` su `leftSplit` e `mainSplit` che garantisce e blocca l'apertura a 380px ed evita che la finestra all'avvio comprima la sidebar a 240px
+- [x] Aumentata la dimensione minima consentita per la sidebar sinistra (`setMinimumSize(340, 100)`) così che né il layout automatico né l'utente possano schiacciare i controlli oltre il limite di leggibilità
+- [x] Risolto schiacciamento del pulsante `rollSeedBtn` ("Roll Seed"): assegnata larghezza fissa preferita di 84px e layout flessibile `Integer.MAX_VALUE` per `seedRow` e `genGroundBtn`
+- [x] Ottimizzata la riga parametri `createParamRow` (Altezza Massima Rilievo e Livello Acqua): spinner compatto a 72px e gap a 6px per garantire piena visibilità a label, spinner e unità di misura 'm'
+- [x] Rimosso blocco limite altezza finestra: ridotto `frame.setMinimumSize` da 1280x720 a 850x480 pixel
+- [x] Implementato `WindowResizer` globale basato su `AWTEventListener` registrato su `Toolkit.getDefaultToolkit`: cattura e gestisce il ridimensionamento della finestra frameless su TUTTI i bordi (Nord, Sud, Est, Ovest e angoli), inclusa l'altezza dal bordo superiore (header) e inferiore (footer)

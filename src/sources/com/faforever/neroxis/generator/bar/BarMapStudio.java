@@ -3,6 +3,8 @@ package com.faforever.neroxis.generator.bar;
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLaf;
 import java.awt.*;
+import java.awt.AWTEvent;
+import java.awt.event.AWTEventListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
@@ -124,6 +126,7 @@ public class BarMapStudio {
                 frame.setUndecorated(true);
                 Rectangle maxBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
                 frame.setMaximizedBounds(maxBounds);
+                frame.setMinimumSize(new Dimension(850, 480));
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -247,9 +250,7 @@ public class BarMapStudio {
             customRoot.add(customFooter, BorderLayout.SOUTH);
 
             // Add edge window resizer for undecorated window
-            WindowResizer resizer = new WindowResizer(frame);
-            customRoot.addMouseListener(resizer);
-            customRoot.addMouseMotionListener(resizer);
+            new WindowResizer(frame);
 
             frame.setContentPane(customRoot);
             frame.revalidate();
@@ -276,6 +277,8 @@ public class BarMapStudio {
             @Override
             public void mousePressed(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
+                    Point p = SwingUtilities.convertPoint(comp, e.getPoint(), frame);
+                    if (p.y <= 7) return; // Allow top edge resize
                     dragPoint[0] = e.getPoint();
                 }
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
@@ -803,8 +806,8 @@ public class BarMapStudio {
         }
     }
 
-    public static class WindowResizer extends MouseAdapter {
-        private static final int BORDER_DRAG_THICKNESS = 6;
+    public static class WindowResizer implements AWTEventListener {
+        private static final int BORDER_DRAG_THICKNESS = 7;
         private final JFrame frame;
         private Point clickPoint;
         private Rectangle initialBounds;
@@ -817,14 +820,22 @@ public class BarMapStudio {
 
         public WindowResizer(JFrame frame) {
             this.frame = frame;
+            Toolkit.getDefaultToolkit().addAWTEventListener(this,
+                AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
         }
 
-        private int getDirection(Point p, Dimension size) {
+        private int getDirection(Point p) {
+            if ((frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
+                return 0;
+            }
             int dir = 0;
-            if (p.y <= BORDER_DRAG_THICKNESS) dir |= NORTH;
-            else if (p.y >= size.height - BORDER_DRAG_THICKNESS) dir |= SOUTH;
-            if (p.x <= BORDER_DRAG_THICKNESS) dir |= WEST;
-            else if (p.x >= size.width - BORDER_DRAG_THICKNESS) dir |= EAST;
+            int w = frame.getWidth();
+            int h = frame.getHeight();
+            if (p.y >= 0 && p.y <= BORDER_DRAG_THICKNESS) dir |= NORTH;
+            else if (p.y >= h - BORDER_DRAG_THICKNESS && p.y <= h) dir |= SOUTH;
+
+            if (p.x >= 0 && p.x <= BORDER_DRAG_THICKNESS) dir |= WEST;
+            else if (p.x >= w - BORDER_DRAG_THICKNESS && p.x <= w) dir |= EAST;
             return dir;
         }
 
@@ -842,72 +853,109 @@ public class BarMapStudio {
             };
         }
 
-        @Override
-        public void mouseMoved(MouseEvent e) {
-            if ((frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
-                frame.setCursor(Cursor.getDefaultCursor());
-                return;
-            }
-            int dir = getDirection(e.getPoint(), frame.getSize());
-            frame.setCursor(Cursor.getPredefinedCursor(getCursorForDirection(dir)));
+        private static boolean isResizeCursor(Cursor c) {
+            if (c == null) return false;
+            int t = c.getType();
+            return t == Cursor.N_RESIZE_CURSOR || t == Cursor.S_RESIZE_CURSOR
+                || t == Cursor.E_RESIZE_CURSOR || t == Cursor.W_RESIZE_CURSOR
+                || t == Cursor.NW_RESIZE_CURSOR || t == Cursor.NE_RESIZE_CURSOR
+                || t == Cursor.SW_RESIZE_CURSOR || t == Cursor.SE_RESIZE_CURSOR;
         }
 
         @Override
-        public void mousePressed(MouseEvent e) {
-            if (SwingUtilities.isLeftMouseButton(e)) {
-                cursorDirection = getDirection(e.getPoint(), frame.getSize());
-                if (cursorDirection != 0) {
-                    clickPoint = e.getLocationOnScreen();
-                    initialBounds = frame.getBounds();
+        public void eventDispatched(AWTEvent event) {
+            if (!(event instanceof MouseEvent e)) return;
+            Component src = e.getComponent();
+            if (src == null) return;
+            if (!SwingUtilities.isDescendingFrom(src, frame) && src != frame) return;
+
+            Point p = SwingUtilities.convertPoint(src, e.getPoint(), frame);
+            int dir = getDirection(p);
+
+            switch (e.getID()) {
+                case MouseEvent.MOUSE_MOVED -> {
+                    if ((frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
+                        if (isResizeCursor(frame.getCursor())) frame.setCursor(Cursor.getDefaultCursor());
+                        return;
+                    }
+                    if (cursorDirection == 0) {
+                        if (dir != 0) {
+                            frame.setCursor(Cursor.getPredefinedCursor(getCursorForDirection(dir)));
+                        } else if (isResizeCursor(frame.getCursor())) {
+                            frame.setCursor(Cursor.getDefaultCursor());
+                        }
+                    }
+                }
+                case MouseEvent.MOUSE_PRESSED -> {
+                    if ((frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
+                        return;
+                    }
+                    if (SwingUtilities.isLeftMouseButton(e) && dir != 0) {
+                        cursorDirection = dir;
+                        clickPoint = e.getLocationOnScreen();
+                        initialBounds = frame.getBounds();
+                        e.consume();
+                    }
+                }
+                case MouseEvent.MOUSE_DRAGGED -> {
+                    if (cursorDirection != 0 && clickPoint != null && initialBounds != null) {
+                        Point current = e.getLocationOnScreen();
+                        int dx = current.x - clickPoint.x;
+                        int dy = current.y - clickPoint.y;
+
+                        int newX = initialBounds.x;
+                        int newY = initialBounds.y;
+                        int newW = initialBounds.width;
+                        int newH = initialBounds.height;
+
+                        int minW = 850;
+                        int minH = 480;
+
+                        if ((cursorDirection & WEST) != 0) {
+                            int nw = initialBounds.width - dx;
+                            if (nw >= minW) {
+                                newX = initialBounds.x + dx;
+                                newW = nw;
+                            }
+                        } else if ((cursorDirection & EAST) != 0) {
+                            newW = Math.max(minW, initialBounds.width + dx);
+                        }
+
+                        if ((cursorDirection & NORTH) != 0) {
+                            int nh = initialBounds.height - dy;
+                            if (nh >= minH) {
+                                newY = initialBounds.y + dy;
+                                newH = nh;
+                            }
+                        } else if ((cursorDirection & SOUTH) != 0) {
+                            newH = Math.max(minH, initialBounds.height + dy);
+                        }
+
+                        frame.setBounds(newX, newY, newW, newH);
+                        frame.revalidate();
+                        frame.repaint();
+                        e.consume();
+                    }
+                }
+                case MouseEvent.MOUSE_RELEASED -> {
+                    if (cursorDirection != 0) {
+                        cursorDirection = 0;
+                        clickPoint = null;
+                        initialBounds = null;
+                        if (dir != 0) {
+                            frame.setCursor(Cursor.getPredefinedCursor(getCursorForDirection(dir)));
+                        } else {
+                            frame.setCursor(Cursor.getDefaultCursor());
+                        }
+                        e.consume();
+                    }
+                }
+                case MouseEvent.MOUSE_EXITED -> {
+                    if (cursorDirection == 0 && isResizeCursor(frame.getCursor())) {
+                        frame.setCursor(Cursor.getDefaultCursor());
+                    }
                 }
             }
-        }
-
-        @Override
-        public void mouseReleased(MouseEvent e) {
-            cursorDirection = 0;
-            clickPoint = null;
-            initialBounds = null;
-        }
-
-        @Override
-        public void mouseDragged(MouseEvent e) {
-            if (cursorDirection == 0 || clickPoint == null || initialBounds == null) return;
-            Point current = e.getLocationOnScreen();
-            int dx = current.x - clickPoint.x;
-            int dy = current.y - clickPoint.y;
-
-            int newX = initialBounds.x;
-            int newY = initialBounds.y;
-            int newW = initialBounds.width;
-            int newH = initialBounds.height;
-
-            Dimension min = frame.getMinimumSize();
-            int minW = min != null ? min.width : 800;
-            int minH = min != null ? min.height : 600;
-
-            if ((cursorDirection & WEST) != 0) {
-                int w = initialBounds.width - dx;
-                if (w >= minW) {
-                    newX = initialBounds.x + dx;
-                    newW = w;
-                }
-            } else if ((cursorDirection & EAST) != 0) {
-                newW = Math.max(minW, initialBounds.width + dx);
-            }
-
-            if ((cursorDirection & NORTH) != 0) {
-                int h = initialBounds.height - dy;
-                if (h >= minH) {
-                    newY = initialBounds.y + dy;
-                    newH = h;
-                }
-            } else if ((cursorDirection & SOUTH) != 0) {
-                newH = Math.max(minH, initialBounds.height + dy);
-            }
-
-            frame.setBounds(newX, newY, newW, newH);
-            frame.validate();
         }
     }
 }

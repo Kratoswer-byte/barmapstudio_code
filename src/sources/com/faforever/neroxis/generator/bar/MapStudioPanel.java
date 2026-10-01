@@ -215,9 +215,9 @@ public final class MapStudioPanel extends JPanel {
         JComponent leftSidebar = buildLeftSidebar();
         JComponent rightSidebar = buildRightSidebar();
 
-        leftSidebar.setMinimumSize(new Dimension(240, 100));
+        leftSidebar.setMinimumSize(new Dimension(340, 100));
         centerWrapper.setMinimumSize(new Dimension(300, 100));
-        rightSidebar.setMinimumSize(new Dimension(260, 100));
+        rightSidebar.setMinimumSize(new Dimension(280, 100));
 
         JSplitPane leftSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSidebar, centerWrapper);
         leftSplit.setDividerSize(7);
@@ -225,7 +225,18 @@ public final class MapStudioPanel extends JPanel {
         leftSplit.setBorder(null);
         leftSplit.setOpaque(false);
         leftSplit.setResizeWeight(0.0);
-        leftSplit.setDividerLocation(350);
+        leftSplit.setDividerLocation(380);
+
+        leftSplit.addComponentListener(new java.awt.event.ComponentAdapter() {
+            private boolean initialSet = false;
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                if (!initialSet && leftSplit.getWidth() > 0) {
+                    initialSet = true;
+                    leftSplit.setDividerLocation(380);
+                }
+            }
+        });
 
         JSplitPane mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSplit, rightSidebar);
         mainSplit.setDividerSize(7);
@@ -243,6 +254,7 @@ public final class MapStudioPanel extends JPanel {
                     int rightW = 350;
                     int loc = Math.max(300, mainSplit.getWidth() - rightW);
                     mainSplit.setDividerLocation(loc);
+                    leftSplit.setDividerLocation(380);
                 }
             }
         });
@@ -649,13 +661,14 @@ public final class MapStudioPanel extends JPanel {
         seedField.setCaretColor(ACCENT_CYAN);
         seedField.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
         seedRow.add(seedField, BorderLayout.CENTER);
+        rollSeedBtn.setPreferredSize(new Dimension(84, 28));
         seedRow.add(rollSeedBtn, BorderLayout.EAST);
-        seedRow.setMaximumSize(new Dimension(400, 32));
+        seedRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
         seedRow.setAlignmentX(0f);
         side.add(seedRow);
 
         side.add(Box.createVerticalStrut(10));
-        genGroundBtn.setMaximumSize(new Dimension(400, 36));
+        genGroundBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         genGroundBtn.setAlignmentX(0f);
         side.add(genGroundBtn);
 
@@ -731,10 +744,10 @@ public final class MapStudioPanel extends JPanel {
         scroll.setBackground(CARD_BG);
         scroll.getViewport().setBackground(CARD_BG);
         scroll.setBorder(null);
-        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         scroll.getVerticalScrollBar().setUnitIncrement(18);
-        scroll.setPreferredSize(new Dimension(350, 600));
+        scroll.setPreferredSize(new Dimension(380, 600));
         return scroll;
     }
 
@@ -1276,7 +1289,7 @@ public final class MapStudioPanel extends JPanel {
     }
 
     private static JPanel createParamRow(String labelText, JSpinner spinner, String unit) {
-        JPanel row = new JPanel(new BorderLayout(8, 0));
+        JPanel row = new JPanel(new BorderLayout(6, 0));
         row.setOpaque(false);
         JLabel lbl = new JLabel(labelText);
         lbl.setFont(BarMapStudio.font(Font.BOLD, 11));
@@ -1285,7 +1298,7 @@ public final class MapStudioPanel extends JPanel {
 
         JPanel spinnerWrap = new JPanel(new BorderLayout(4, 0));
         spinnerWrap.setOpaque(false);
-        spinner.setPreferredSize(new Dimension(85, 26));
+        spinner.setPreferredSize(new Dimension(72, 26));
         spinnerWrap.add(spinner, BorderLayout.CENTER);
         if (unit != null && !unit.isEmpty()) {
             JLabel uLbl = new JLabel(unit);
