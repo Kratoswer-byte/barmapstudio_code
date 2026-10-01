@@ -86,3 +86,12 @@
 - [x] Creazione di un'icona vettoriale `statusDot` con doppio anello (alone luminoso esterno a 60% alpha e nucleo LED pieno)
 - [x] Aggiunto listener reattivo su `barStatus.text` per intercettare e rimuovere il prefisso `●` / `•`, rimpiazzandolo con l'icona LED vettoriale
 - [x] Risoluzione del glifo `▯` mostrato accanto alla versione di Beyond All Reason ed engine Recoil
+
+### 10. Footer Moderno Slim con Overlay Popups Informativi (Stato BAR & Guida Hotkeys)
+- [x] Pulizia header superiore: rimosse le scritte lunghe di stato dal top-right per mantenere l'header pulito, simmetrico e dedicato unicamente alla navigazione e ai comandi finestra
+- [x] Creazione footer compatto a basso profilo (altezza 24px) ancorato in basso con branding discreto a sinistra (`BAR MAP STUDIO`)
+- [x] Pulsante compatto a pillola con LED di stato vettoriale e testo `BAR` in basso a destra
+- [x] Overlay popup flyout per lo Stato BAR: cliccando sul pulsante si apre un riquadro flottante scuro con bordo ciano che mostra versione BAR, versione engine Recoil, stato di sincronizzazione e tasto rapido 'Apri Cartella BAR'
+- [x] Pulsante guida a vettore `[ ? ]` in basso a destra
+- [x] Overlay popup flyout per Scorciatoie e Hotkeys: riquadro a 2 colonne con tutte le scorciatoie di Map Studio ([S], [M], [G], [P], [R], [T], [W], [E], [DEL], [Spazio], [X], [Ctrl+Z/Y], [L], rotellina zoom, drag destro)
+- [x] Posizionamento dinamico verso l'alto degli overlay popup (offset Y negativo rispetto al footer) per evitare clipping oltre il bordo dello schermo

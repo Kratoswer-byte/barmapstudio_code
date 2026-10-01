@@ -233,7 +233,10 @@ public class BarMapStudio {
             masterViewPanel.add(unitsView, "UNITS");
 
             // Build Brand-New Modern Header
-            JPanel customHeader = buildCustomHeader(frame, launcher, masterCards, masterViewPanel, mEnsureLoaded, unitsObj, barStatus);
+            JPanel customHeader = buildCustomHeader(frame, launcher, masterCards, masterViewPanel, mEnsureLoaded, unitsObj);
+
+            // Build Slim Modern Footer with Status & Help Overlays
+            JPanel customFooter = buildCustomFooter(frame, launcher, barStatus);
 
             // Construct Root Panel (100% full width, ZERO ONLINE DOCK!)
             JPanel customRoot = new JPanel(new BorderLayout());
@@ -241,6 +244,7 @@ public class BarMapStudio {
             customRoot.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
             customRoot.add(customHeader, BorderLayout.NORTH);
             customRoot.add(masterViewPanel, BorderLayout.CENTER);
+            customRoot.add(customFooter, BorderLayout.SOUTH);
 
             // Add edge window resizer for undecorated window
             WindowResizer resizer = new WindowResizer(frame);
@@ -297,7 +301,7 @@ public class BarMapStudio {
         });
     }
 
-    private static JPanel buildCustomHeader(JFrame frame, BarLauncher launcher, CardLayout masterCards, JPanel masterViewPanel, Method mEnsureLoaded, Object unitsObj, JLabel barStatus) {
+    private static JPanel buildCustomHeader(JFrame frame, BarLauncher launcher, CardLayout masterCards, JPanel masterViewPanel, Method mEnsureLoaded, Object unitsObj) {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(BG_HEADER);
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
@@ -362,53 +366,10 @@ public class BarMapStudio {
         center.add(unitsTab);
         header.add(center, BorderLayout.CENTER);
 
-        // Right: BAR Status & Window Controls
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 10));
+        // Right: Window Controls Only (Clean & Symmetrical)
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 8));
         right.setOpaque(false);
 
-        // Vector glowing LED status dot icon (replaces unrenderable Unicode black circle U+25CF)
-        Icon statusDot = new Icon() {
-            @Override
-            public void paintIcon(Component c, Graphics g, int x, int y) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color fg = c.getForeground();
-                if (fg == null) fg = new Color(58, 176, 84);
-                // Glow halo
-                g2.setColor(new Color(fg.getRed(), fg.getGreen(), fg.getBlue(), 60));
-                g2.fillOval(x, y + 2, 10, 10);
-                // Bright center core
-                g2.setColor(fg);
-                g2.fillOval(x + 2, y + 4, 6, 6);
-                g2.dispose();
-            }
-
-            @Override
-            public int getIconWidth() { return 12; }
-
-            @Override
-            public int getIconHeight() { return 14; }
-        };
-
-        barStatus.setFont(font(Font.BOLD, 12));
-        barStatus.setIcon(statusDot);
-        barStatus.setIconTextGap(6);
-        barStatus.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        String curText = barStatus.getText();
-        if (curText != null && (curText.startsWith("●") || curText.startsWith("•") || curText.startsWith("\u25CF"))) {
-            barStatus.setText(curText.replaceFirst("^[●•\u25CF]\\s*", ""));
-        }
-        barStatus.addPropertyChangeListener("text", evt -> {
-            String val = (String) evt.getNewValue();
-            if (val != null && (val.startsWith("●") || val.startsWith("•") || val.startsWith("\u25CF"))) {
-                String clean = val.replaceFirst("^[●•\u25CF]\\s*", "");
-                SwingUtilities.invokeLater(() -> barStatus.setText(clean));
-            }
-        });
-        right.add(barStatus);
-
-        // Window Controls
         JPanel windowBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         windowBtns.setOpaque(false);
 
@@ -428,6 +389,252 @@ public class BarMapStudio {
 
         header.add(right, BorderLayout.EAST);
         return header;
+    }
+
+    private static JPanel buildCustomFooter(JFrame frame, BarLauncher launcher, JLabel barStatus) {
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setBackground(BG_HEADER);
+        footer.setPreferredSize(new Dimension(100, 24));
+        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER_COLOR));
+
+        // Left: Studio Branding
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 3));
+        left.setOpaque(false);
+        JLabel brand = new JLabel("BAR MAP STUDIO");
+        brand.setFont(fontCond(Font.BOLD, 10));
+        brand.setForeground(new Color(100, 116, 139));
+        left.add(brand);
+        footer.add(left, BorderLayout.WEST);
+
+        // Right: BAR Status Pill Button + Help Button
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 2));
+        right.setOpaque(false);
+
+        JButton barBtn = createBarStatusOverlayButton(launcher, barStatus);
+        JButton helpBtn = createHelpOverlayButton();
+
+        right.add(barBtn);
+        right.add(helpBtn);
+        footer.add(right, BorderLayout.EAST);
+
+        return footer;
+    }
+
+    private static JButton createBarStatusOverlayButton(BarLauncher launcher, JLabel barStatus) {
+        JButton btn = new JButton() {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g = (Graphics2D) graphics.create();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                int w = getWidth();
+                int h = getHeight();
+                boolean hover = getModel().isRollover();
+
+                g.setColor(hover ? new Color(25, 34, 54) : BG_CARD);
+                g.fillRoundRect(0, 0, w, h, 8, 8);
+                g.setColor(hover ? ACCENT_CYAN : BORDER_COLOR);
+                g.drawRoundRect(0, 0, w - 1, h - 1, 8, 8);
+
+                Color fg = barStatus.getForeground();
+                if (fg == null || fg.equals(TEXT_WHITE)) fg = new Color(34, 197, 94);
+
+                // Vector LED dot with glow
+                g.setColor(new Color(fg.getRed(), fg.getGreen(), fg.getBlue(), 60));
+                g.fillOval(7, (h - 10) / 2, 10, 10);
+                g.setColor(fg);
+                g.fillOval(9, (h - 6) / 2, 6, 6);
+
+                // Label
+                g.setFont(fontCond(Font.BOLD, 10));
+                g.setColor(hover ? TEXT_WHITE : TEXT_MUTED);
+                FontMetrics fm = g.getFontMetrics();
+                g.drawString("BAR", 23, (h + fm.getAscent()) / 2 - 2);
+                g.dispose();
+            }
+        };
+
+        btn.setPreferredSize(new Dimension(56, 20));
+        btn.setToolTipText("Dettagli connessione BAR ed Engine (Clicca per visualizzare overlay)");
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> showBarStatusOverlay(btn, launcher, barStatus));
+        return btn;
+    }
+
+    private static void showBarStatusOverlay(Component anchor, BarLauncher launcher, JLabel barStatus) {
+        JPopupMenu popup = new JPopupMenu();
+        popup.setBackground(new Color(14, 19, 31));
+        popup.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(0, 229, 255, 140), 1, true),
+            BorderFactory.createEmptyBorder(12, 14, 12, 14)
+        ));
+
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setOpaque(false);
+
+        JLabel title = new JLabel("STATO BEYOND ALL REASON");
+        title.setFont(fontCond(Font.BOLD, 12));
+        title.setForeground(ACCENT_CYAN);
+        title.setAlignmentX(0f);
+        content.add(title);
+        content.add(Box.createVerticalStrut(8));
+
+        String raw = barStatus.getText();
+        if (raw == null || raw.isEmpty()) raw = "Verifica stato in corso...";
+        raw = raw.replaceFirst("^[●•\u25CF]\\s*", "");
+
+        Color fg = barStatus.getForeground();
+        boolean ok = (fg != null && fg.getRed() < 100);
+
+        JLabel statusLine = new JLabel((ok ? "✓ " : "✕ ") + raw);
+        statusLine.setFont(font(Font.BOLD, 11));
+        statusLine.setForeground(ok ? new Color(34, 197, 94) : new Color(239, 68, 68));
+        statusLine.setAlignmentX(0f);
+        content.add(statusLine);
+        content.add(Box.createVerticalStrut(6));
+
+        String tip = barStatus.getToolTipText();
+        if (tip != null && !tip.isEmpty()) {
+            JLabel detailsLbl = new JLabel(tip);
+            detailsLbl.setFont(font(Font.PLAIN, 11));
+            detailsLbl.setForeground(TEXT_MUTED);
+            detailsLbl.setAlignmentX(0f);
+            content.add(detailsLbl);
+            content.add(Box.createVerticalStrut(8));
+        }
+
+        try {
+            Field fBarFolder = BarLauncher.class.getDeclaredField("barFolder");
+            fBarFolder.setAccessible(true);
+            JTextField barFolder = (JTextField) fBarFolder.get(launcher);
+            String path = barFolder.getText().trim();
+            if (!path.isEmpty()) {
+                JButton openFolderBtn = new JButton("Apri Cartella BAR");
+                openFolderBtn.setFont(fontCond(Font.BOLD, 11));
+                openFolderBtn.setBackground(new Color(18, 24, 38));
+                openFolderBtn.setForeground(ACCENT_CYAN);
+                openFolderBtn.setFocusPainted(false);
+                openFolderBtn.setAlignmentX(0f);
+                openFolderBtn.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(0, 229, 255, 80), 1, true),
+                    BorderFactory.createEmptyBorder(5, 10, 5, 10)
+                ));
+                openFolderBtn.addActionListener(ev -> {
+                    popup.setVisible(false);
+                    try {
+                        Desktop.getDesktop().open(new java.io.File(path));
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                });
+                content.add(openFolderBtn);
+            }
+        } catch (Throwable ignored) {}
+
+        popup.add(content);
+        Dimension ps = popup.getPreferredSize();
+        popup.show(anchor, anchor.getWidth() - ps.width, -ps.height - 4);
+    }
+
+    private static JButton createHelpOverlayButton() {
+        JButton btn = new JButton() {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g = (Graphics2D) graphics.create();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                int w = getWidth();
+                int h = getHeight();
+                boolean hover = getModel().isRollover();
+
+                g.setColor(hover ? new Color(0, 229, 255, 40) : BG_CARD);
+                g.fillRoundRect(0, 0, w, h, 8, 8);
+                g.setColor(hover ? ACCENT_CYAN : BORDER_COLOR);
+                g.drawRoundRect(0, 0, w - 1, h - 1, 8, 8);
+
+                g.setFont(fontCond(Font.BOLD, 11));
+                g.setColor(hover ? ACCENT_CYAN : TEXT_MUTED);
+                FontMetrics fm = g.getFontMetrics();
+                int tw = fm.stringWidth("?");
+                g.drawString("?", (w - tw) / 2, (h + fm.getAscent()) / 2 - 2);
+                g.dispose();
+            }
+        };
+
+        btn.setPreferredSize(new Dimension(24, 20));
+        btn.setToolTipText("Guida e scorciatoie da tastiera (Clicca per visualizzare overlay)");
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> showHelpOverlay(btn));
+        return btn;
+    }
+
+    private static void showHelpOverlay(Component anchor) {
+        JPopupMenu popup = new JPopupMenu();
+        popup.setBackground(new Color(14, 19, 31));
+        popup.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(0, 229, 255, 140), 1, true),
+            BorderFactory.createEmptyBorder(12, 14, 12, 14)
+        ));
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setOpaque(false);
+
+        JLabel title = new JLabel("SCORCIATOIE & CONTROLLI MAP STUDIO");
+        title.setFont(fontCond(Font.BOLD, 12));
+        title.setForeground(ACCENT_CYAN);
+        title.setAlignmentX(0f);
+        panel.add(title);
+        panel.add(Box.createVerticalStrut(10));
+
+        String[][] shortcuts = {
+            {"[ S ]", "Seleziona ed ispeziona entità"},
+            {"[ M ]", "Piazza Mex (Estrattore metallo)"},
+            {"[ 1 - 5 ]", "Imposta valore metallo Mex rapido"},
+            {"[ G ]", "Piazza Geotermico (Fessura idrotermale)"},
+            {"[ P ]", "Piazza Spawn Giocatore"},
+            {"[ R ]", "Piazza Rocce da Reclaim"},
+            {"[ T ]", "Piazza Alberi da Reclaim"},
+            {"[ W ]", "Piazza Relitti da Reclaim"},
+            {"[ E ]", "Gomma: cancella entità sotto cursore"},
+            {"[ DEL ]", "Elimina entità attualmente selezionata"},
+            {"[ Spazio ]", "Attiva / Disattiva modalità Simmetria"},
+            {"[ X ]", "Cicla Asse Simmetria (Diag / Z / X / Quad)"},
+            {"[ Ctrl+Z / Y ]", "Annulla (Undo) e Ripristina (Redo)"},
+            {"[ L ]", "Attiva / Disattiva Slope Map (Pendenze)"},
+            {"[ Rotellina ]", "Zoom dinamico centrato su cursore"},
+            {"[ Drag Destro ]", "Sposta visuale mappa (Pan)"}
+        };
+
+        JPanel grid = new JPanel(new GridLayout(shortcuts.length, 2, 14, 4));
+        grid.setOpaque(false);
+
+        for (String[] sc : shortcuts) {
+            JLabel keyLbl = new JLabel(sc[0]);
+            keyLbl.setFont(fontCond(Font.BOLD, 11));
+            keyLbl.setForeground(ACCENT_CYAN);
+            grid.add(keyLbl);
+
+            JLabel descLbl = new JLabel(sc[1]);
+            descLbl.setFont(font(Font.PLAIN, 11));
+            descLbl.setForeground(TEXT_WHITE);
+            grid.add(descLbl);
+        }
+        grid.setAlignmentX(0f);
+        panel.add(grid);
+
+        popup.add(panel);
+        Dimension ps = popup.getPreferredSize();
+        popup.show(anchor, anchor.getWidth() - ps.width, -ps.height - 4);
     }
 
     private static JToggleButton createTopNavButton(String text, String iconType, boolean selected) {
