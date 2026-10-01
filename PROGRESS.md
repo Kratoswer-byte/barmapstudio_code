@@ -24,6 +24,7 @@
 | `28398b9` | `feat` | 01/10/2026 12:35 | Controlli Slope Map, zoom e scala spostati in dock HUD centrale sotto le coordinate |
 | `ab50212` | `fix` | 01/10/2026 14:27 | Ripristino massimizzazione all'avvio, bounds spaziosi e fix troncamento testi nei pannelli |
 | `22ccb6b` | `docs` | 01/10/2026 14:57 | Analisi e documentazione architetturale origine biomi, texture e stili rilievo (/plan) |
+| `0da6da3` | `feat` | 01/10/2026 15:16 | Finestra AssetSpecsDialog (guida requisiti asset) e supporto texture custom |
 
 ---
 
