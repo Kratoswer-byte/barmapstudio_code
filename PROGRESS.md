@@ -12,8 +12,8 @@
 | `21df09b` | `chore` | 01/10/2026 09:47 | Baseline savepoint prima delle feature heightmap, pendenze e slope map |
 | `3eba201` | `feat` | 01/10/2026 09:51 | Motore di calcolo pendenze, rigenerazione ground e smooth slopes |
 | `12d9cba` | `feat` | 01/10/2026 09:55 | Visualizzatore Slope Map in Canvas, HUD e ispezione quote/pendenza al cursore |
-| *Step 3* | `feat` | 01/10/2026 10:02 | Controlli GUI per MaxHeight, WaterLevel, Smooth Slopes e importazione da file |
-| *Step 4* | `build` | In attesa | Ricompilazione patch, iniezione launcher.jar e collaudo finale |
+| `efdbe8e` | `feat` | 01/10/2026 10:01 | Controlli GUI per MaxHeight, WaterLevel, Smooth Slopes e importazione da file |
+| *Step 4* | `build` | 01/10/2026 10:04 | Ricompilazione patch, iniezione launcher.jar e collaudo finale |
 
 ---
 
@@ -41,6 +41,6 @@
 - [x] Tasto rapido e slider trasparenza per la Slope Map nella Top Toolbar e hotkey [L]
 
 ### 4. Compilazione e Verifica Binari
-- [ ] Compilazione classi in `patch/`
-- [ ] Iniezione classi aggiornate in `extracted/{app}/app/launcher.jar`
-- [ ] Test di generazione da CLI e verifica esportazione BAR
+- [x] Compilazione classi in `patch/`
+- [x] Iniezione classi aggiornate in `extracted/{app}/app/launcher.jar`
+- [x] Test di generazione da CLI e verifica esportazione BAR (generazione .sdz convalidata)
