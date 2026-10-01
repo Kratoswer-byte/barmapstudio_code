@@ -135,3 +135,11 @@
 - [x] Origine Texture: mappati i 3 livelli (anteprima UI con `previewColors` + illuminazione normale in `PreviewGenerator.java`, detail textures procedurali matematiche fBm/Voronoi in `DetailTextures.java`, e asset 3D BAR in `BiomeFlora.java`)
 - [x] Origine Stili Rilievo: identificati i 18+ stili (`TerrainStyle.java`), pennelli alfa PNG in `/images/brushes/` (`Brushes.java`) e pipeline di calcolo procedurale (`BooleanMask`/`FloatMask`, `randomWalk`, erosione e simmetria)
 - [x] Creazione artifact architetturale dedicato: `biome_texture_terrain_pipeline.md`
+
+### 15. Finestra Specifiche Asset BAR e Supporto Asset Custom (Heightmaps, Texture, Modelli 3D)
+- [x] Creazione componente dedicato `AssetSpecsDialog.java`: finestra dark moderna, non-modale, navigabile con 5 schede di approfondimento per Heightmap, Texture, Modelli 3D / Flora, Metallo & Mapinfo e Cartella Custom
+- [x] Pulsante footer in basso a destra `[ ⓘ SPECS ]` con hover highlight, apribile e riapribile in qualsiasi momento
+- [x] Requisiti tecnici e consigli dettagliati (formati 16-bit vs 8-bit, pendenze veicoli/bot, potenze di 2 DDS/TGA, canali splatting RGBA, budget poligonale flora 150-500 tris per evitare drop FPS, definizioni .lua)
+- [x] Creazione directory `custom_assets/` (`heightmaps/`, `textures/`, `features/`) con guide `README` e pulsante di apertura diretta in Windows Explorer
+- [x] Nuovo pulsante "Carica Texture Terreno..." in `MapStudioPanel` per applicare texture diffuse personali in tempo reale
+- [x] Compilazione ed iniezione in `launcher.jar`, test di esecuzione completato con successo

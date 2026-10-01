@@ -121,6 +121,7 @@ public final class MapStudioPanel extends JPanel {
     private final JSlider slopeOpacitySlider = new JSlider(10, 100, 70);
     private final JButton btnRegenGround = createPrimaryButton("RIGENERA DA HEIGHTMAP", ACCENT_AMBER);
     private final JButton btnLoadHeightmap = createGhostButton("Carica Heightmap...");
+    private final JButton btnLoadTexture = createGhostButton("Carica Texture Terreno...");
     private final JButton btnSmoothSlopes = createGhostButton("Leviga Pendenze Ripide [Ramps]");
 
     private final java.util.Map<MapStudioCanvas.Tool, JToggleButton> toolButtons = new java.util.EnumMap<>(MapStudioCanvas.Tool.class);
@@ -292,6 +293,7 @@ public final class MapStudioPanel extends JPanel {
 
         btnRegenGround.addActionListener(e -> doRegenerateFromHeightmap(null));
         btnLoadHeightmap.addActionListener(e -> doLoadHeightmapFile());
+        btnLoadTexture.addActionListener(e -> doLoadCustomTextureFile());
         btnSmoothSlopes.addActionListener(e -> doSmoothSlopes());
 
         canvas.setOnTerrainHover(info -> {
@@ -769,6 +771,12 @@ public final class MapStudioPanel extends JPanel {
         btnLoadHeightmap.setAlignmentX(0f);
         btnLoadHeightmap.setToolTipText("Importa un file immagine (PNG 16-bit, RAW, BMP) come heightmap");
         heightCard.add(btnLoadHeightmap);
+        heightCard.add(Box.createVerticalStrut(6));
+
+        btnLoadTexture.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        btnLoadTexture.setAlignmentX(0f);
+        btnLoadTexture.setToolTipText("Applica un'immagine personalizzata (PNG, JPG, BMP) come texture di superficie");
+        heightCard.add(btnLoadTexture);
 
         side.add(heightCard);
         side.add(Box.createVerticalStrut(12));
@@ -1129,6 +1137,7 @@ public final class MapStudioPanel extends JPanel {
         progressBar.setVisible(true);
         btnRegenGround.setEnabled(false);
         btnLoadHeightmap.setEnabled(false);
+        btnLoadTexture.setEnabled(false);
         btnSmoothSlopes.setEnabled(false);
 
         long finalSeed = seed;
@@ -1158,6 +1167,7 @@ public final class MapStudioPanel extends JPanel {
                     progressBar.setVisible(false);
                     btnRegenGround.setEnabled(true);
                     btnLoadHeightmap.setEnabled(true);
+                    btnLoadTexture.setEnabled(true);
                     btnSmoothSlopes.setEnabled(true);
                 });
             } catch (Throwable ex) {
@@ -1167,6 +1177,7 @@ public final class MapStudioPanel extends JPanel {
                     progressBar.setVisible(false);
                     btnRegenGround.setEnabled(true);
                     btnLoadHeightmap.setEnabled(true);
+                    btnLoadTexture.setEnabled(true);
                     btnSmoothSlopes.setEnabled(true);
                     JOptionPane.showMessageDialog(this,
                         "Errore durante la rigenerazione da heightmap:\n" + ex.getMessage(),
@@ -1211,6 +1222,48 @@ public final class MapStudioPanel extends JPanel {
             } catch (Exception ex) {
                 ex.printStackTrace();
                 JOptionPane.showMessageDialog(this, "Errore durante il caricamento del file:\n" + ex.getMessage(), "Errore File", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void doLoadCustomTextureFile() {
+        JFileChooser chooser = new JFileChooser();
+        File defaultDir = new File("custom_assets/textures");
+        if (defaultDir.exists()) chooser.setCurrentDirectory(defaultDir);
+        chooser.setDialogTitle("Seleziona Texture Terreno (PNG, JPG, BMP)");
+        chooser.setFileFilter(new FileNameExtensionFilter("Immagini Texture (*.png, *.jpg, *.jpeg, *.bmp)", "png", "jpg", "jpeg", "bmp"));
+        int ret = chooser.showOpenDialog(this);
+        if (ret == JFileChooser.APPROVE_OPTION) {
+            File f = chooser.getSelectedFile();
+            try {
+                BufferedImage loaded = ImageIO.read(f);
+                if (loaded == null) {
+                    JOptionPane.showMessageDialog(this, "Formato immagine non supportato o non valido.", "Errore Import", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                SCMap currentMap = canvas.getMap();
+                if (currentMap == null) {
+                    JOptionPane.showMessageDialog(this, "Genera prima una mappa base su cui applicare la texture!", "Attenzione", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                int targetW = currentMap.getWidth() > 0 ? currentMap.getWidth() : currentMap.getSize();
+                int targetH = currentMap.getHeight() > 0 ? currentMap.getHeight() : currentMap.getSize();
+                int previewDim = 512;
+                int previewH = (int) Math.round(512.0 * ((double) targetH / targetW));
+
+                BufferedImage scaled = new BufferedImage(previewDim, previewH, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g = scaled.createGraphics();
+                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+                g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g.drawImage(loaded, 0, 0, previewDim, previewH, null);
+                g.dispose();
+
+                currentMap.setPreview(scaled);
+                canvas.repaint();
+                setStatus("Texture personalizzata applicata: " + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + " px)");
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Errore durante il caricamento della texture:\n" + ex.getMessage(), "Errore File", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

@@ -462,14 +462,16 @@ public class BarMapStudio {
         left.add(brand);
         footer.add(left, BorderLayout.WEST);
 
-        // Right: BAR Status Pill Button + Help Button
+        // Right: BAR Status Pill Button + Asset Specs Button + Help Button
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 2));
         right.setOpaque(false);
 
         JButton barBtn = createBarStatusOverlayButton(launcher, barStatus);
+        JButton specsBtn = createSpecsOverlayButton(frame);
         JButton helpBtn = createHelpOverlayButton();
 
         right.add(barBtn);
+        right.add(specsBtn);
         right.add(helpBtn);
         footer.add(right, BorderLayout.EAST);
 
@@ -595,6 +597,43 @@ public class BarMapStudio {
         popup.add(content);
         Dimension ps = popup.getPreferredSize();
         popup.show(anchor, anchor.getWidth() - ps.width, -ps.height - 4);
+    }
+
+    private static JButton createSpecsOverlayButton(JFrame frame) {
+        JButton btn = new JButton() {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g = (Graphics2D) graphics.create();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                int w = getWidth();
+                int h = getHeight();
+                boolean hover = getModel().isRollover();
+
+                g.setColor(hover ? new Color(25, 34, 54) : BG_CARD);
+                g.fillRoundRect(0, 0, w, h, 8, 8);
+                g.setColor(hover ? ACCENT_CYAN : BORDER_COLOR);
+                g.drawRoundRect(0, 0, w - 1, h - 1, 8, 8);
+
+                g.setFont(fontCond(Font.BOLD, 10));
+                g.setColor(hover ? ACCENT_CYAN : TEXT_MUTED);
+                FontMetrics fm = g.getFontMetrics();
+                String txt = "ⓘ SPECS";
+                int tw = fm.stringWidth(txt);
+                g.drawString(txt, (w - tw) / 2, (h + fm.getAscent()) / 2 - 2);
+                g.dispose();
+            }
+        };
+
+        btn.setPreferredSize(new Dimension(66, 20));
+        btn.setToolTipText("Linee guida e specifiche tecniche per Heightmap, Texture e Modelli 3D (Clicca per aprire)");
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> AssetSpecsDialog.toggle(frame));
+        return btn;
     }
 
     private static JButton createHelpOverlayButton() {
