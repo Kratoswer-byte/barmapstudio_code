@@ -105,7 +105,7 @@
 - [x] Rimosso blocco limite altezza finestra: ridotto `frame.setMinimumSize` da 1280x720 a 850x480 pixel
 - [x] Implementato `WindowResizer` globale basato su `AWTEventListener` registrato su `Toolkit.getDefaultToolkit`: cattura e gestisce il ridimensionamento della finestra frameless su TUTTI i bordi (Nord, Sud, Est, Ovest e angoli), inclusa l'altezza dal bordo superiore (header) e inferiore (footer)
 
-### 12. Spostamento Controlli Slope Map, Zoom e Scala nel Riquadro Centrale sotto le Coordinate
+### 12. Spostamento Controlli Slope Map, Zoom e Scala nel Riquadro Centrale sotto le Coordinate [Commit: 28398b9]
 - [x] Rimossi controlli di visualizzazione dalla toolbar superiore (`STRUMENTI`): rimossi pulsanti Zoom `+`, Zoom `-`, Scala `1:1`, pulsante `Slope Map [L]` e slider `Opacità`
 - [x] Snellita la toolbar superiore che ora accoglie unicamente gli strumenti di disegno/editing, metallo mex, controlli simmetria e undo/redo, evitando sovraffollamento e wrapping
 - [x] Creato dock HUD interattivo flottante in `MapStudioPanel` (`buildCanvasHudDock`) ancorato nel riquadro centrale della mappa
