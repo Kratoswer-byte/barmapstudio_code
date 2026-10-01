@@ -33,6 +33,10 @@ public final class MapStudioCanvas extends JPanel {
     }
 
     private BufferedImage groundPreview;
+    private BufferedImage slopeOverlay;
+    private boolean showSlopeMap = false;
+    private float slopeOpacity = 0.85f;
+    private Consumer<String> onTerrainHover = null;
     private SCMap map;
     private SymmetrySettings symmetrySettings = new SymmetrySettings(Symmetry.POINT2);
     private boolean symmetryEnabled = true;
@@ -136,6 +140,33 @@ public final class MapStudioCanvas extends JPanel {
             @Override
             public void mouseMoved(MouseEvent e) {
                 mousePos = e.getPoint();
+                if (map != null && onTerrainHover != null) {
+                    float[] norm = screenToNorm(e.getPoint());
+                    if (norm != null) {
+                        float wx = norm[0] * map.getWidth();
+                        float wy = norm[1] * map.getHeight();
+                        float h = map.getHeightAtWorld(wx, wy);
+                        float s = map.getSlopeAtWorld(wx, wy);
+                        double deg = Math.toDegrees(Math.atan(s));
+                        float wElev = map.getWaterElevation();
+                        String desc;
+                        if (wElev > -500f && h < wElev) {
+                            desc = "Subacqueo (" + String.format(Locale.ROOT, "%.1fm sotto", wElev - h) + ")";
+                        } else if (s < 0.22f) {
+                            desc = "Veicoli OK & Costruibile";
+                        } else if (s < 0.35f) {
+                            desc = "Veicoli Lenti / No Costruz.";
+                        } else if (s < 0.65f) {
+                            desc = "Solo Kbot / Bot Bipedi";
+                        } else {
+                            desc = "Invalicabile / Dirupo";
+                        }
+                        String info = String.format(Locale.ROOT, "Pos: [%d, %d] | Quota: %.1fm | Pendenza: %.2f (%.1f°) | %s", Math.round(wx), Math.round(wy), h, s, deg, desc);
+                        onTerrainHover.accept(info);
+                    } else {
+                        onTerrainHover.accept("");
+                    }
+                }
                 repaint();
             }
 
@@ -178,8 +209,19 @@ public final class MapStudioCanvas extends JPanel {
     }
 
     public void setMapAndGround(SCMap map, BufferedImage ground, SymmetrySettings symmetrySettings) {
+        setMapAndGround(map, ground, null, symmetrySettings);
+    }
+
+    public void setMapAndGround(SCMap map, BufferedImage ground, BufferedImage slopeOverlay, SymmetrySettings symmetrySettings) {
         this.map = map;
         this.groundPreview = ground;
+        if (slopeOverlay != null) {
+            this.slopeOverlay = slopeOverlay;
+        } else if (map != null) {
+            this.slopeOverlay = GroundGenerator.generateSlopeOverlayImage(map, map.getWaterElevation());
+        } else {
+            this.slopeOverlay = null;
+        }
         this.symmetrySettings = symmetrySettings != null ? symmetrySettings : new SymmetrySettings(Symmetry.POINT2);
         this.undoStack.clear();
         this.redoStack.clear();
@@ -198,6 +240,51 @@ public final class MapStudioCanvas extends JPanel {
         this.panY = 0;
         repaint();
         notifyChange();
+    }
+
+    public void setShowSlopeMap(boolean show) {
+        this.showSlopeMap = show;
+        if (show && this.slopeOverlay == null && map != null) {
+            updateSlopeOverlay();
+        }
+        repaint();
+    }
+
+    public boolean isShowSlopeMap() {
+        return this.showSlopeMap;
+    }
+
+    public void toggleSlopeMap() {
+        setShowSlopeMap(!this.showSlopeMap);
+    }
+
+    public void setSlopeOpacity(float opacity) {
+        this.slopeOpacity = Math.max(0.0f, Math.min(1.0f, opacity));
+        repaint();
+    }
+
+    public float getSlopeOpacity() {
+        return this.slopeOpacity;
+    }
+
+    public void setSlopeOverlay(BufferedImage overlay) {
+        this.slopeOverlay = overlay;
+        repaint();
+    }
+
+    public BufferedImage getSlopeOverlay() {
+        return this.slopeOverlay;
+    }
+
+    public void updateSlopeOverlay() {
+        if (map != null) {
+            this.slopeOverlay = GroundGenerator.generateSlopeOverlayImage(map, map.getWaterElevation());
+            repaint();
+        }
+    }
+
+    public void setOnTerrainHover(Consumer<String> listener) {
+        this.onTerrainHover = listener;
     }
 
     public void setOnMexSelected(Consumer<Float> listener) {
@@ -831,6 +918,14 @@ public final class MapStudioCanvas extends JPanel {
             g.setClip(clip);
             g.drawImage(groundPreview, b.x, b.y, b.width, b.height, null);
 
+            // Render Slope Map overlay if active
+            if (showSlopeMap && slopeOverlay != null) {
+                Composite oldComp = g.getComposite();
+                g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.min(1.0f, Math.max(0.05f, slopeOpacity))));
+                g.drawImage(slopeOverlay, b.x, b.y, b.width, b.height, null);
+                g.setComposite(oldComp);
+            }
+
             // Subtle tactical grid
             g.setColor(new Color(0, 229, 255, 20));
             g.setStroke(new BasicStroke(1.0f));
@@ -1121,6 +1216,13 @@ public final class MapStudioCanvas extends JPanel {
             (symmetryEnabled ? (symmetrySettings != null ? symmetrySettings.terrainSymmetry().name() : "ON") : "OFF")
         );
 
+        if (norm != null && map != null) {
+            float hAt = map.getHeightAtWorld(wx, wy);
+            float sAt = map.getSlopeAtWorld(wx, wy);
+            double deg = Math.toDegrees(Math.atan(sAt));
+            coordStr += String.format(Locale.ROOT, " | Quota: %.1fm | Pend: %.2f (%.1f°)", hAt, sAt, deg);
+        }
+
         if (selectedEntity instanceof Marker m && map != null && map.getMexes().contains(m)) {
             coordStr += String.format(Locale.ROOT, " | MEX SELEZIONATO: %.1f M", getMexMetal(m));
         } else if (selectedEntity instanceof Spawn s) {
@@ -1142,7 +1244,7 @@ public final class MapStudioCanvas extends JPanel {
         g.drawString(coordStr, hx + 2, hy + 2);
 
         // Hotkey cheatsheet bar in top-left corner
-        String hotkeys = "[S] Seleziona  [M] Mex  [G] Geo  [R] Rocce  [E] Cancella  [DEL] Elimina  [Ctrl+Z] Annulla  [Space] Simm  [1-5] Metallo  [+/-] Zoom";
+        String hotkeys = "[S] Seleziona  [M] Mex  [G] Geo  [R] Rocce  [E] Cancella  [DEL] Elimina  [Ctrl+Z] Annulla  [L] Slope Map  [Space] Simm  [1-5] Metallo  [+/-] Zoom";
         g.setFont(new Font("Segoe UI", Font.BOLD, 10));
         int hkW = g.getFontMetrics().stringWidth(hotkeys);
         int hkX = 16;
@@ -1156,5 +1258,60 @@ public final class MapStudioCanvas extends JPanel {
 
         g.setColor(new Color(0, 229, 255, 200));
         g.drawString(hotkeys, hkX, hkY + 2);
+
+        // Slope Map HUD Legend (bottom right)
+        if (showSlopeMap) {
+            int legW = 220;
+            int legH = 130;
+            int legX = getWidth() - legW - 20;
+            int legY = getHeight() - legH - 28;
+
+            g.setColor(new Color(11, 14, 20, 235));
+            g.fillRoundRect(legX, legY, legW, legH, 10, 10);
+            g.setColor(new Color(255, 159, 28, 180));
+            g.setStroke(new BasicStroke(1.2f));
+            g.drawRoundRect(legX, legY, legW, legH, 10, 10);
+
+            g.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            g.setColor(new Color(255, 159, 28));
+            g.drawString("⛰️ LEGENDA PENDENZE (BAR)", legX + 10, legY + 18);
+
+            g.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            int cy = legY + 36;
+
+            // 1. Green
+            g.setColor(new Color(34, 197, 94));
+            g.fillRect(legX + 12, cy - 8, 12, 10);
+            g.setColor(new Color(240, 244, 250));
+            g.drawString("< 12°  Veicoli OK & Costruibile", legX + 30, cy);
+            cy += 18;
+
+            // 2. Yellow
+            g.setColor(new Color(234, 179, 8));
+            g.fillRect(legX + 12, cy - 8, 12, 10);
+            g.setColor(new Color(240, 244, 250));
+            g.drawString("12°-20° Veicoli Rallentati", legX + 30, cy);
+            cy += 18;
+
+            // 3. Orange
+            g.setColor(new Color(249, 115, 22));
+            g.fillRect(legX + 12, cy - 8, 12, 10);
+            g.setColor(new Color(240, 244, 250));
+            g.drawString("20°-33° Solo Kbot / Bot", legX + 30, cy);
+            cy += 18;
+
+            // 4. Red
+            g.setColor(new Color(239, 68, 68));
+            g.fillRect(legX + 12, cy - 8, 12, 10);
+            g.setColor(new Color(240, 244, 250));
+            g.drawString("> 33°  Invalicabile (Scarpata)", legX + 30, cy);
+            cy += 18;
+
+            // 5. Blue
+            g.setColor(new Color(14, 165, 233));
+            g.fillRect(legX + 12, cy - 8, 12, 10);
+            g.setColor(new Color(240, 244, 250));
+            g.drawString("Acqua / Subacqueo", legX + 30, cy);
+        }
     }
 }

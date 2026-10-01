@@ -10,8 +10,8 @@
 | Commit ID | Tipo | Data / Ora | Descrizione |
 | :--- | :---: | :---: | :--- |
 | `21df09b` | `chore` | 01/10/2026 09:47 | Baseline savepoint prima delle feature heightmap, pendenze e slope map |
-| *Step 1* | `feat` | 01/10/2026 09:51 | Motore di calcolo pendenze, rigenerazione ground e smooth slopes |
-| *Step 2* | `feat` | In attesa | Visualizzatore Slope Map in Canvas, HUD e ispezione quote/pendenza al cursore |
+| `3eba201` | `feat` | 01/10/2026 09:51 | Motore di calcolo pendenze, rigenerazione ground e smooth slopes |
+| *Step 2* | `feat` | 01/10/2026 09:55 | Visualizzatore Slope Map in Canvas, HUD e ispezione quote/pendenza al cursore |
 | *Step 3* | `feat` | In attesa | Controlli GUI per MaxHeight, WaterLevel, Smooth Slopes e importazione da file |
 | *Step 4* | `build` | In attesa | Ricompilazione patch, iniezione launcher.jar e collaudo finale |
 
@@ -27,10 +27,10 @@
 - [x] Algoritmo di levigatura pendenze (*Smooth Slopes / Ramps*) (`smoothSlopes`)
 
 ### 2. Rendering e Interfaccia Canvas (`MapStudioCanvas.java`)
-- [ ] Layer sovrapposto Slope Map con trasparenza regolabile (0% - 100%)
-- [ ] Scorciatoia da tastiera rapida `L` (Slope Map Toggle)
-- [ ] Legenda grafica HUD a schermo (Veicoli, Bot, Invalicabile, Acqua)
-- [ ] Ispezione dinamica al mouse (quota in metri e pendenza in gradi/valore)
+- [x] Layer sovrapposto Slope Map con trasparenza regolabile (`slopeOpacity`)
+- [x] Scorciatoia da tastiera e cheatsheet `[L] Slope Map`
+- [x] Legenda grafica HUD a schermo (Veicoli, Bot, Invalicabile, Acqua)
+- [x] Ispezione dinamica al mouse (quota in metri e pendenza in gradi/valore numerico live nel canvas HUD)
 
 ### 3. Controlli Pannello Studio (`MapStudioPanel.java`)
 - [ ] Slider e Spinner Quota Massima (`maxHeight`, 50m - 800m)
