@@ -26,6 +26,7 @@
 | `22ccb6b` | `docs` | 01/10/2026 14:57 | Analisi e documentazione architetturale origine biomi, texture e stili rilievo (/plan) |
 | `0da6da3` | `feat` | 01/10/2026 15:16 | Finestra AssetSpecsDialog (guida requisiti asset) e supporto texture custom |
 | `3146ec6` | `fix/feat` | 01/10/2026 15:58 | Icone vettoriali specs (no tofu), apertura allo start, specs button su slope map e sidebar responsive con margini |
+| `0a5ebc4` | `feat` | 01/10/2026 16:55 | Modulo Texture Studio (PBR Seamless 4D, Splatting Multi-Materiale RGBA e nuova tab TEXTURES) |
 
 ---
 
@@ -156,4 +157,17 @@
 - [x] Sidebar laterali fluide e responsive: introdotto `ScrollableTrackWidthPanel` (JPanel che implementa `Scrollable` vincolando la larghezza al viewport del `JScrollPane`), garantendo che gli elementi dei pannelli si restringano proporzionalmente quando si sposta il divider di `JSplitPane`
 - [x] Margini laterali preservati: impostato padding rigido `EmptyBorder(12, 12, 12, 12)` sia sulla sidebar sinistra che su quella destra, garantendo 12px di margine sinistro e destro costanti senza overflow orizzontale
 - [x] Ridotta dimensione minima delle sidebar a 180px per permettere all'utente di restringere i pannelli senza blocchi rigidi
+
+### 17. Modulo Texture Studio, Generatore PBR Seamless e Splatting Multi-Materiale [Commit: 0a5ebc4]
+- [x] Nuovo componente dedicato `TextureStudioPanel.java`: modulo completo dark mode per la generazione di texture procedurali e composizione multi-materiale
+- [x] Motore Frattale Seamless 4D: campionamento toroidale su $(x=\cos 2\pi u, y=\sin 2\pi u, z=\cos 2\pi v, w=\sin 2\pi v)$ che garantisce matematicamente il 100% di continuità nei bordi (tiling seamless infinito senza giunture)
+- [x] 8 Preset di materiale BAR integrati: Roccia & Falesia, Erba & Prato, Sabbia & Dune, Argilla Crepata, Neve & Ghiaccio, Basalto Vulcanico, Ghiaia & Ciottoli, Suolo Cristallino Alieno
+- [x] Modalità Material Designer: regolazione interattiva di scala frequenza, ottave (1-8), persistenza/rugosità, contrasto cromatico, forza del rilievo bump 3D e color ramp a 3 stop con color pickers
+- [x] Modalità Terrain Splatter (Multi-Materiale): composizione a 4 layer (Layer 1 Base/Valle R, Layer 2 Pendenze G, Layer 3 Spiaggia/Mare B, Layer 4 Picchi A)
+- [x] Regole di Splatting Intelligenti: soglia pendenza (es. > 22° per la roccia) con transizione sfumata morbida (falloff), fascia di battigia/costa parametrabile, quota picchi e perturbazione frattale organica dei bordi
+- [x] Visualizzatore Canvas Interattivo: 8 modalità di visualizzazione (Diffuse Composito, Mappa Splatting RGBA, Singoli Canali R/G/B/A in B&W, Normal Map 3D con illuminazione solare rotante al mouse, e verifica Seamless Tiling a griglia 2x2)
+- [x] Pulsante primario `[ ★ APPLICA AL TERRENO DELLA MAPPA ]`: trasferisce la texture fusa e le maschere di splatting `tLow` e `tHigh` (calibrate per `BarMapExporter`) direttamente alla mappa attiva, tornando automaticamente a `MAPS`
+- [x] Salvataggio ed Esportazione: tasti dedicati `Salva Texture`, `Esporta Normal Map` e `Apri Cartella Textures` (in `custom_assets/textures/`)
+- [x] Navigazione Superiore in `BarMapStudio.java`: aggiunta la voce `TEXTURES` posizionata tra `MAPS` e `UNITS`, corredata da nuova icona vettoriale della tavolozza artistica Java2D
+- [x] Collegamento rapido nell'Editor: aggiunto pulsante `Apri Texture Studio (Splatting)...` nella sidebar sinistra di `MapStudioPanel`
 

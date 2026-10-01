@@ -184,6 +184,15 @@ public final class MapStudioPanel extends JPanel {
     private final Path barDataFolder;
     private final Consumer<Path> onMapCreated;
     private final Consumer<Path> onPlaySkirmish;
+    private Runnable openTextureStudioCallback;
+
+    public void setOpenTextureStudioCallback(Runnable openTextureStudioCallback) {
+        this.openTextureStudioCallback = openTextureStudioCallback;
+    }
+
+    public SCMap getCurrentMap() {
+        return canvas != null ? canvas.getMap() : null;
+    }
 
     public MapStudioPanel(Path homeFolder, Path barDataFolder, Consumer<Path> onMapCreated, Consumer<Path> onPlaySkirmish) {
         this.homeFolder = homeFolder;
@@ -777,6 +786,16 @@ public final class MapStudioPanel extends JPanel {
         btnLoadTexture.setAlignmentX(0f);
         btnLoadTexture.setToolTipText("Applica un'immagine personalizzata (PNG, JPG, BMP) come texture di superficie");
         heightCard.add(btnLoadTexture);
+        heightCard.add(Box.createVerticalStrut(6));
+
+        JButton btnOpenTexStudio = createGhostButton("Apri Texture Studio (Splatting)...");
+        btnOpenTexStudio.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        btnOpenTexStudio.setAlignmentX(0f);
+        btnOpenTexStudio.setToolTipText("Passa al modulo Texture Studio per generare texture procedurali e maschere di splatting");
+        btnOpenTexStudio.addActionListener(e -> {
+            if (openTextureStudioCallback != null) openTextureStudioCallback.run();
+        });
+        heightCard.add(btnOpenTexStudio);
 
         side.add(heightCard);
         side.add(Box.createVerticalStrut(12));
@@ -1272,6 +1291,54 @@ public final class MapStudioPanel extends JPanel {
                 ex.printStackTrace();
                 JOptionPane.showMessageDialog(this, "Errore durante il caricamento della texture:\n" + ex.getMessage(), "Errore File", JOptionPane.ERROR_MESSAGE);
             }
+        }
+    }
+
+    public void applyComposedTerrain(BufferedImage diffuseMap, BufferedImage splatLow, BufferedImage splatHigh, String name) {
+        SCMap currentMap = canvas != null ? canvas.getMap() : null;
+        if (currentMap == null) {
+            JOptionPane.showMessageDialog(this, "Nessuna mappa attiva trovata nell'Editor. Genera prima una mappa base su cui applicare la composizione!", "Attenzione", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try {
+            int mapW = currentMap.getWidth() > 0 ? currentMap.getWidth() : currentMap.getSize();
+            int mapH = currentMap.getHeight() > 0 ? currentMap.getHeight() : currentMap.getSize();
+            int previewDim = 512;
+            int previewH = (int) Math.round(512.0 * ((double) mapH / mapW));
+
+            BufferedImage scaled = new BufferedImage(previewDim, previewH, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = scaled.createGraphics();
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g.drawImage(diffuseMap, 0, 0, previewDim, previewH, null);
+            g.dispose();
+
+            currentMap.setPreview(scaled);
+
+            // Se fornite, aggiorna anche le maschere interne di splatting per l'esportazione BAR
+            if (splatLow != null && currentMap.getTextureMasksLow() != null) {
+                BufferedImage targetLow = currentMap.getTextureMasksLow();
+                Graphics2D gLow = targetLow.createGraphics();
+                gLow.setComposite(AlphaComposite.Src);
+                gLow.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                gLow.drawImage(splatLow, 0, 0, targetLow.getWidth(), targetLow.getHeight(), null);
+                gLow.dispose();
+            }
+            if (splatHigh != null && currentMap.getTextureMasksHigh() != null) {
+                BufferedImage targetHigh = currentMap.getTextureMasksHigh();
+                Graphics2D gHigh = targetHigh.createGraphics();
+                gHigh.setComposite(AlphaComposite.Src);
+                gHigh.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                gHigh.drawImage(splatHigh, 0, 0, targetHigh.getWidth(), targetHigh.getHeight(), null);
+                gHigh.dispose();
+            }
+
+            canvas.repaint();
+            setStatus("Composizione Texture & Splatting applicata: " + name + " (" + diffuseMap.getWidth() + "x" + diffuseMap.getHeight() + " px)");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Errore durante l'applicazione della texture:\n" + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
         }
     }
 

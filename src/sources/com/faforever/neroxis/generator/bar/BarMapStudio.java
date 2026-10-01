@@ -258,15 +258,37 @@ public class BarMapStudio {
             // Build Unified MAPS Master Panel (Editor sub-tab + Library sub-tab)
             MapsMasterPanel mapsMasterPanel = new MapsMasterPanel(editorPanel, libraryView);
 
-            // Master CardLayout for top-level tabs (MAPS and UNITS)
+            // Master CardLayout for top-level tabs (MAPS, TEXTURES and UNITS)
             CardLayout masterCards = new CardLayout();
             JPanel masterViewPanel = new JPanel(masterCards);
             masterViewPanel.setOpaque(false);
+
+            final JToggleButton[] mapsTabHolder = new JToggleButton[1];
+            final JToggleButton[] texturesTabHolder = new JToggleButton[1];
+
+            // TextureStudioPanel per generazione texture e splatting multi-materiale
+            TextureStudioPanel textureStudioPanel = new TextureStudioPanel(
+                home,
+                finalBarData,
+                (diffuseMap, splatLow, splatHigh, name) -> {
+                    editorPanel.applyComposedTerrain(diffuseMap, splatLow, splatHigh, name);
+                    masterCards.show(masterViewPanel, "MAPS");
+                    if (mapsTabHolder[0] != null) mapsTabHolder[0].setSelected(true);
+                }
+            );
+
+            editorPanel.setOpenTextureStudioCallback(() -> {
+                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap());
+                masterCards.show(masterViewPanel, "TEXTURES");
+                if (texturesTabHolder[0] != null) texturesTabHolder[0].setSelected(true);
+            });
+
             masterViewPanel.add(mapsMasterPanel, "MAPS");
+            masterViewPanel.add(textureStudioPanel, "TEXTURES");
             masterViewPanel.add(unitsView, "UNITS");
 
             // Build Brand-New Modern Header
-            JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj);
+            JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj, mapsTabHolder, texturesTabHolder, textureStudioPanel, editorPanel);
 
             // Build Slim Modern Footer with Status & Help Overlays
             JPanel customFooter = buildCustomFooter(frame, launcher, barStatus, lobby);
@@ -360,7 +382,19 @@ public class BarMapStudio {
         });
     }
 
-    private static JPanel buildCustomHeader(JFrame frame, BarLauncher launcher, LobbyUi lobby, CardLayout masterCards, JPanel masterViewPanel, Method mEnsureLoaded, Object unitsObj) {
+    private static JPanel buildCustomHeader(
+        JFrame frame,
+        BarLauncher launcher,
+        LobbyUi lobby,
+        CardLayout masterCards,
+        JPanel masterViewPanel,
+        Method mEnsureLoaded,
+        Object unitsObj,
+        JToggleButton[] mapsTabHolder,
+        JToggleButton[] texturesTabHolder,
+        TextureStudioPanel textureStudioPanel,
+        MapStudioPanel editorPanel
+    ) {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(BG_HEADER);
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
@@ -397,19 +431,31 @@ public class BarMapStudio {
 
         header.add(left, BorderLayout.WEST);
 
-        // Center: Main Navigation Tabs (MAPS and UNITS)
+        // Center: Main Navigation Tabs (MAPS, TEXTURES and UNITS)
         JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 10));
         center.setOpaque(false);
 
         ButtonGroup navGroup = new ButtonGroup();
         JToggleButton mapsTab = createTopNavButton("MAPS", "MAP", true);
+        JToggleButton texturesTab = createTopNavButton("TEXTURES", "PALETTE", false);
         JToggleButton unitsTab = createTopNavButton("UNITS", "SWORDS", false);
 
+        if (mapsTabHolder != null && mapsTabHolder.length > 0) mapsTabHolder[0] = mapsTab;
+        if (texturesTabHolder != null && texturesTabHolder.length > 0) texturesTabHolder[0] = texturesTab;
+
         navGroup.add(mapsTab);
+        navGroup.add(texturesTab);
         navGroup.add(unitsTab);
 
         mapsTab.addActionListener(e -> {
             masterCards.show(masterViewPanel, "MAPS");
+        });
+
+        texturesTab.addActionListener(e -> {
+            if (textureStudioPanel != null && editorPanel != null) {
+                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap());
+            }
+            masterCards.show(masterViewPanel, "TEXTURES");
         });
 
         unitsTab.addActionListener(e -> {
@@ -422,6 +468,7 @@ public class BarMapStudio {
         });
 
         center.add(mapsTab);
+        center.add(texturesTab);
         center.add(unitsTab);
         header.add(center, BorderLayout.CENTER);
 
@@ -803,6 +850,8 @@ public class BarMapStudio {
 
             if ("MAP".equals(iconType)) {
                 drawMapVector(g, startX, iconY, iconSize, iconSize, fg);
+            } else if ("PALETTE".equals(iconType)) {
+                drawPaletteVector(g, startX, iconY, iconSize, iconSize, fg);
             } else if ("SWORDS".equals(iconType)) {
                 drawSwordsVector(g, startX, iconY, iconSize, iconSize, fg);
             }
@@ -812,6 +861,26 @@ public class BarMapStudio {
 
             g.dispose();
         }
+    }
+
+    public static void drawPaletteVector(Graphics2D g, int x, int y, int w, int h, Color c) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setColor(c);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setStroke(new BasicStroke(1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        // Disegna profilo sagomato della tavolozza artistica
+        java.awt.geom.Path2D.Float p = new java.awt.geom.Path2D.Float();
+        p.moveTo(x + w * 0.5f, y + 1);
+        p.curveTo(x + w, y + 1, x + w, y + h * 0.7f, x + w * 0.7f, y + h - 1);
+        p.curveTo(x + w * 0.45f, y + h - 1, x + w * 0.4f, y + h * 0.65f, x + w * 0.25f, y + h * 0.75f);
+        p.curveTo(x + 1, y + h * 0.85f, x + 1, y + 1, x + w * 0.5f, y + 1);
+        p.closePath();
+        g2.draw(p);
+        // Macchie di colore / spot geometrici
+        g2.fillOval((int)(x + w * 0.35f), (int)(y + h * 0.28f), 2, 2);
+        g2.fillOval((int)(x + w * 0.65f), (int)(y + h * 0.30f), 2, 2);
+        g2.fillOval((int)(x + w * 0.70f), (int)(y + h * 0.55f), 2, 2);
+        g2.dispose();
     }
 
     public static void drawMapVector(Graphics2D g, int x, int y, int w, int h, Color c) {
