@@ -87,7 +87,7 @@
 - [x] Aggiunto listener reattivo su `barStatus.text` per intercettare e rimuovere il prefisso `●` / `•`, rimpiazzandolo con l'icona LED vettoriale
 - [x] Risoluzione del glifo `▯` mostrato accanto alla versione di Beyond All Reason ed engine Recoil
 
-### 10. Footer Moderno Slim con Overlay Popups Informativi (Stato BAR & Guida Hotkeys)
+### 10. Footer Moderno Slim con Overlay Popups Informativi (Stato BAR & Guida Hotkeys) [Commit: 096d209]
 - [x] Pulizia header superiore: rimosse le scritte lunghe di stato dal top-right per mantenere l'header pulito, simmetrico e dedicato unicamente alla navigazione e ai comandi finestra
 - [x] Creazione footer compatto a basso profilo (altezza 24px) ancorato in basso con branding discreto a sinistra (`BAR MAP STUDIO`)
 - [x] Pulsante compatto a pillola con LED di stato vettoriale e testo `BAR` in basso a destra
