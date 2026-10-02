@@ -65,6 +65,7 @@ public final class BarMapExporter {
     private static final float GEO_MARK_RADIUS = 34.0f;
     private static final float RECLAIM_METAL_PER_PLAYER = 600.0f;
     private final SCMap map;
+    private final BufferedImage customTexture;
     private BarExportOptions options;
     private final int faSize;
     private final int faWidth;
@@ -113,6 +114,7 @@ public final class BarMapExporter {
 
     private BarMapExporter(SCMap map, BarExportOptions options) {
         this.map = map;
+        this.customTexture = map.getCustomTexture();
         this.options = options;
         this.faSize = map.getSize();
         int fW = map.getWidth();
@@ -1538,36 +1540,67 @@ public final class BarMapExporter {
         float coarse = (noiseAt((((x * 0.788f) + (z * 0.616f)) * 0.0113f) + 13.0f, (((z * 0.788f) - (x * 0.616f)) * 0.0113f) + 173.0f) * 0.55f) + (noiseAt((((x * 0.342f) - (z * 0.94f)) * 0.0047f) + 401.0f, (((x * 0.94f) + (z * 0.342f)) * 0.0047f) + 59.0f) * 0.45f);
         float slopeX = (heightAt(x + 6.0f, z) - heightAt(x - 6.0f, z)) / 12.0f;
         float slopeZ = (heightAt(x, z + 6.0f) - heightAt(x, z - 6.0f)) / 12.0f;
-        float[] blended = blendLayers(x, z, medium, fine, (float) StrictMath.sqrt((slopeX * slopeX) + (slopeZ * slopeZ)));
-        float r = blended[0];
-        float g = blended[1];
-        float b = blended[2];
         float slopeHere = (float) StrictMath.sqrt((slopeX * slopeX) + (slopeZ * slopeZ));
-        float patchNoise = earthPatches(x, z);
-        float earth = (smoothStep(0.1f, 0.32f, patchNoise + (medium * 0.2f)) * 0.7f) + (smoothStep(0.07f, 0.22f, slopeHere) * (1.0f - smoothStep(MAX_SATURATION, 0.5f, slopeHere)) * 0.55f);
-        for (float[] mex : nearMexes) {
-            float mexDistance = (float) StrictMath.sqrt(((x - mex[0]) * (x - mex[0])) + ((z - mex[1]) * (z - mex[1])));
-            earth = Math.max(earth, smoothStep(95.0f, 40.0f, mexDistance + (medium * 18.0f)) * 0.6f);
-        }
-        float earth2 = Math.min(0.8f, earth) * (this.snowGround ? MAX_SATURATION : 1.0f);
-        if (earth2 > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-            float grain = 1.0f + (fine * 0.1f) + (medium * 0.08f);
-            r += ((this.dirtColor[0] * grain) - r) * earth2;
-            g += ((this.dirtColor[1] * grain) - g) * earth2;
-            b += ((this.dirtColor[2] * grain) - b) * earth2;
-        }
-        float altitude = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(1.0f, (heightAt(x, z) - this.lowGround) / (this.highGround - this.lowGround)));
-        float dry = altitude * 0.2f;
-        float groundLuminance = (r * 0.2126f) + (g * 0.7152f) + (b * 0.0722f);
-        float r2 = (r + (((groundLuminance * 1.06f) - r) * dry)) * (1.0f + (altitude * 0.07f));
-        float g2 = (g + (((groundLuminance * 1.0f) - g) * dry)) * (1.0f + (altitude * 0.07f));
-        float b2 = (b + (((groundLuminance * 0.9f) - b) * dry)) * (1.0f + (altitude * 0.07f));
-        float beach = beachAt(x, z, medium);
-        if (beach > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-            float grain2 = 1.0f + (fine * 0.06f);
-            r2 += ((this.sandColor[0] * grain2) - r2) * beach;
-            g2 += ((this.sandColor[1] * grain2) - g2) * beach;
-            b2 += ((this.sandColor[2] * grain2) - b2) * beach;
+        float r;
+        float g;
+        float b;
+        if (this.customTexture != null) {
+            float u = Math.max(0.0f, Math.min(1.0f, x / (float) this.textureWidth));
+            float v = Math.max(0.0f, Math.min(1.0f, z / (float) this.textureHeight));
+            int tw = this.customTexture.getWidth();
+            int th = this.customTexture.getHeight();
+            float fx = u * (tw - 1);
+            float fz = v * (th - 1);
+            int x0 = (int) fx;
+            int y0 = (int) fz;
+            int x1 = Math.min(tw - 1, x0 + 1);
+            int y1 = Math.min(th - 1, y0 + 1);
+            float fracX = fx - x0;
+            float fracY = fz - y0;
+            int c00 = this.customTexture.getRGB(x0, y0);
+            int c10 = this.customTexture.getRGB(x1, y0);
+            int c01 = this.customTexture.getRGB(x0, y1);
+            int c11 = this.customTexture.getRGB(x1, y1);
+            float r0 = (((c00 >> 16) & 255) * (1.0f - fracX)) + (((c10 >> 16) & 255) * fracX);
+            float r1 = (((c01 >> 16) & 255) * (1.0f - fracX)) + (((c11 >> 16) & 255) * fracX);
+            r = ((r0 * (1.0f - fracY)) + (r1 * fracY)) / 255.0f;
+            float g0 = (((c00 >> 8) & 255) * (1.0f - fracX)) + (((c10 >> 8) & 255) * fracX);
+            float g1 = (((c01 >> 8) & 255) * (1.0f - fracX)) + (((c11 >> 8) & 255) * fracX);
+            g = ((g0 * (1.0f - fracY)) + (g1 * fracY)) / 255.0f;
+            float b0 = ((c00 & 255) * (1.0f - fracX)) + ((c10 & 255) * fracX);
+            float b1 = ((c01 & 255) * (1.0f - fracX)) + ((c11 & 255) * fracX);
+            b = ((b0 * (1.0f - fracY)) + (b1 * fracY)) / 255.0f;
+        } else {
+            float[] blended = blendLayers(x, z, medium, fine, slopeHere);
+            r = blended[0];
+            g = blended[1];
+            b = blended[2];
+            float patchNoise = earthPatches(x, z);
+            float earth = (smoothStep(0.1f, 0.32f, patchNoise + (medium * 0.2f)) * 0.7f) + (smoothStep(0.07f, 0.22f, slopeHere) * (1.0f - smoothStep(MAX_SATURATION, 0.5f, slopeHere)) * 0.55f);
+            for (float[] mex : nearMexes) {
+                float mexDistance = (float) StrictMath.sqrt(((x - mex[0]) * (x - mex[0])) + ((z - mex[1]) * (z - mex[1])));
+                earth = Math.max(earth, smoothStep(95.0f, 40.0f, mexDistance + (medium * 18.0f)) * 0.6f);
+            }
+            float earth2 = Math.min(0.8f, earth) * (this.snowGround ? MAX_SATURATION : 1.0f);
+            if (earth2 > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
+                float grain = 1.0f + (fine * 0.1f) + (medium * 0.08f);
+                r += ((this.dirtColor[0] * grain) - r) * earth2;
+                g += ((this.dirtColor[1] * grain) - g) * earth2;
+                b += ((this.dirtColor[2] * grain) - b) * earth2;
+            }
+            float altitude = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(1.0f, (heightAt(x, z) - this.lowGround) / (this.highGround - this.lowGround)));
+            float dry = altitude * 0.2f;
+            float groundLuminance = (r * 0.2126f) + (g * 0.7152f) + (b * 0.0722f);
+            r = (r + (((groundLuminance * 1.06f) - r) * dry)) * (1.0f + (altitude * 0.07f));
+            g = (g + (((groundLuminance * 1.0f) - g) * dry)) * (1.0f + (altitude * 0.07f));
+            b = (b + (((groundLuminance * 0.9f) - b) * dry)) * (1.0f + (altitude * 0.07f));
+            float beach = beachAt(x, z, medium);
+            if (beach > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
+                float grain2 = 1.0f + (fine * 0.06f);
+                r += ((this.sandColor[0] * grain2) - r) * beach;
+                g += ((this.sandColor[1] * grain2) - g) * beach;
+                b += ((this.sandColor[2] * grain2) - b) * beach;
+            }
         }
         float normalLength = (float) StrictMath.sqrt((slopeX * slopeX) + (slopeZ * slopeZ) + 1.0f);
         float nx = (-slopeX) / normalLength;
@@ -1581,33 +1614,45 @@ public final class BarMapExporter {
         float height = heightAt(x, z);
         float curvature = ((((heightAt(x + 14.0f, z) + heightAt(x - 14.0f, z)) + heightAt(x, z + 14.0f)) + heightAt(x, z - 14.0f)) - (4.0f * height)) / 14.0f;
         float shading3 = shading2 * (1.0f - Math.max(-0.1f, Math.min(0.2f, curvature * TARGET_SATURATION)));
-        float rockFace = smoothStep(MAX_SATURATION, 0.62f, ((float) StrictMath.sqrt((slopeX * slopeX) + (slopeZ * slopeZ))) + (medium * 0.05f));
-        if (rockFace > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-            float gradientLength = ((float) StrictMath.sqrt((slopeX * slopeX) + (slopeZ * slopeZ))) + 1.0E-4f;
-            float alongContour = ((x * (-slopeZ)) + (z * slopeX)) / gradientLength;
-            float streaks = (noiseAt((alongContour * 0.42f) + 31.0f, (height * 0.035f) + 7.0f) * 0.65f) + (noiseAt((alongContour * 0.17f) + 113.0f, (height * 0.02f) + 59.0f) * 0.35f);
-            float faceBrightness = 1.0f + (streaks * 0.22f);
-            r2 += ((this.rockColor[0] * faceBrightness) - r2) * rockFace * 0.85f;
-            g2 += ((this.rockColor[1] * faceBrightness) - g2) * rockFace * 0.85f;
-            b2 += ((this.rockColor[2] * faceBrightness) - b2) * rockFace * 0.85f;
-            shading3 = Math.max(shading3 * (1.0f - (Math.max(-0.07f, Math.min(0.2f, curvature * 0.22f)) * rockFace)), 0.78f);
+        float r4;
+        float g4;
+        float b4;
+        if (this.customTexture != null) {
+            r4 = r * shading3;
+            g4 = g * shading3;
+            b4 = b * shading3;
+        } else {
+            float r2 = r;
+            float g2 = g;
+            float b2 = b;
+            float rockFace = smoothStep(MAX_SATURATION, 0.62f, slopeHere + (medium * 0.05f));
+            if (rockFace > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
+                float gradientLength = slopeHere + 1.0E-4f;
+                float alongContour = ((x * (-slopeZ)) + (z * slopeX)) / gradientLength;
+                float streaks = (noiseAt((alongContour * 0.42f) + 31.0f, (height * 0.035f) + 7.0f) * 0.65f) + (noiseAt((alongContour * 0.17f) + 113.0f, (height * 0.02f) + 59.0f) * 0.35f);
+                float faceBrightness = 1.0f + (streaks * 0.22f);
+                r2 += ((this.rockColor[0] * faceBrightness) - r2) * rockFace * 0.85f;
+                g2 += ((this.rockColor[1] * faceBrightness) - g2) * rockFace * 0.85f;
+                b2 += ((this.rockColor[2] * faceBrightness) - b2) * rockFace * 0.85f;
+                shading3 = Math.max(shading3 * (1.0f - (Math.max(-0.07f, Math.min(0.2f, curvature * 0.22f)) * rockFace)), 0.78f);
+            }
+            float drift = coarse * (1.0f - steepness);
+            float r3 = r2 * (1.0f + (drift * TARGET_SATURATION));
+            float g3 = g2 * (1.0f + (drift * 0.05f));
+            float b3 = b2 * (1.0f - (drift * TARGET_SATURATION));
+            if (steepness > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
+                float band = (((float) StrictMath.sin((height * 0.11f) + (medium * 2.5f) + (coarse * 4.0f))) * 0.6f) + (((float) StrictMath.sin((height * 0.37f) + (medium * 4.0f))) * 0.4f);
+                float strata = band * steepness;
+                r3 *= 1.0f + (strata * 0.08f);
+                g3 *= 1.0f + (strata * 0.065f);
+                b3 *= 1.0f + (strata * 0.045f);
+            }
+            float detail = 1.0f + (fine * (0.08f + (0.04f * steepness))) + (medium * 0.17f) + (coarse * 0.14f);
+            float brightness = shading3 * detail;
+            r4 = r3 * brightness;
+            g4 = g3 * brightness;
+            b4 = b3 * brightness;
         }
-        float drift = coarse * (1.0f - steepness);
-        float r3 = r2 * (1.0f + (drift * TARGET_SATURATION));
-        float g3 = g2 * (1.0f + (drift * 0.05f));
-        float b3 = b2 * (1.0f - (drift * TARGET_SATURATION));
-        if (steepness > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-            float band = (((float) StrictMath.sin((height * 0.11f) + (medium * 2.5f) + (coarse * 4.0f))) * 0.6f) + (((float) StrictMath.sin((height * 0.37f) + (medium * 4.0f))) * 0.4f);
-            float strata = band * steepness;
-            r3 *= 1.0f + (strata * 0.08f);
-            g3 *= 1.0f + (strata * 0.065f);
-            b3 *= 1.0f + (strata * 0.045f);
-        }
-        float detail = 1.0f + (fine * (0.08f + (0.04f * steepness))) + (medium * 0.17f) + (coarse * 0.14f);
-        float brightness = shading3 * detail;
-        float r4 = r3 * brightness;
-        float g4 = g3 * brightness;
-        float b4 = b3 * brightness;
         if (height < 12.0f) {
             float wet = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(1.0f, (5.0f - height) / 14.0f));
             float depth = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(1.0f, (-height) / 220.0f));

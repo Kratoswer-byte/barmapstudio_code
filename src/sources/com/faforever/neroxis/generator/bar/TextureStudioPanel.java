@@ -852,6 +852,24 @@ public class TextureStudioPanel extends JPanel {
         });
     }
 
+    private Dimension computeTargetResolution() {
+        int mapW = 512;
+        int mapH = 512;
+        if (activeMap != null) {
+            mapW = activeMap.getWidth() > 0 ? activeMap.getWidth() : activeMap.getSize();
+            mapH = activeMap.getHeight() > 0 ? activeMap.getHeight() : activeMap.getSize();
+        } else if (customLoadedHeightmap != null) {
+            mapW = customLoadedHeightmap.getWidth();
+            mapH = customLoadedHeightmap.getHeight();
+        }
+        if (mapW <= 0) mapW = 512;
+        if (mapH <= 0) mapH = 512;
+        double aspect = (double) mapH / (double) mapW;
+        int resW = currentRes;
+        int resH = (int) Math.max(64, Math.round(currentRes * aspect));
+        return new Dimension(resW, resH);
+    }
+
     private void triggerAsyncGeneration() {
         final BufferedImage sourceHm = (activeMap != null && activeMap.getHeightmap() != null) ? activeMap.getHeightmap() : customLoadedHeightmap;
         if (sourceHm == null) {
@@ -868,14 +886,16 @@ public class TextureStudioPanel extends JPanel {
         }
 
         setStatus("Generazione ed elaborazione in corso...", ACCENT_AMBER);
-        final int res = currentRes;
+        final Dimension targetDim = computeTargetResolution();
+        final int resW = targetDim.width;
+        final int resH = targetDim.height;
         final long seed = currentSeed;
 
         genPool.submit(() -> {
             long t0 = System.currentTimeMillis();
             try {
-                float[][] heightmap = new float[res][res];
-                float[][] slopeMap = new float[res][res];
+                float[][] heightmap = new float[resH][resW];
+                float[][] slopeMap = new float[resH][resW];
                 float minH = Float.MAX_VALUE;
                 float maxH = -Float.MAX_VALUE;
 
@@ -885,10 +905,10 @@ public class TextureStudioPanel extends JPanel {
                 Raster r = sourceHm.getRaster();
                 int[] pixelH = new int[1];
 
-                for (int y = 0; y < res; y++) {
-                    int sy = Math.min(hmH - 1, (y * hmH) / res);
-                    for (int x = 0; x < res; x++) {
-                        int sx = Math.min(hmW - 1, (x * hmW) / res);
+                for (int y = 0; y < resH; y++) {
+                    int sy = Math.min(hmH - 1, (y * hmH) / resH);
+                    for (int x = 0; x < resW; x++) {
+                        int sx = Math.min(hmW - 1, (x * hmW) / resW);
                         r.getPixel(sx, sy, pixelH);
                         float h = (pixelH[0] > 255) ? (pixelH[0] * scale) : (pixelH[0] * 0.5f);
                         heightmap[y][x] = h;
@@ -897,25 +917,25 @@ public class TextureStudioPanel extends JPanel {
                     }
                 }
 
-                for (int y = 0; y < res; y++) {
+                for (int y = 0; y < resH; y++) {
                     int yPrev = Math.max(0, y - 1);
-                    int yNext = Math.min(res - 1, y + 1);
-                    for (int x = 0; x < res; x++) {
+                    int yNext = Math.min(resH - 1, y + 1);
+                    for (int x = 0; x < resW; x++) {
                         int xPrev = Math.max(0, x - 1);
-                        int xNext = Math.min(res - 1, x + 1);
+                        int xNext = Math.min(resW - 1, x + 1);
                         float dx = (heightmap[y][xNext] - heightmap[y][xPrev]) * 0.5f;
                         float dy = (heightmap[yNext][x] - heightmap[yPrev][x]) * 0.5f;
                         slopeMap[y][x] = (float) Math.min(1.0, Math.sqrt(dx * dx + dy * dy) * 0.35);
                     }
                 }
 
-                float[][] maskR = computeZoneMask(zone1, heightmap, slopeMap, res, 1, seed, minH, maxH);
-                float[][] maskG = computeZoneMask(zone2, heightmap, slopeMap, res, 2, seed, minH, maxH);
-                float[][] maskB = computeZoneMask(zone3, heightmap, slopeMap, res, 3, seed, minH, maxH);
-                float[][] maskA = computeZoneMask(zone4, heightmap, slopeMap, res, 4, seed, minH, maxH);
+                float[][] maskR = computeZoneMask(zone1, heightmap, slopeMap, resW, resH, 1, seed, minH, maxH);
+                float[][] maskG = computeZoneMask(zone2, heightmap, slopeMap, resW, resH, 2, seed, minH, maxH);
+                float[][] maskB = computeZoneMask(zone3, heightmap, slopeMap, resW, resH, 3, seed, minH, maxH);
+                float[][] maskA = computeZoneMask(zone4, heightmap, slopeMap, resW, resH, 4, seed, minH, maxH);
 
-                for (int y = 0; y < res; y++) {
-                    for (int x = 0; x < res; x++) {
+                for (int y = 0; y < resH; y++) {
+                    for (int x = 0; x < resW; x++) {
                         float sum = maskR[y][x] + maskG[y][x] + maskB[y][x] + maskA[y][x];
                         if (sum <= 0.0001f) sum = 1.0f;
                         maskR[y][x] /= sum;
@@ -925,32 +945,33 @@ public class TextureStudioPanel extends JPanel {
                     }
                 }
 
-                BufferedImage tex1 = getOrGenerateTexture(zone1, res, seed + 1);
-                BufferedImage tex2 = getOrGenerateTexture(zone2, res, seed + 2);
-                BufferedImage tex3 = getOrGenerateTexture(zone3, res, seed + 3);
-                BufferedImage tex4 = getOrGenerateTexture(zone4, res, seed + 4);
+                int texTileSize = 512;
+                BufferedImage tex1 = getOrGenerateTexture(zone1, texTileSize, seed + 1);
+                BufferedImage tex2 = getOrGenerateTexture(zone2, texTileSize, seed + 2);
+                BufferedImage tex3 = getOrGenerateTexture(zone3, texTileSize, seed + 3);
+                BufferedImage tex4 = getOrGenerateTexture(zone4, texTileSize, seed + 4);
 
-                BufferedImage composite = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-                BufferedImage splatRGBA = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-                BufferedImage chR = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-                BufferedImage chG = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-                BufferedImage chB = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-                BufferedImage chA = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage composite = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage splatRGBA = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage chR = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage chG = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage chB = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage chA = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
 
-                int tileReps = Math.max(2, Math.round(matScale * 2.0f));
-                for (int y = 0; y < res; y++) {
-                    int ty = (y * tileReps) % res;
-                    for (int x = 0; x < res; x++) {
-                        int tx = (x * tileReps) % res;
+                float tileScale = Math.max(0.5f, matScale * 2.0f);
+                for (int y = 0; y < resH; y++) {
+                    int ty = Math.round(y * tileScale);
+                    for (int x = 0; x < resW; x++) {
+                        int tx = Math.round(x * tileScale);
                         float wR = maskR[y][x];
                         float wG = maskG[y][x];
                         float wB = maskB[y][x];
                         float wA = maskA[y][x];
 
-                        int rgb1 = tex1.getRGB(tx % tex1.getWidth(), ty % tex1.getHeight());
-                        int rgb2 = tex2.getRGB(tx % tex2.getWidth(), ty % tex2.getHeight());
-                        int rgb3 = tex3.getRGB(tx % tex3.getWidth(), ty % tex3.getHeight());
-                        int rgb4 = tex4.getRGB(tx % tex4.getWidth(), ty % tex4.getHeight());
+                        int rgb1 = tex1.getRGB(Math.floorMod(tx, tex1.getWidth()), Math.floorMod(ty, tex1.getHeight()));
+                        int rgb2 = tex2.getRGB(Math.floorMod(tx, tex2.getWidth()), Math.floorMod(ty, tex2.getHeight()));
+                        int rgb3 = tex3.getRGB(Math.floorMod(tx, tex3.getWidth()), Math.floorMod(ty, tex3.getHeight()));
+                        int rgb4 = tex4.getRGB(Math.floorMod(tx, tex4.getWidth()), Math.floorMod(ty, tex4.getHeight()));
 
                         int red = (int) ((((rgb1 >> 16) & 0xFF) * wR) + (((rgb2 >> 16) & 0xFF) * wG) + (((rgb3 >> 16) & 0xFF) * wB) + (((rgb4 >> 16) & 0xFF) * wA));
                         int green = (int) ((((rgb1 >> 8) & 0xFF) * wR) + (((rgb2 >> 8) & 0xFF) * wG) + (((rgb3 >> 8) & 0xFF) * wB) + (((rgb4 >> 8) & 0xFF) * wA));
@@ -975,7 +996,7 @@ public class TextureStudioPanel extends JPanel {
                     }
                 }
 
-                BufferedImage normal = createNormalMap(heightmap, res, matBump);
+                BufferedImage normal = createNormalMap(heightmap, resW, resH, matBump);
 
                 this.renderedDiffuse = composite;
                 this.renderedNormal = normal;
@@ -987,7 +1008,7 @@ public class TextureStudioPanel extends JPanel {
 
                 long elapsed = System.currentTimeMillis() - t0;
                 String mapName = (activeMap != null) ? activeMap.getName() : "Terreno Sintetico";
-                setStatus("Composizione pronta in " + elapsed + " ms (" + res + "x" + res + " px) su " + mapName, ACCENT_GREEN);
+                setStatus("Composizione pronta in " + elapsed + " ms (" + resW + "x" + resH + " px) su " + mapName, ACCENT_GREEN);
                 SwingUtilities.invokeLater(() -> canvas.repaint());
 
             } catch (Throwable t) {
@@ -997,18 +1018,18 @@ public class TextureStudioPanel extends JPanel {
         });
     }
 
-    private float[][] computeZoneMask(ZoneConfig z, float[][] heightmap, float[][] slopeMap, int res, int zoneIndex, long seed, float minH, float maxH) {
-        float[][] mask = new float[res][res];
+    private float[][] computeZoneMask(ZoneConfig z, float[][] heightmap, float[][] slopeMap, int resW, int resH, int zoneIndex, long seed, float minH, float maxH) {
+        float[][] mask = new float[resH][resW];
 
         // METODO B: File caricato dall'utente
         if (z.useFileMask && z.loadedMask != null) {
             BufferedImage fileImg = z.loadedMask;
             int fw = fileImg.getWidth();
             int fh = fileImg.getHeight();
-            for (int y = 0; y < res; y++) {
-                int sy = Math.min(fh - 1, (y * fh) / res);
-                for (int x = 0; x < res; x++) {
-                    int sx = Math.min(fw - 1, (x * fw) / res);
+            for (int y = 0; y < resH; y++) {
+                int sy = Math.min(fh - 1, (y * fh) / resH);
+                for (int x = 0; x < resW; x++) {
+                    int sx = Math.min(fw - 1, (x * fw) / resW);
                     int rgb = fileImg.getRGB(sx, sy);
                     int r = (rgb >> 16) & 0xFF;
                     int g = (rgb >> 8) & 0xFF;
@@ -1024,10 +1045,10 @@ public class TextureStudioPanel extends JPanel {
         float heightRange = Math.max(10.0f, maxH - minH);
         float peakThreshold = minH + peakAltitude * heightRange;
 
-        for (int y = 0; y < res; y++) {
-            float ny = (float) y / res;
-            for (int x = 0; x < res; x++) {
-                float nx = (float) x / res;
+        for (int y = 0; y < resH; y++) {
+            float ny = (float) y / resH;
+            for (int x = 0; x < resW; x++) {
+                float nx = (float) x / resW;
                 float h = heightmap[y][x];
                 float s = slopeMap[y][x];
                 float nPerturb = (fbmPeriodic2D(nx * 8f, ny * 8f, 8, 3, 0.5f, seed + 50) - 0.5f) * noisePerturbation;
@@ -1078,14 +1099,14 @@ public class TextureStudioPanel extends JPanel {
         return img;
     }
 
-    private BufferedImage createNormalMap(float[][] height, int res, float bumpStrength) {
-        BufferedImage normal = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-        for (int y = 0; y < res; y++) {
-            int yPrev = (y - 1 + res) % res;
-            int yNext = (y + 1) % res;
-            for (int x = 0; x < res; x++) {
-                int xPrev = (x - 1 + res) % res;
-                int xNext = (x + 1) % res;
+    private BufferedImage createNormalMap(float[][] height, int resW, int resH, float bumpStrength) {
+        BufferedImage normal = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < resH; y++) {
+            int yPrev = (y - 1 + resH) % resH;
+            int yNext = (y + 1) % resH;
+            for (int x = 0; x < resW; x++) {
+                int xPrev = (x - 1 + resW) % resW;
+                int xNext = (x + 1) % resW;
 
                 float dx = (height[y][xNext] - height[y][xPrev]) * bumpStrength;
                 float dy = (height[yNext][x] - height[yPrev][x]) * bumpStrength;
@@ -1112,12 +1133,13 @@ public class TextureStudioPanel extends JPanel {
         }
 
         if (applyCallback != null) {
-            int res = renderedDiffuse.getWidth();
-            BufferedImage splatLow = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-            BufferedImage splatHigh = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
+            int resW = renderedDiffuse.getWidth();
+            int resH = renderedDiffuse.getHeight();
+            BufferedImage splatLow = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
+            BufferedImage splatHigh = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
 
-            for (int y = 0; y < res; y++) {
-                for (int x = 0; x < res; x++) {
+            for (int y = 0; y < resH; y++) {
+                for (int x = 0; x < resW; x++) {
                     int cR = (renderedChannelR != null) ? (renderedChannelR.getRGB(x, y) & 0xFF) : 255;
                     int cG = (renderedChannelG != null) ? (renderedChannelG.getRGB(x, y) & 0xFF) : 0;
                     int cB = (renderedChannelB != null) ? (renderedChannelB.getRGB(x, y) & 0xFF) : 0;
@@ -1385,7 +1407,8 @@ public class TextureStudioPanel extends JPanel {
             g2.drawRect(cx - 1, cy - 1, w + 1, h + 1);
 
             String mapInfo = (activeMap != null) ? ("Mappa: " + (activeMap.getWidth() > 0 ? activeMap.getWidth() : activeMap.getSize()) + "x" + (activeMap.getHeight() > 0 ? activeMap.getHeight() : activeMap.getSize())) : (customLoadedHeightmap != null ? ("Heightmap: " + customLoadedHeightmap.getWidth() + "x" + customLoadedHeightmap.getHeight()) : "Nessun Terreno");
-            String info = mapInfo + " | Vista: " + currentViewMode.label + " | Risoluzione: " + currentRes + "x" + currentRes + " | Zoom: " + Math.round(zoom * 100) + "%";
+            String resStr = (toDraw != null) ? (toDraw.getWidth() + "x" + toDraw.getHeight()) : (currentRes + "x" + currentRes);
+            String info = mapInfo + " | Vista: " + currentViewMode.label + " | Risoluzione: " + resStr + " | Zoom: " + Math.round(zoom * 100) + "%";
             g2.setFont(BarMapStudio.font(Font.BOLD, 10));
             FontMetrics fm = g2.getFontMetrics();
             int strW = fm.stringWidth(info);

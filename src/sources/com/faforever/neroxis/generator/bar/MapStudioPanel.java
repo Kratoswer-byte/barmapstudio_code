@@ -629,14 +629,14 @@ public final class MapStudioPanel extends JPanel {
         dock.add(slopeToggleBtn);
 
         // Opacity Label & Slider
-        JLabel opacityLbl = new JLabel("Opacità:");
+        JLabel opacityLbl = new JLabel("Opacita':");
         opacityLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
         opacityLbl.setForeground(TEXT_MUTED);
         dock.add(opacityLbl);
 
         slopeOpacitySlider.setPreferredSize(new Dimension(65, 20));
         slopeOpacitySlider.setOpaque(false);
-        slopeOpacitySlider.setToolTipText("Regola l'opacità dello Slope Map Overlay");
+        slopeOpacitySlider.setToolTipText("Regola l'opacita' dello Slope Map Overlay");
         slopeOpacitySlider.addChangeListener(e -> canvas.setSlopeOpacity(slopeOpacitySlider.getValue() / 100.0f));
         dock.add(slopeOpacitySlider);
 
@@ -828,10 +828,10 @@ public final class MapStudioPanel extends JPanel {
         ));
         JLabel tip = new JLabel("<html><b style='color:#00E5FF'>Slope Map [Tasto L]:</b><br/>" +
             "Visualizza in tempo reale le pendenze Recoil/BAR:<br/>" +
-            "- <span style='color:#00FF88'>Verde (&lt;12°):</span> Veicoli & Costruibile<br/>" +
-            "- <span style='color:#FFFF00'>Giallo (12°-20°):</span> Veicoli lenti<br/>" +
-            "- <span style='color:#FF9F1C'>Arancio (20°-33°):</span> Solo Kbot / Bot<br/>" +
-            "- <span style='color:#FF3333'>Rosso (&gt;33°):</span> Rupi Invalicabili</html>");
+            "- <span style='color:#00FF88'>Verde (&lt;12 deg):</span> Veicoli & Costruibile<br/>" +
+            "- <span style='color:#FFFF00'>Giallo (12-20 deg):</span> Veicoli lenti<br/>" +
+            "- <span style='color:#FF9F1C'>Arancio (20-33 deg):</span> Solo Kbot / Bot<br/>" +
+            "- <span style='color:#FF3333'>Rosso (&gt;33 deg):</span> Rupi Invalicabili</html>");
         tip.setFont(BarMapStudio.font(Font.PLAIN, 11));
         tip.setForeground(TEXT_MUTED);
         infoBox.add(tip, BorderLayout.CENTER);
@@ -977,7 +977,7 @@ public final class MapStudioPanel extends JPanel {
         JButton autoReclaimBtn = createGhostButton("+ Auto Reclaim (Rocce & Alberi)");
         autoReclaimBtn.setAlignmentX(0f);
         autoReclaimBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
-        autoReclaimBtn.setToolTipText("Distribuisce rocce e alberi proceduralmente in base al bioma e alla densità");
+        autoReclaimBtn.setToolTipText("Distribuisce rocce e alberi proceduralmente in base al bioma e alla densita'");
         autoReclaimBtn.addActionListener(e -> canvas.autoSeedReclaim(reclaimSlider.getValue() / 10f));
         side.add(autoReclaimBtn);
         side.add(Box.createVerticalStrut(4));
@@ -1008,7 +1008,7 @@ public final class MapStudioPanel extends JPanel {
         side.add(ecoCard);
         side.add(Box.createVerticalStrut(8));
 
-        side.add(createFieldRow("Densità Reclaim:", reclaimSlider));
+        side.add(createFieldRow("Densita' Reclaim:", reclaimSlider));
         reclaimValueLabel.setFont(BarMapStudio.font(Font.PLAIN, 11));
         reclaimValueLabel.setForeground(TEXT_MUTED);
         reclaimValueLabel.setAlignmentX(0f);
@@ -1307,6 +1307,7 @@ public final class MapStudioPanel extends JPanel {
                 g.drawImage(loaded, 0, 0, previewDim, previewH, null);
                 g.dispose();
 
+                currentMap.setCustomTexture(loaded);
                 currentMap.setPreview(scaled);
                 if (canvas != null) {
                     canvas.setGroundPreview(scaled);
@@ -1351,6 +1352,7 @@ public final class MapStudioPanel extends JPanel {
             g.drawImage(diffuseMap, 0, 0, previewDim, previewH, null);
             g.dispose();
 
+            currentMap.setCustomTexture(diffuseMap);
             currentMap.setPreview(scaled);
             if (canvas != null) {
                 canvas.setGroundPreview(scaled);

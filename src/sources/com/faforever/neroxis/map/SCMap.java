@@ -92,6 +92,7 @@ public class SCMap {
     private String skyCubePath = "/textures/environment/defaultskycube.dds";
     private SkyBox skyBox = new SkyBox();
     private BufferedImage preview = new BufferedImage(PreviewGenerator.PREVIEW_SIZE, PreviewGenerator.PREVIEW_SIZE, 2);
+    private BufferedImage customTexture = null;
     private int cartographicContourInterval = 100;
     private int cartographicDeepWaterColor = new Color(71, 140, 181).getRGB();
     private int cartographicMapContourColor = new Color(0, 0, 0).getRGB();
@@ -1097,6 +1098,14 @@ public class SCMap {
 
     public void setPreview(BufferedImage preview) {
         this.preview = preview;
+    }
+
+    public BufferedImage getCustomTexture() {
+        return this.customTexture;
+    }
+
+    public void setCustomTexture(BufferedImage customTexture) {
+        this.customTexture = customTexture;
     }
 
     public AIMarker getAmphibiousMarker(String id) {

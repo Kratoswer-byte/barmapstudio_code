@@ -32,6 +32,7 @@
 | `13aa881` | `feat/fix` | 02/10/2026 09:20 | Sincronizzazione live Mappa Attiva in Texture Studio, eliminazione anelli sinusoidali con Perlin periodico e aggiornamento canvas |
 | `69e19c9` | `feat/fix` | 02/10/2026 11:00 | Avvio pulito senza generazioni fake in Texture Studio, supporto Heightmap esterne con Empty State e sync bidirezionale a MAPS |
 | `810d1d6` | `feat/fix` | 02/10/2026 14:49 | Risoluzione vincolo 256px in SCMap.setPreview per BAR e icone native Java2D (stella, cartella, dadi) |
+| `PENDING` | `feat/fix` | 02/10/2026 15:30 | Supporto mappe rettangolari in Texture Studio ed esportazione texture personalizzate in BAR |
 
 ---
 
@@ -219,4 +220,17 @@
 - [x] **Regola MUST di Progetto & Icone Vettoriali Native Java2D:** Eliminati definitivamente tutti i caratteri Unicode ed emoji da `TextureStudioPanel.java` (`★`, `📂`, `🎲`, `°`) per prevenire glifi tofu (`☒`).
 - [x] **Disegno Vettoriale Antialiased:** Implementate icone Java2D native per la stella (`createVectorStarIcon` con `Path2D`), cartella (`createVectorFolderIcon`), e dadi (`createVectorDiceIcon`), integrate sia nei pulsanti ghost che nel pulsante primario `[APPLICA AL TERRENO DELLA MAPPA]`.
 - [x] **Verifica e Integrazione Beyond All Reason:** Test di generazione procedurale ed esportazione `.sdz` convalidato al 100% da CLI e verifica diretta del metodo `SCMap.setPreview` su mappe 256x256 con runtime Java 25.
+
+### 23. Supporto Mappe Rettangolari in Texture Studio ed Esportazione Texture Personalizzate in BAR [Commit: PENDING]
+- [x] **Supporto Mappe Rettangolari (Eliminato lo Schiacciamento):** In `TextureStudioPanel.java`, implementato `computeTargetResolution()` che calcola dinamicamente le dimensioni `resW x resH` preservando l'esatto aspect ratio della mappa (es. mappe 256x384 generano texture e anteprime a 512x768).
+- [x] **Campionamento Isotropo Seamless dei Materiali:** Il calcolo delle coordinate di tiling `tx` e `ty` avanza allo stesso identico passo su X e Y con `tileScale`, impedendo qualsiasi deformazione ellittica o allungamento dei granuli e dei dettagli PBR su mappe non quadrate.
+- [x] **Maschere e Mappe Normali Rettangolari:** Aggiornati `computeZoneMask` e `createNormalMap` per operare con matrici bidimensionali `float[resH][resW]` e immagini `BufferedImage(resW, resH)`.
+- [x] **Risoluzione del Bug "GENERA MAPPA FINALE" (Texture Personalizzate Ignorate):**
+  - Aggiunto il campo `customTexture` con getter e setter in `SCMap.java`.
+  - In `MapStudioPanel.java`, sia `applyComposedTerrain` (da Texture Studio) che `doLoadCustomTextureFile` (da file esterno) registrano l'immagine ad alta risoluzione in `currentMap.setCustomTexture(...)`.
+  - In `BarMapExporter.java`, la pipeline di rendering dei tile grafici (`.smt`), della minimap (`.smf`) e delle anteprime lobby ora campiona direttamente da `customTexture` con interpolazione bilineare quando presente, anziché ricadere sui colori procedurali del bioma.
+  - Vengono preservati e modulati l'illuminazione solare 3D e il relief shading (`brightness = shading3`), le bruciature dei mex e dei geo vents e lo scurimento dell'acqua, garantendo una perfetta integrazione nel motore 3D di Beyond All Reason.
+- [x] **Rigida Aderenza alle Regole di Progetto:** Zero emoji e zero caratteri non-ASCII su tutti i sorgenti (utilizzati solo caratteri ASCII standard e icone Java2D native).
+- [x] **Collaudo e Validazione Binaria:** Test programmatico automatizzato con generazione di mappa rettangolare (256x384 -> 8x12 unità BAR) ed esportazione `.sdz`, verificando che la texture custom venga effettivamente scritta e campionata nei tile `.smt` e nell'anteprima `.png`.
+
 
