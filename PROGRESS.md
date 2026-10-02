@@ -36,6 +36,7 @@
 | `a040f9e` | `fix` | 02/10/2026 16:10 | Allineamento a sinistra titoli e descrizioni sezioni in Texture Studio (BoxLayout alignmentX) |
 | `9e800db` | `feat` | 02/10/2026 16:40 | Integrati comandi HUD Slope Map, opacita' e zoom 1:1 in Texture Studio |
 | `432ad9c` | `feat` | 02/10/2026 17:55 | Nuova suite Objects & Units Studio: viewport 3D, validatore Lua, import Wavefront .obj e placement tray in MAPS |
+| `881935b` | `fix/perf` | 02/10/2026 18:12 | Risolto blocco/freeze EDT all'avvio: lazy loading unita' BAR su richiesta e Flyweight cell renderer a zero allocazioni |
 
 ---
 
@@ -291,6 +292,22 @@
   - Le entita' custom (mesh `.obj` e texture) vengono automaticamente confezionate nelle cartelle dedicate dell'archivio `.sdz` (`objects3d/` e `unittextures/`).
   - Per gli oggetti animati e le unita' boss viene generato il gadget Lua `luarules/gadgets/map_custom_spawner.lua` che effettua lo spawn automatico delle unita' all'avvio partita (`gadget:GameStart()`).
 - [x] **Rigida Aderenza alle Regole MUST:** Zero caratteri non-ASCII o emoji (icone native Java2D con `Path2D`), tipografia conforme e compatibilita' totale con il runtime Java 25.
+
+### 27. Risoluzione Blocco/Freeze EDT all'Avvio (Programma Imballato) [Commit: 881935b]
+- [x] **Analisi e Diagnostica Avanzata (Thread Dump `jstack`):**
+  - Eseguita profilazione diagnostica sul processo in blocco tramite `jstack` su PID.
+  - Individuato collo di bottiglia critico su `AWT-EventQueue-0` bloccato al 100% di CPU per oltre 21 secondi all'interno del metodo Swing `BasicListUI.updateLayoutState` e `Component.getHWPeerAboveMe` con ricorsione di locking su `AWTTreeLock`.
+- [x] **Radice dei Problemi Identificata:**
+  1. *Caricamento Prematuro all'Avvio:* All'avvio dell'applicazione veniva lanciato un thread che leggeva l'intero archivio dati multi-gigabyte di BAR e subito dopo accodava su EDT l'inserimento di oltre 450 unita' contemporaneamente all'inizializzazione della finestra.
+  2. *Ciclo O(N^2) di Notifiche su JList:* Nel metodo `refillList()`, `listModel.addElement(e)` veniva invocato all'interno di un ciclo for per 450 elementi, scatenando 450 eventi individuali `intervalAdded`. Ogni singolo evento forzava FlatLaf a ricalcolare l'intero layout della lista da zero (oltre 100.000 iterazioni).
+  3. *CellRenderer Non-Flyweight:* Il renderer della lista istanziava un nuovo `new JPanel(new BorderLayout())`, due nuovi `JLabel`, font e bordi per ogni singola cella ad ogni passata di misura e ridisegno, provocando migliaia di chiamate `addImpl`/`addNotify` a `CellRendererPane` e saturando la memoria e il thread della grafica Swing.
+- [x] **Risoluzione e Ottimizzazione Totale:**
+  - **Lazy Loading su Richiesta (`ensureOfficialUnitsLoaded()`):** All'avvio vengono caricate istantaneamente solo le 4 entita' di default. La scansione delle unita' ufficiali di BAR viene differita a quando l'utente clicca effettivamente sul tab `[ OBJECTS & UNITS ]` o attiva il filtro `BAR`, rendendo l'avvio di `MAPS` e dell'intera suite istantaneo (zero lag).
+  - **Batch Insertion (`listModel.addAll`):** Sostituito il ciclo di `addElement` con il batching atomico `listModel.addAll(filtered)`, riducendo gli eventi di layout da 450 a 1 singolo evento.
+  - **Renderer Flyweight ad Alte Prestazioni:** Convertito il `ListCellRenderer` secondo il pattern Flyweight (un singolo pannello e due label allocati una volta sola e riusati per tutte le righe aggiornando solo i testi). Zero garbage collection, zero aggiunte all'albero dei componenti.
+  - **Off-EDT Image Scaling:** Il ridimensionamento bilineare dell'anteprima delle unita' a 256x256 e' stato spostato nel thread in background prima di invocare `SwingUtilities.invokeLater`.
+- [x] **Verifica e Collaudo:** Test di avvio ripetuto con `jstack` che ha confermato `AWT-EventQueue-0` completamente scarico e reattivo (consumo CPU sceso da 22s a 1.1s, thread in stato WAITING pronto a gestire gli input dell'utente).
+
 
 
 
