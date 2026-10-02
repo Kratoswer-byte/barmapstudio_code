@@ -278,10 +278,18 @@ public class BarMapStudio {
             );
 
             editorPanel.setOpenTextureStudioCallback(() -> {
-                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap());
+                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround());
                 masterCards.show(masterViewPanel, "TEXTURES");
                 if (texturesTabHolder[0] != null) texturesTabHolder[0].setSelected(true);
             });
+
+            editorPanel.setOnMapChangedCallback(() -> {
+                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround());
+            });
+
+            if (editorPanel.getCurrentMap() != null) {
+                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround());
+            }
 
             masterViewPanel.add(mapsMasterPanel, "MAPS");
             masterViewPanel.add(textureStudioPanel, "TEXTURES");
@@ -453,7 +461,7 @@ public class BarMapStudio {
 
         texturesTab.addActionListener(e -> {
             if (textureStudioPanel != null && editorPanel != null) {
-                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap());
+                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround());
             }
             masterCards.show(masterViewPanel, "TEXTURES");
         });

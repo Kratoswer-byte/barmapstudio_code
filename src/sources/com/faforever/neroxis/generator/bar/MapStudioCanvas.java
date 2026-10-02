@@ -240,6 +240,14 @@ public final class MapStudioCanvas extends JPanel {
         setMapAndGround(map, ground, null, symmetrySettings);
     }
 
+    public void setGroundPreview(BufferedImage ground) {
+        this.groundPreview = ground;
+        if (this.map != null && ground != null) {
+            this.map.setPreview(ground);
+        }
+        repaint();
+    }
+
     public void setMapAndGround(SCMap map, BufferedImage ground, BufferedImage slopeOverlay, SymmetrySettings symmetrySettings) {
         this.map = map;
         this.groundPreview = ground;

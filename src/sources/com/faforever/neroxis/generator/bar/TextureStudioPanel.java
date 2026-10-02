@@ -9,6 +9,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.Raster;
 import java.io.File;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
@@ -40,14 +41,15 @@ public class TextureStudioPanel extends JPanel {
     private static final Color TEXT_MUTED = new Color(130, 140, 160);
 
     public enum ViewMode {
-        COMPOSITE("1. Terreno Fuso (Colori)"),
-        SPLAT_RGBA("2. Mappa Splatting (RGBA)"),
-        CHANNEL_R("3. Zona 1: Pianura (Canale R)"),
-        CHANNEL_G("4. Zona 2: Roccia (Canale G)"),
-        CHANNEL_B("5. Zona 3: Spiaggia (Canale B)"),
-        CHANNEL_A("6. Zona 4: Picchi (Canale A)"),
-        NORMAL_MAP_3D("7. Normal Map 3D (Luce Solare)"),
-        SEAMLESS_TILING("8. Tiling Seamless (2x2)");
+        COMPOSITE("1. Terreno Mappa (Colori Fusi)"),
+        MAPS_GROUND("2. Texture Bioma Originale (MAPS)"),
+        SPLAT_RGBA("3. Mappa Splatting RGBA"),
+        CHANNEL_R("4. Zona 1: Pianura (Canale R)"),
+        CHANNEL_G("5. Zona 2: Roccia (Canale G)"),
+        CHANNEL_B("6. Zona 3: Spiaggia (Canale B)"),
+        CHANNEL_A("7. Zona 4: Picchi (Canale A)"),
+        NORMAL_MAP_3D("8. Normal Map 3D (Luce Solare)"),
+        SEAMLESS_TILING("9. Tassello Materiale (Griglia 2x2)");
 
         public final String label;
         ViewMode(String label) { this.label = label; }
@@ -149,6 +151,7 @@ public class TextureStudioPanel extends JPanel {
     private int currentRes = 512;
     private long currentSeed = 133742L;
     private SCMap activeMap = null;
+    private BufferedImage activeGround = null;
 
     // Buffer Immagini
     private BufferedImage renderedDiffuse;
@@ -163,6 +166,7 @@ public class TextureStudioPanel extends JPanel {
     private JComboBox<String> resCombo;
     private JComboBox<ViewMode> viewModeCombo;
     private JLabel statusLabel;
+    private JLabel lblMapStatus;
     private TextureCanvas canvas;
     private final Timer debounceTimer = new Timer(50, e -> triggerAsyncGeneration());
 
@@ -198,9 +202,33 @@ public class TextureStudioPanel extends JPanel {
     }
 
     public void setActiveMap(SCMap map) {
+        setActiveMap(map, null);
+    }
+
+    public void setActiveMap(SCMap map, BufferedImage currentGround) {
+        boolean isNew = (this.activeMap != map) || (this.renderedDiffuse == null);
         this.activeMap = map;
-        if (map != null && map.getBiome() != null && map.getBiome().waterSettings() != null) {
-            this.waterElevation = map.getBiome().waterSettings().elevation();
+        this.activeGround = currentGround;
+        if (map != null) {
+            if (map.getBiome() != null && map.getBiome().waterSettings() != null) {
+                this.waterElevation = map.getBiome().waterSettings().elevation();
+            } else {
+                this.waterElevation = map.getWaterElevation();
+            }
+            if (lblMapStatus != null) {
+                int w = map.getWidth() > 0 ? map.getWidth() : map.getSize();
+                int h = map.getHeight() > 0 ? map.getHeight() : map.getSize();
+                lblMapStatus.setText("  MAPPA ATTIVA: " + w + "x" + h + "  ");
+                lblMapStatus.setForeground(ACCENT_GREEN);
+            }
+        } else {
+            if (lblMapStatus != null) {
+                lblMapStatus.setText("  NESSUNA MAPPA ATTIVA IN [MAPS]  ");
+                lblMapStatus.setForeground(ACCENT_AMBER);
+            }
+        }
+        if (isNew || activeMap != null) {
+            triggerAsyncGeneration();
         }
     }
 
@@ -210,7 +238,7 @@ public class TextureStudioPanel extends JPanel {
         bar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
         bar.setPreferredSize(new Dimension(100, 42));
 
-        // Sinistra: Titolo e badge
+        // Sinistra: Titolo e badge mappa attiva
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         left.setOpaque(false);
 
@@ -219,13 +247,13 @@ public class TextureStudioPanel extends JPanel {
         lblTitle.setForeground(ACCENT_CYAN);
         left.add(lblTitle);
 
-        JLabel badge = new JLabel("  4 ZONE & SLIDERS PBR  ");
-        badge.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
-        badge.setForeground(TEXT_MUTED);
-        badge.setBackground(CARD_INNER);
-        badge.setOpaque(true);
-        badge.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1, true));
-        left.add(badge);
+        lblMapStatus = new JLabel("  NESSUNA MAPPA ATTIVA IN [MAPS]  ");
+        lblMapStatus.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
+        lblMapStatus.setForeground(ACCENT_AMBER);
+        lblMapStatus.setBackground(CARD_INNER);
+        lblMapStatus.setOpaque(true);
+        lblMapStatus.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1, true));
+        left.add(lblMapStatus);
 
         bar.add(left, BorderLayout.WEST);
 
@@ -264,6 +292,14 @@ public class TextureStudioPanel extends JPanel {
             if (activeMap != null) {
                 if (activeMap.getBiome() != null && activeMap.getBiome().waterSettings() != null) {
                     waterElevation = activeMap.getBiome().waterSettings().elevation();
+                } else {
+                    waterElevation = activeMap.getWaterElevation();
+                }
+                if (lblMapStatus != null) {
+                    int w = activeMap.getWidth() > 0 ? activeMap.getWidth() : activeMap.getSize();
+                    int h = activeMap.getHeight() > 0 ? activeMap.getHeight() : activeMap.getSize();
+                    lblMapStatus.setText("  MAPPA ATTIVA: " + w + "x" + h + "  ");
+                    lblMapStatus.setForeground(ACCENT_GREEN);
                 }
                 setStatus("Sincronizzato con l'orografia della mappa: " + activeMap.getName(), ACCENT_CYAN);
                 triggerAsyncGeneration();
@@ -748,16 +784,39 @@ public class TextureStudioPanel extends JPanel {
             try {
                 float[][] heightmap = new float[res][res];
                 float[][] slopeMap = new float[res][res];
+                float minH = Float.MAX_VALUE;
+                float maxH = -Float.MAX_VALUE;
 
                 if (activeMap != null && activeMap.getHeightmap() != null) {
                     BufferedImage mapHm = activeMap.getHeightmap();
+                    float scale = activeMap.getHeightMapScale();
+                    if (scale <= 0) scale = 0.0078125f;
                     int hmW = mapHm.getWidth();
                     int hmH = mapHm.getHeight();
+                    Raster r = mapHm.getRaster();
+                    int[] pixelH = new int[1];
+
                     for (int y = 0; y < res; y++) {
                         int sy = Math.min(hmH - 1, (y * hmH) / res);
                         for (int x = 0; x < res; x++) {
                             int sx = Math.min(hmW - 1, (x * hmW) / res);
-                            heightmap[y][x] = ((mapHm.getRGB(sx, sy) & 0xFF) / 255.0f) * 120.0f;
+                            r.getPixel(sx, sy, pixelH);
+                            float h = pixelH[0] * scale;
+                            heightmap[y][x] = h;
+                            if (h < minH) minH = h;
+                            if (h > maxH) maxH = h;
+                        }
+                    }
+
+                    for (int y = 0; y < res; y++) {
+                        int yPrev = Math.max(0, y - 1);
+                        int yNext = Math.min(res - 1, y + 1);
+                        for (int x = 0; x < res; x++) {
+                            int xPrev = Math.max(0, x - 1);
+                            int xNext = Math.min(res - 1, x + 1);
+                            float dx = (heightmap[y][xNext] - heightmap[y][xPrev]) * 0.5f;
+                            float dy = (heightmap[yNext][x] - heightmap[yPrev][x]) * 0.5f;
+                            slopeMap[y][x] = (float) Math.min(1.0, Math.sqrt(dx * dx + dy * dy) * 0.35);
                         }
                     }
                 } else {
@@ -766,28 +825,30 @@ public class TextureStudioPanel extends JPanel {
                         for (int x = 0; x < res; x++) {
                             float nx = (float) x / res;
                             float base = (float) (Math.sin(nx * Math.PI) * Math.sin(ny * Math.PI) * 90.0);
-                            float ridge = fbm2D(nx * 4f, ny * 4f, 4, 0.5f, seed + 10) * 45.0f;
-                            heightmap[y][x] = Math.max(0f, base + ridge);
+                            float ridge = fbmPeriodic2D(nx * 4f, ny * 4f, 4, 3, 0.5f, seed + 10) * 45.0f;
+                            float h = Math.max(0f, base + ridge);
+                            heightmap[y][x] = h;
+                            if (h < minH) minH = h;
+                            if (h > maxH) maxH = h;
+                        }
+                    }
+                    for (int y = 0; y < res; y++) {
+                        int yPrev = Math.max(0, y - 1);
+                        int yNext = Math.min(res - 1, y + 1);
+                        for (int x = 0; x < res; x++) {
+                            int xPrev = Math.max(0, x - 1);
+                            int xNext = Math.min(res - 1, x + 1);
+                            float dx = (heightmap[y][xNext] - heightmap[y][xPrev]) * 0.5f;
+                            float dy = (heightmap[yNext][x] - heightmap[yPrev][x]) * 0.5f;
+                            slopeMap[y][x] = (float) Math.min(1.0, Math.sqrt(dx * dx + dy * dy) * 0.15);
                         }
                     }
                 }
 
-                for (int y = 0; y < res; y++) {
-                    int yPrev = (y - 1 + res) % res;
-                    int yNext = (y + 1) % res;
-                    for (int x = 0; x < res; x++) {
-                        int xPrev = (x - 1 + res) % res;
-                        int xNext = (x + 1) % res;
-                        float dx = heightmap[y][xNext] - heightmap[y][xPrev];
-                        float dy = heightmap[yNext][x] - heightmap[yPrev][x];
-                        slopeMap[y][x] = Math.min(1.0f, (float) Math.sqrt(dx * dx + dy * dy) * 0.15f);
-                    }
-                }
-
-                float[][] maskR = computeZoneMask(zone1, heightmap, slopeMap, res, 1, seed);
-                float[][] maskG = computeZoneMask(zone2, heightmap, slopeMap, res, 2, seed);
-                float[][] maskB = computeZoneMask(zone3, heightmap, slopeMap, res, 3, seed);
-                float[][] maskA = computeZoneMask(zone4, heightmap, slopeMap, res, 4, seed);
+                float[][] maskR = computeZoneMask(zone1, heightmap, slopeMap, res, 1, seed, minH, maxH);
+                float[][] maskG = computeZoneMask(zone2, heightmap, slopeMap, res, 2, seed, minH, maxH);
+                float[][] maskB = computeZoneMask(zone3, heightmap, slopeMap, res, 3, seed, minH, maxH);
+                float[][] maskA = computeZoneMask(zone4, heightmap, slopeMap, res, 4, seed, minH, maxH);
 
                 for (int y = 0; y < res; y++) {
                     for (int x = 0; x < res; x++) {
@@ -812,17 +873,20 @@ public class TextureStudioPanel extends JPanel {
                 BufferedImage chB = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
                 BufferedImage chA = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
 
+                int tileReps = Math.max(2, Math.round(matScale * 2.0f));
                 for (int y = 0; y < res; y++) {
+                    int ty = (y * tileReps) % res;
                     for (int x = 0; x < res; x++) {
+                        int tx = (x * tileReps) % res;
                         float wR = maskR[y][x];
                         float wG = maskG[y][x];
                         float wB = maskB[y][x];
                         float wA = maskA[y][x];
 
-                        int rgb1 = tex1.getRGB(x % tex1.getWidth(), y % tex1.getHeight());
-                        int rgb2 = tex2.getRGB(x % tex2.getWidth(), y % tex2.getHeight());
-                        int rgb3 = tex3.getRGB(x % tex3.getWidth(), y % tex3.getHeight());
-                        int rgb4 = tex4.getRGB(x % tex4.getWidth(), y % tex4.getHeight());
+                        int rgb1 = tex1.getRGB(tx % tex1.getWidth(), ty % tex1.getHeight());
+                        int rgb2 = tex2.getRGB(tx % tex2.getWidth(), ty % tex2.getHeight());
+                        int rgb3 = tex3.getRGB(tx % tex3.getWidth(), ty % tex3.getHeight());
+                        int rgb4 = tex4.getRGB(tx % tex4.getWidth(), ty % tex4.getHeight());
 
                         int red = (int) ((((rgb1 >> 16) & 0xFF) * wR) + (((rgb2 >> 16) & 0xFF) * wG) + (((rgb3 >> 16) & 0xFF) * wB) + (((rgb4 >> 16) & 0xFF) * wA));
                         int green = (int) ((((rgb1 >> 8) & 0xFF) * wR) + (((rgb2 >> 8) & 0xFF) * wG) + (((rgb3 >> 8) & 0xFF) * wB) + (((rgb4 >> 8) & 0xFF) * wA));
@@ -858,7 +922,8 @@ public class TextureStudioPanel extends JPanel {
                 this.renderedChannelA = chA;
 
                 long elapsed = System.currentTimeMillis() - t0;
-                setStatus("Composizione pronta in " + elapsed + " ms (" + res + "x" + res + " px)", ACCENT_GREEN);
+                String mapName = (activeMap != null) ? activeMap.getName() : "Terreno Sintetico";
+                setStatus("Composizione pronta in " + elapsed + " ms (" + res + "x" + res + " px) su " + mapName, ACCENT_GREEN);
                 SwingUtilities.invokeLater(() -> canvas.repaint());
 
             } catch (Throwable t) {
@@ -868,7 +933,7 @@ public class TextureStudioPanel extends JPanel {
         });
     }
 
-    private float[][] computeZoneMask(ZoneConfig z, float[][] heightmap, float[][] slopeMap, int res, int zoneIndex, long seed) {
+    private float[][] computeZoneMask(ZoneConfig z, float[][] heightmap, float[][] slopeMap, int res, int zoneIndex, long seed, float minH, float maxH) {
         float[][] mask = new float[res][res];
 
         // METODO B: File caricato dall'utente
@@ -881,7 +946,10 @@ public class TextureStudioPanel extends JPanel {
                 for (int x = 0; x < res; x++) {
                     int sx = Math.min(fw - 1, (x * fw) / res);
                     int rgb = fileImg.getRGB(sx, sy);
-                    int val = ((rgb >> 16) & 0xFF + (rgb >> 8) & 0xFF + (rgb & 0xFF)) / 3;
+                    int r = (rgb >> 16) & 0xFF;
+                    int g = (rgb >> 8) & 0xFF;
+                    int b = rgb & 0xFF;
+                    int val = (r + g + b) / 3;
                     mask[y][x] = val / 255.0f;
                 }
             }
@@ -889,13 +957,16 @@ public class TextureStudioPanel extends JPanel {
         }
 
         // METODO A: Sliders e Regole Automatiche
+        float heightRange = Math.max(10.0f, maxH - minH);
+        float peakThreshold = minH + peakAltitude * heightRange;
+
         for (int y = 0; y < res; y++) {
             float ny = (float) y / res;
             for (int x = 0; x < res; x++) {
                 float nx = (float) x / res;
                 float h = heightmap[y][x];
                 float s = slopeMap[y][x];
-                float nPerturb = (fbm2D(nx * 8f, ny * 8f, 3, 0.5f, seed + 50) - 0.5f) * noisePerturbation;
+                float nPerturb = (fbmPeriodic2D(nx * 8f, ny * 8f, 8, 3, 0.5f, seed + 50) - 0.5f) * noisePerturbation;
 
                 if (zoneIndex == 2) {
                     mask[y][x] = smoothstep(slopeThreshold - slopeFalloff, slopeThreshold + slopeFalloff, s + nPerturb);
@@ -904,7 +975,7 @@ public class TextureStudioPanel extends JPanel {
                     float b = 1.0f - smoothstep(0f, beachBand, dist);
                     mask[y][x] = Math.max(0f, b * (1.0f - s));
                 } else if (zoneIndex == 4) {
-                    mask[y][x] = smoothstep(peakAltitude * 90f, 90f, h + nPerturb * 10f);
+                    mask[y][x] = smoothstep(peakThreshold - 15f, peakThreshold + 15f, h + nPerturb * 20f);
                 } else {
                     mask[y][x] = Math.max(0.05f, 1.0f - s);
                 }
@@ -922,20 +993,14 @@ public class TextureStudioPanel extends JPanel {
 
     private BufferedImage generateFastMaterial(MaterialPreset pset, int res, long seed) {
         BufferedImage img = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-        float radius = matScale;
+        int basePeriod = Math.max(4, Math.round(matScale * 2.0f));
         for (int y = 0; y < res; y++) {
-            double vAngle = (2.0 * Math.PI * y) / res;
-            float z = (float) (Math.cos(vAngle) * radius);
-            float w = (float) (Math.sin(vAngle) * radius);
+            float ny = (float) y / res;
             for (int x = 0; x < res; x++) {
-                double uAngle = (2.0 * Math.PI * x) / res;
-                float nx = (float) (Math.cos(uAngle) * radius);
-                float ny = (float) (Math.sin(uAngle) * radius);
-
-                float val = fbm4D(nx, ny, z, w, matOctaves, matPersistence, seed);
+                float nx = (float) x / res;
+                float val = fbmPeriodic2D(nx * basePeriod, ny * basePeriod, basePeriod, matOctaves, matPersistence, seed);
                 val = (val + 1.0f) * 0.5f;
-                val = (float) Math.pow(val, matContrast);
-                val = Math.max(0f, Math.min(1f, val));
+                val = (float) Math.pow(Math.max(0f, Math.min(1f, val)), matContrast);
 
                 Color c;
                 if (val < 0.5f) {
@@ -1056,39 +1121,63 @@ public class TextureStudioPanel extends JPanel {
         return new Color(r, g, b);
     }
 
-    private static float fbm4D(float x, float y, float z, float w, int octaves, float persistence, long seed) {
-        float total = 0f;
-        float freq = 1.0f;
-        float amp = 1.0f;
-        float maxVal = 0f;
-        for (int i = 0; i < octaves; i++) {
-            total += simplex4D(x * freq, y * freq, z * freq, w * freq, seed + i * 1337) * amp;
-            maxVal += amp;
-            amp *= persistence;
-            freq *= 2.0f;
-        }
-        return total / maxVal;
+    private static float periodicNoise2D(float x, float y, int period, long seed) {
+        int xi = (int) Math.floor(x);
+        int yi = (int) Math.floor(y);
+
+        int x0 = ((xi % period) + period) % period;
+        int y0 = ((yi % period) + period) % period;
+        int x1 = (x0 + 1) % period;
+        int y1 = (y0 + 1) % period;
+
+        float fx = x - (float) Math.floor(x);
+        float fy = y - (float) Math.floor(y);
+
+        float u = fx * fx * fx * (fx * (fx * 6.0f - 15.0f) + 10.0f);
+        float v = fy * fy * fy * (fy * (fy * 6.0f - 15.0f) + 10.0f);
+
+        float g00 = gradHash(x0, y0, seed, fx, fy);
+        float g10 = gradHash(x1, y0, seed, fx - 1.0f, fy);
+        float g01 = gradHash(x0, y1, seed, fx, fy - 1.0f);
+        float g11 = gradHash(x1, y1, seed, fx - 1.0f, fy - 1.0f);
+
+        float nx0 = g00 + u * (g10 - g00);
+        float nx1 = g01 + u * (g11 - g01);
+        return nx0 + v * (nx1 - nx0);
     }
 
-    private static float fbm2D(float x, float y, int octaves, float persistence, long seed) {
-        float total = 0f;
-        float freq = 1.0f;
-        float amp = 1.0f;
-        float maxVal = 0f;
-        for (int i = 0; i < octaves; i++) {
-            total += (float) (Math.sin(x * freq + seed) * Math.cos(y * freq + seed)) * amp;
-            maxVal += amp;
-            amp *= persistence;
-            freq *= 2.0f;
+    private static float gradHash(int x, int y, long seed, float dx, float dy) {
+        long h = seed ^ (x * 374761393L + y * 668265263L);
+        h = (h ^ (h >> 13)) * 1274126177L;
+        h = h ^ (h >> 16);
+        int dir = (int) (h & 7);
+        switch (dir) {
+            case 0: return dx + dy;
+            case 1: return -dx + dy;
+            case 2: return dx - dy;
+            case 3: return -dx - dy;
+            case 4: return dx * 1.4142f;
+            case 5: return -dx * 1.4142f;
+            case 6: return dy * 1.4142f;
+            default: return -dy * 1.4142f;
         }
-        return total / maxVal;
     }
 
-    private static float simplex4D(float x, float y, float z, float w, long seed) {
-        int s = (int) seed;
-        double n0 = Math.sin(x * 1.31 + y * 1.57 + z * 1.73 + w * 1.91 + s);
-        double n1 = Math.cos(x * 0.93 - y * 1.17 + z * 1.41 - w * 1.23 + (s * 31));
-        return (float) ((n0 + n1) * 0.5);
+    private static float fbmPeriodic2D(float x, float y, int basePeriod, int octaves, float persistence, long seed) {
+        float total = 0f;
+        float amp = 1.0f;
+        float maxAmp = 0f;
+        float freq = 1.0f;
+        int period = Math.max(2, basePeriod);
+
+        for (int i = 0; i < octaves; i++) {
+            total += periodicNoise2D(x * freq, y * freq, period, seed + i * 1013L) * amp;
+            maxAmp += amp;
+            amp *= persistence;
+            freq *= 2.0f;
+            period *= 2;
+        }
+        return maxAmp > 0 ? (total / maxAmp) : 0f;
     }
 
     // --- Componente Canvas Interattivo ---
@@ -1207,7 +1296,8 @@ public class TextureStudioPanel extends JPanel {
             g2.setColor(BORDER_COLOR);
             g2.drawRect(cx - 1, cy - 1, w + 1, h + 1);
 
-            String info = "Vista: " + currentViewMode.label + " | Risoluzione: " + currentRes + "x" + currentRes + " | Zoom: " + Math.round(zoom * 100) + "%";
+            String mapInfo = (activeMap != null) ? ("Mappa: " + (activeMap.getWidth() > 0 ? activeMap.getWidth() : activeMap.getSize()) + "x" + (activeMap.getHeight() > 0 ? activeMap.getHeight() : activeMap.getSize())) : "Modalità Sintetica";
+            String info = mapInfo + " | Vista: " + currentViewMode.label + " | Risoluzione: " + currentRes + "x" + currentRes + " | Zoom: " + Math.round(zoom * 100) + "%";
             g2.setFont(BarMapStudio.font(Font.BOLD, 10));
             FontMetrics fm = g2.getFontMetrics();
             int strW = fm.stringWidth(info);
@@ -1226,6 +1316,7 @@ public class TextureStudioPanel extends JPanel {
 
         private BufferedImage getActiveViewImage() {
             switch (currentViewMode) {
+                case MAPS_GROUND: return activeGround != null ? activeGround : renderedDiffuse;
                 case NORMAL_MAP_3D: return renderedNormal;
                 case SPLAT_RGBA: return renderedSplatRGBA != null ? renderedSplatRGBA : renderedDiffuse;
                 case CHANNEL_R: return renderedChannelR != null ? renderedChannelR : renderedDiffuse;

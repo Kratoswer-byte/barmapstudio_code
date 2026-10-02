@@ -190,6 +190,16 @@ public final class MapStudioPanel extends JPanel {
         this.openTextureStudioCallback = openTextureStudioCallback;
     }
 
+    private Runnable onMapChangedCallback;
+
+    public void setOnMapChangedCallback(Runnable callback) {
+        this.onMapChangedCallback = callback;
+    }
+
+    public BufferedImage getCurrentGround() {
+        return canvas != null ? canvas.getGroundPreview() : null;
+    }
+
     public SCMap getCurrentMap() {
         return canvas != null ? canvas.getMap() : null;
     }
@@ -1119,6 +1129,9 @@ public final class MapStudioPanel extends JPanel {
                     setStatus("Terreno generato! Premi [L] per visualizzare la Slope Map.");
                     progressBar.setVisible(false);
                     genGroundBtn.setEnabled(true);
+                    if (onMapChangedCallback != null) {
+                        onMapChangedCallback.run();
+                    }
                 });
             } catch (Throwable ex) {
                 ex.printStackTrace();
@@ -1195,6 +1208,9 @@ public final class MapStudioPanel extends JPanel {
                     btnLoadHeightmap.setEnabled(true);
                     btnLoadTexture.setEnabled(true);
                     btnSmoothSlopes.setEnabled(true);
+                    if (onMapChangedCallback != null) {
+                        onMapChangedCallback.run();
+                    }
                 });
             } catch (Throwable ex) {
                 ex.printStackTrace();
@@ -1285,7 +1301,11 @@ public final class MapStudioPanel extends JPanel {
                 g.dispose();
 
                 currentMap.setPreview(scaled);
-                canvas.repaint();
+                if (canvas != null) {
+                    canvas.setGroundPreview(scaled);
+                } else {
+                    canvas.repaint();
+                }
                 setStatus("Texture personalizzata applicata: " + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + " px)");
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -1315,6 +1335,9 @@ public final class MapStudioPanel extends JPanel {
             g.dispose();
 
             currentMap.setPreview(scaled);
+            if (canvas != null) {
+                canvas.setGroundPreview(scaled);
+            }
 
             // Se fornite, aggiorna anche le maschere interne di splatting per l'esportazione BAR
             if (splatLow != null && currentMap.getTextureMasksLow() != null) {
@@ -1334,7 +1357,7 @@ public final class MapStudioPanel extends JPanel {
                 gHigh.dispose();
             }
 
-            canvas.repaint();
+            if (canvas != null) canvas.repaint();
             setStatus("Composizione Texture & Splatting applicata: " + name + " (" + diffuseMap.getWidth() + "x" + diffuseMap.getHeight() + " px)");
         } catch (Exception ex) {
             ex.printStackTrace();
