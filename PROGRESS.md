@@ -31,6 +31,7 @@
 | `8975273` | `feat/fix` | 01/10/2026 18:00 | Sblocco pulsante Pialla Pendenze [Ramps] e integrazione completa Sliders Metodo A & PBR in sidebar compatta 240px |
 | `13aa881` | `feat/fix` | 02/10/2026 09:20 | Sincronizzazione live Mappa Attiva in Texture Studio, eliminazione anelli sinusoidali con Perlin periodico e aggiornamento canvas |
 | `69e19c9` | `feat/fix` | 02/10/2026 11:00 | Avvio pulito senza generazioni fake in Texture Studio, supporto Heightmap esterne con Empty State e sync bidirezionale a MAPS |
+| `810d1d6` | `feat/fix` | 02/10/2026 14:49 | Risoluzione vincolo 256px in SCMap.setPreview per BAR e icone native Java2D (stella, cartella, dadi) |
 
 ---
 
@@ -213,7 +214,7 @@
 - [x] **Caricamento Diretto Heightmap Esterne:** Aggiunto pulsante `[Carica Heightmap]` nella toolbar superiore di Texture Studio per importare heightmap PNG (16-bit/8-bit), RAW o BMP indipendentemente dalla mappa attiva.
 - [x] **Sincronizzazione Bidirezionale con MAPS:** Trasferimento coerente di heightmap personalizzate, texture composte e maschere di splatting all'editor principale `MAPS` tramite `applyCallback`.
 
-### 22. Risoluzione Vincolo 256px in `SCMap.setPreview` e Icone Vettoriali Native Java2D
+### 22. Risoluzione Vincolo 256px in `SCMap.setPreview` e Icone Vettoriali Native Java2D [Commit: 810d1d6]
 - [x] **Risoluzione Errore "Image size does not match required size":** Rimosso il vecchio controllo `checkImageSize(preview, 256)` in `SCMap.setPreview`. Questo vincolo legacy di Supreme Commander bloccava l'applicazione di anteprime e texture fusi a 512px o 1024px sulle mappe quadrate (`width == height`). Ora qualsiasi risoluzione valida viene accettata sia in `applyComposedTerrain` che in `loadCustomTexture`.
 - [x] **Regola MUST di Progetto & Icone Vettoriali Native Java2D:** Eliminati definitivamente tutti i caratteri Unicode ed emoji da `TextureStudioPanel.java` (`★`, `📂`, `🎲`, `°`) per prevenire glifi tofu (`☒`).
 - [x] **Disegno Vettoriale Antialiased:** Implementate icone Java2D native per la stella (`createVectorStarIcon` con `Path2D`), cartella (`createVectorFolderIcon`), e dadi (`createVectorDiceIcon`), integrate sia nei pulsanti ghost che nel pulsante primario `[APPLICA AL TERRENO DELLA MAPPA]`.
