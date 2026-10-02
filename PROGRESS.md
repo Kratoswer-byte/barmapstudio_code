@@ -29,7 +29,7 @@
 | `0a5ebc4` | `feat` | 01/10/2026 16:55 | Modulo Texture Studio (PBR Seamless 4D, Splatting Multi-Materiale RGBA e nuova tab TEXTURES) |
 | `eea4450` | `feat/fix` | 01/10/2026 17:40 | Riprogettazione Texture Studio: layout compatto 240px, default Metodo B (file maschera) e fallback Metodo A |
 | `8975273` | `feat/fix` | 01/10/2026 18:00 | Sblocco pulsante Pialla Pendenze [Ramps] e integrazione completa Sliders Metodo A & PBR in sidebar compatta 240px |
-| `PENDING` | `feat/fix` | 02/10/2026 09:20 | Sincronizzazione live Mappa Attiva in Texture Studio, eliminazione anelli sinusoidali con Perlin periodico e aggiornamento canvas |
+| `13aa881` | `feat/fix` | 02/10/2026 09:20 | Sincronizzazione live Mappa Attiva in Texture Studio, eliminazione anelli sinusoidali con Perlin periodico e aggiornamento canvas |
 
 ---
 
@@ -199,7 +199,7 @@
   - *Intensità Rilievo Normal Map* (0.1x - 3.0x)
 - [x] **Architettura Layout a Due Righe Compatta:** Per evitare che i controlli forzino la larghezza orizzontale, ogni slider è strutturato su due livelli verticali (Riga 1: etichetta + valore dinamico allineato a destra; Riga 2: slider esteso al 100% della larghezza). L'intero pannello adotta `ScrollableTrackWidthPanel`, consentendo di alloggiare sia il Metodo B che il Metodo A e i controlli PBR entro i consueti 240px-260px senza toccare la visuale del canvas.
 
-### 20. Sincronizzazione Live Mappa in Texture Studio ed Eliminazione Artefatti Circolari [Commit: PENDING]
+### 20. Sincronizzazione Live Mappa in Texture Studio ed Eliminazione Artefatti Circolari [Commit: 13aa881]
 - [x] **Sincronizzazione Automatica Mappa Attiva:** Risolto il disallineamento per cui Texture Studio mostrava un terreno sintetico di default invece della mappa generata dall'utente. Ora `TextureStudioPanel.setActiveMap(SCMap, BufferedImage)` riceve sia la mappa attiva che il suo `groundPreview` non appena generati o caricati in `MAPS`, e ogni volta che si clicca il tab `[ TEXTURES ]`.
 - [x] **Rilevazione 16-bit Heightmap Reale:** La generazione procedurale di Texture Studio ora legge la quota fisica reale in metri tramite `Raster.getPixel(sx, sy, pixelH) * scale` da `activeMap.getHeightmap()`, calcolando le pendenze e distribuendo la roccia sui rilievi effettivi della mappa creata.
 - [x] **Eliminazione Anelli Concentrici (Fix Artefatto Visivo):** Sostituita la precedente formula trigonometrica sinusoidale `simplex4D` (responsabile dei cerchi concentrici ad effetto tronco d'albero) con un generatore frattale periodico Perlin (`periodicNoise2D` e `fbmPeriodic2D`). I materiali ora risultano 100% seamless e con una grana organica e fotorealistica (erba rigogliosa, roccia frastagliata, sabbia fine, neve alpina).
