@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.SplittableRandom;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -166,12 +167,15 @@ public class TextureStudioPanel extends JPanel {
     private BufferedImage renderedChannelG;
     private BufferedImage renderedChannelB;
     private BufferedImage renderedChannelA;
+    private volatile BufferedImage renderedSlopeOverlay;
 
     // Componenti UI
     private JComboBox<String> resCombo;
     private JComboBox<ViewMode> viewModeCombo;
     private JLabel statusLabel;
     private JLabel lblMapStatus;
+    private final JToggleButton slopeToggleBtn = new JToggleButton("Slope Map [L]", false);
+    private final JSlider slopeOpacitySlider = new JSlider(10, 100, 70);
     private TextureCanvas canvas;
     private final Timer debounceTimer = new Timer(50, e -> triggerAsyncGeneration());
 
@@ -203,6 +207,8 @@ public class TextureStudioPanel extends JPanel {
         add(mainSplit, BorderLayout.CENTER);
         add(buildBottomActionBar(), BorderLayout.SOUTH);
 
+        setupHotkeys();
+
         // All'avvio NON generiamo nulla: stato pulito in attesa di azione utente
         setStatus("In attesa di terreno attivo. Genera in [MAPS] o carica un'Heightmap con [Carica Heightmap].", TEXT_MUTED);
     }
@@ -212,13 +218,23 @@ public class TextureStudioPanel extends JPanel {
     }
 
     public void setActiveMap(SCMap map) {
-        setActiveMap(map, null);
+        setActiveMap(map, null, null);
     }
 
     public void setActiveMap(SCMap map, BufferedImage currentGround) {
+        setActiveMap(map, currentGround, null);
+    }
+
+    public void setActiveMap(SCMap map, BufferedImage currentGround, BufferedImage currentSlope) {
         boolean isNew = (this.activeMap != map) || (this.renderedDiffuse == null);
         this.activeMap = map;
         this.activeGround = currentGround;
+        if (currentSlope != null) {
+            this.renderedSlopeOverlay = currentSlope;
+        } else if (map != null && map.getHeightmap() != null) {
+            float wElev = (map.getBiome() != null && map.getBiome().waterSettings() != null) ? map.getBiome().waterSettings().elevation() : map.getWaterElevation();
+            this.renderedSlopeOverlay = GroundGenerator.generateSlopeOverlayImage(map, wElev);
+        }
         if (map != null) {
             this.customLoadedHeightmap = null;
             this.customLoadedHeightmapName = null;
@@ -245,6 +261,7 @@ public class TextureStudioPanel extends JPanel {
                 this.renderedChannelG = null;
                 this.renderedChannelB = null;
                 this.renderedChannelA = null;
+                this.renderedSlopeOverlay = null;
                 if (lblMapStatus != null) {
                     lblMapStatus.setText("  NESSUN TERRENO ATTIVO  ");
                     lblMapStatus.setForeground(ACCENT_AMBER);
@@ -289,6 +306,7 @@ public class TextureStudioPanel extends JPanel {
                 this.customLoadedHeightmapName = f.getName();
                 this.activeMap = null;
                 this.activeGround = null;
+                this.renderedSlopeOverlay = null;
                 if (lblMapStatus != null) {
                     lblMapStatus.setText("  HEIGHTMAP: " + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + ")  ");
                     lblMapStatus.setForeground(ACCENT_GREEN);
@@ -790,27 +808,153 @@ public class TextureStudioPanel extends JPanel {
         left.add(viewModeCombo);
         bar.add(left, BorderLayout.WEST);
 
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 4));
-        right.setOpaque(false);
-
-        JButton btnZoomIn = createGhostButton("+");
-        btnZoomIn.addActionListener(e -> canvas.zoomIn());
-        JButton btnZoomOut = createGhostButton("-");
-        btnZoomOut.addActionListener(e -> canvas.zoomOut());
-        JButton btnZoomFit = createGhostButton("1:1");
-        btnZoomFit.addActionListener(e -> canvas.zoomFit());
-
-        right.add(btnZoomOut);
-        right.add(btnZoomFit);
-        right.add(btnZoomIn);
-        bar.add(right, BorderLayout.EAST);
-
         p.add(bar, BorderLayout.NORTH);
 
         canvas = new TextureCanvas();
+        canvas.setHudDock(buildCanvasHudDock());
         p.add(canvas, BorderLayout.CENTER);
 
         return p;
+    }
+
+    private JComponent buildCanvasHudDock() {
+        JPanel dock = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(11, 14, 20, 230));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2.setColor(new Color(0, 229, 255, 130));
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        dock.setOpaque(false);
+        dock.setBorder(new EmptyBorder(2, 6, 2, 6));
+        dock.addMouseListener(new MouseAdapter() {});
+
+        // Slope Map Toggle Button
+        styleToggleButton(slopeToggleBtn);
+        slopeToggleBtn.setPreferredSize(new Dimension(135, 24));
+        slopeToggleBtn.setToolTipText("Attiva/Disattiva Overlay Pendenze (Slope Map) [Tasto L]");
+        slopeToggleBtn.addActionListener(e -> {
+            canvas.setShowSlopeMap(slopeToggleBtn.isSelected());
+            updateSlopeButtonState();
+        });
+        dock.add(slopeToggleBtn);
+
+        // Opacity Label & Slider
+        JLabel opacityLbl = new JLabel("Opacita':");
+        opacityLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
+        opacityLbl.setForeground(TEXT_MUTED);
+        dock.add(opacityLbl);
+
+        slopeOpacitySlider.setPreferredSize(new Dimension(65, 20));
+        slopeOpacitySlider.setOpaque(false);
+        slopeOpacitySlider.setToolTipText("Regola l'opacita' dello Slope Map Overlay");
+        slopeOpacitySlider.addChangeListener(e -> canvas.setSlopeOpacity(slopeOpacitySlider.getValue() / 100.0f));
+        dock.add(slopeOpacitySlider);
+
+        // Separator
+        JPanel sep = new JPanel();
+        sep.setBackground(new Color(30, 38, 56));
+        sep.setPreferredSize(new Dimension(1, 16));
+        dock.add(sep);
+
+        // Zoom Out [-]
+        JButton zoomOut = createGhostButton("-");
+        zoomOut.setFont(BarMapStudio.font(Font.BOLD, 13));
+        zoomOut.setPreferredSize(new Dimension(28, 24));
+        zoomOut.setToolTipText("Zoom Indietro [-]");
+        zoomOut.addActionListener(e -> canvas.zoomOut());
+        dock.add(zoomOut);
+
+        // Zoom In [+]
+        JButton zoomIn = createGhostButton("+");
+        zoomIn.setFont(BarMapStudio.font(Font.BOLD, 13));
+        zoomIn.setPreferredSize(new Dimension(28, 24));
+        zoomIn.setToolTipText("Zoom Avanti [+]");
+        zoomIn.addActionListener(e -> canvas.zoomIn());
+        dock.add(zoomIn);
+
+        // 1:1 Scala
+        JButton zoomReset = createGhostButton("1:1 Scala");
+        zoomReset.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
+        zoomReset.setPreferredSize(new Dimension(76, 24));
+        zoomReset.setToolTipText("Ripristina Scala 1:1 [0]");
+        zoomReset.addActionListener(e -> canvas.resetZoom());
+        dock.add(zoomReset);
+
+        return dock;
+    }
+
+    private void styleToggleButton(JToggleButton b) {
+        b.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
+        b.setBackground(CARD_INNER);
+        b.setForeground(TEXT_MAIN);
+        b.setFocusPainted(false);
+        b.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(3, 6, 3, 6)
+        ));
+    }
+
+    private boolean isTypingInText() {
+        Component fo = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        return (fo instanceof javax.swing.text.JTextComponent);
+    }
+
+    private void bindKey(int keyCode, int modifiers, String actionName, Runnable action) {
+        KeyStroke stroke = KeyStroke.getKeyStroke(keyCode, modifiers);
+        getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(stroke, actionName);
+        getActionMap().put(actionName, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                action.run();
+            }
+        });
+    }
+
+    private void setupHotkeys() {
+        bindKey(KeyEvent.VK_L, 0, "toggle_slope_map", () -> { if (!isTypingInText()) toggleSlopeMap(); });
+        bindKey(KeyEvent.VK_PLUS, 0, "zoom_in_plus", () -> { if (!isTypingInText() && canvas != null) canvas.zoomIn(); });
+        bindKey(KeyEvent.VK_ADD, 0, "zoom_in_add", () -> { if (!isTypingInText() && canvas != null) canvas.zoomIn(); });
+        bindKey(KeyEvent.VK_EQUALS, 0, "zoom_in_eq", () -> { if (!isTypingInText() && canvas != null) canvas.zoomIn(); });
+        bindKey(KeyEvent.VK_MINUS, 0, "zoom_out_minus", () -> { if (!isTypingInText() && canvas != null) canvas.zoomOut(); });
+        bindKey(KeyEvent.VK_SUBTRACT, 0, "zoom_out_sub", () -> { if (!isTypingInText() && canvas != null) canvas.zoomOut(); });
+        bindKey(KeyEvent.VK_0, 0, "zoom_reset_0", () -> { if (!isTypingInText() && canvas != null) canvas.resetZoom(); });
+        bindKey(KeyEvent.VK_NUMPAD0, 0, "zoom_reset_num0", () -> { if (!isTypingInText() && canvas != null) canvas.resetZoom(); });
+    }
+
+    public void toggleSlopeMap() {
+        if (canvas != null) {
+            canvas.toggleSlopeMap();
+            updateSlopeButtonState();
+        }
+    }
+
+    public void updateSlopeButtonState() {
+        if (canvas == null) return;
+        boolean active = canvas.isShowSlopeMap();
+        slopeToggleBtn.setSelected(active);
+        slopeToggleBtn.setText(active ? "Slope Map: ON [L]" : "Slope Map [L]");
+        slopeToggleBtn.setForeground(active ? ACCENT_AMBER : TEXT_MAIN);
+        slopeToggleBtn.setBackground(active ? new Color(45, 34, 18) : CARD_INNER);
+        slopeToggleBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(active ? ACCENT_AMBER : BORDER_COLOR, 1, true),
+            new EmptyBorder(2, 8, 2, 8)
+        ));
+    }
+
+    public void updateSlopeOverlay() {
+        if (activeMap != null && activeMap.getHeightmap() != null) {
+            float wElev = (activeMap.getBiome() != null && activeMap.getBiome().waterSettings() != null) ? activeMap.getBiome().waterSettings().elevation() : activeMap.getWaterElevation();
+            this.renderedSlopeOverlay = GroundGenerator.generateSlopeOverlayImage(activeMap, wElev);
+            if (canvas != null) canvas.repaint();
+        }
     }
 
     private JComponent buildBottomActionBar() {
@@ -958,6 +1102,52 @@ public class TextureStudioPanel extends JPanel {
                         slopeMap[y][x] = (float) Math.min(1.0, Math.sqrt(dx * dx + dy * dy) * 0.35);
                     }
                 }
+
+                BufferedImage slopeImg = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
+                int[] sPixels = new int[resW * resH];
+                for (int y = 0; y < resH; y++) {
+                    for (int x = 0; x < resW; x++) {
+                        float h = heightmap[y][x];
+                        float slope = slopeMap[y][x];
+                        if (waterElevation > -900f && h < waterElevation) {
+                            float depth = Math.min(1.0f, (waterElevation - h) / 30.0f);
+                            int blue = (int) (180 + 75 * depth);
+                            int green = (int) (140 - 40 * depth);
+                            int red = (int) (14 - 10 * depth);
+                            sPixels[y * resW + x] = (220 << 24) | (red << 16) | (green << 8) | blue;
+                            continue;
+                        }
+                        int color;
+                        if (slope < 0.22f) {
+                            float t = Math.min(1.0f, Math.max(0f, slope / 0.22f));
+                            int red = (int) (34 + t * 98);
+                            int grn = (int) (197 + t * 7);
+                            int blu = (int) (94 - t * 72);
+                            color = (210 << 24) | (red << 16) | (grn << 8) | blu;
+                        } else if (slope < 0.35f) {
+                            float t = Math.min(1.0f, Math.max(0f, (slope - 0.22f) / (0.35f - 0.22f)));
+                            int red = (int) (132 + t * 102);
+                            int grn = (int) (204 - t * 25);
+                            int blu = (int) (22 - t * 14);
+                            color = (220 << 24) | (red << 16) | (grn << 8) | blu;
+                        } else if (slope < 0.65f) {
+                            float t = Math.min(1.0f, Math.max(0f, (slope - 0.35f) / (0.65f - 0.35f)));
+                            int red = (int) (234 + t * 15);
+                            int grn = (int) (179 - t * 64);
+                            int blu = (int) (8 + t * 14);
+                            color = (230 << 24) | (red << 16) | (grn << 8) | blu;
+                        } else {
+                            float t = Math.min(1.0f, Math.max(0f, (slope - 0.65f) / 0.5f));
+                            int red = (int) (239 - t * 29);
+                            int grn = (int) (68 - t * 38);
+                            int blu = (int) (68 - t * 38);
+                            color = (245 << 24) | (red << 16) | (grn << 8) | blu;
+                        }
+                        sPixels[y * resW + x] = color;
+                    }
+                }
+                slopeImg.setRGB(0, 0, resW, resH, sPixels, 0, resW);
+                this.renderedSlopeOverlay = slopeImg;
 
                 float[][] maskR = computeZoneMask(zone1, heightmap, slopeMap, resW, resH, 1, seed, minH, maxH);
                 float[][] maskG = computeZoneMask(zone2, heightmap, slopeMap, resW, resH, 2, seed, minH, maxH);
@@ -1302,9 +1492,14 @@ public class TextureStudioPanel extends JPanel {
         private double zoom = 1.0;
         private Point pan = new Point(0, 0);
         private Point dragStart = null;
+        private Point mousePos = new Point(0, 0);
         private float sunLightAngle = 0.8f;
+        private boolean showSlopeMap = false;
+        private float slopeOpacity = 0.70f;
+        private JComponent hudDock;
 
         public TextureCanvas() {
+            setLayout(null);
             setOpaque(true);
             setBackground(CARD_INNER);
 
@@ -1325,7 +1520,14 @@ public class TextureStudioPanel extends JPanel {
                 }
 
                 @Override
+                public void mouseMoved(MouseEvent e) {
+                    mousePos = e.getPoint();
+                    repaint();
+                }
+
+                @Override
                 public void mouseDragged(MouseEvent e) {
+                    mousePos = e.getPoint();
                     if (dragStart != null) {
                         pan.x += e.getX() - dragStart.x;
                         pan.y += e.getY() - dragStart.y;
@@ -1349,20 +1551,75 @@ public class TextureStudioPanel extends JPanel {
             addMouseWheelListener(ma);
         }
 
+        public void setHudDock(JComponent dock) {
+            if (this.hudDock != null) {
+                remove(this.hudDock);
+            }
+            this.hudDock = dock;
+            if (dock != null) {
+                add(dock);
+                layoutHudDock();
+            }
+            revalidate();
+            repaint();
+        }
+
+        private void layoutHudDock() {
+            if (hudDock != null) {
+                Dimension ps = hudDock.getPreferredSize();
+                hudDock.setBounds(16, Math.max(10, getHeight() - 38), ps.width, 28);
+            }
+        }
+
+        @Override
+        public void doLayout() {
+            super.doLayout();
+            layoutHudDock();
+        }
+
+        public void setShowSlopeMap(boolean show) {
+            this.showSlopeMap = show;
+            if (show && renderedSlopeOverlay == null) {
+                updateSlopeOverlay();
+            }
+            repaint();
+        }
+
+        public boolean isShowSlopeMap() {
+            return this.showSlopeMap;
+        }
+
+        public void toggleSlopeMap() {
+            setShowSlopeMap(!this.showSlopeMap);
+        }
+
+        public void setSlopeOpacity(float opacity) {
+            this.slopeOpacity = Math.max(0.0f, Math.min(1.0f, opacity));
+            repaint();
+        }
+
+        public float getSlopeOpacity() {
+            return this.slopeOpacity;
+        }
+
         public void zoomIn() {
-            zoom = Math.min(4.0, zoom * 1.2);
+            zoom = Math.min(4.0, zoom * 1.25);
             repaint();
         }
 
         public void zoomOut() {
-            zoom = Math.max(0.2, zoom / 1.2);
+            zoom = Math.max(0.15, zoom / 1.25);
+            repaint();
+        }
+
+        public void resetZoom() {
+            zoom = 1.0;
+            pan = new Point(0, 0);
             repaint();
         }
 
         public void zoomFit() {
-            zoom = 1.0;
-            pan = new Point(0, 0);
-            repaint();
+            resetZoom();
         }
 
         @Override
@@ -1400,6 +1657,11 @@ public class TextureStudioPanel extends JPanel {
                     g2.setFont(BarMapStudio.font(Font.PLAIN, 12));
                     g2.drawString("Nessun terreno attivo.", getWidth() / 2 - 60, getHeight() / 2);
                 }
+
+                // Render HUD status pill badge even when no map is active
+                String coordStr = "Pos: [0, 0] | Mappa: Nessun Terreno | Zoom: " + Math.round(zoom * 100) + "% | Vista: " + currentViewMode.label;
+                drawHudChip(g2, coordStr);
+
                 g2.dispose();
                 return;
             }
@@ -1433,26 +1695,70 @@ public class TextureStudioPanel extends JPanel {
                 g2.drawImage(toDraw, cx, cy, w, h, null);
             }
 
+            // Render Slope Map overlay if active
+            if (showSlopeMap && renderedSlopeOverlay != null) {
+                Composite oldComp = g2.getComposite();
+                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.min(1.0f, Math.max(0.05f, slopeOpacity))));
+                g2.drawImage(renderedSlopeOverlay, cx, cy, w, h, null);
+                g2.setComposite(oldComp);
+            }
+
             g2.setColor(BORDER_COLOR);
             g2.drawRect(cx - 1, cy - 1, w + 1, h + 1);
 
-            String mapInfo = (activeMap != null) ? ("Mappa: " + (activeMap.getWidth() > 0 ? activeMap.getWidth() : activeMap.getSize()) + "x" + (activeMap.getHeight() > 0 ? activeMap.getHeight() : activeMap.getSize())) : (customLoadedHeightmap != null ? ("Heightmap: " + customLoadedHeightmap.getWidth() + "x" + customLoadedHeightmap.getHeight()) : "Nessun Terreno");
-            String resStr = (toDraw != null) ? (toDraw.getWidth() + "x" + toDraw.getHeight()) : (currentRes + "x" + currentRes);
-            String info = mapInfo + " | Vista: " + currentViewMode.label + " | Risoluzione: " + resStr + " | Zoom: " + Math.round(zoom * 100) + "%";
-            g2.setFont(BarMapStudio.font(Font.BOLD, 10));
-            FontMetrics fm = g2.getFontMetrics();
-            int strW = fm.stringWidth(info);
+            // Calcolo coordinate e stato per il pill badge overlay
+            int imgW = toDraw.getWidth();
+            int imgH = toDraw.getHeight();
+            int mw = (activeMap != null) ? (activeMap.getWidth() > 0 ? activeMap.getWidth() : activeMap.getSize()) : (customLoadedHeightmap != null ? customLoadedHeightmap.getWidth() : imgW);
+            int mh = (activeMap != null) ? (activeMap.getHeight() > 0 ? activeMap.getHeight() : activeMap.getSize()) : (customLoadedHeightmap != null ? customLoadedHeightmap.getHeight() : imgH);
 
-            int hx = 12;
-            int hy = getHeight() - 28;
-            g2.setColor(new Color(11, 14, 20, 200));
-            g2.fillRoundRect(hx, hy, strW + 16, 20, 6, 6);
-            g2.setColor(new Color(0, 229, 255, 120));
-            g2.drawRoundRect(hx, hy, strW + 16, 20, 6, 6);
-            g2.setColor(TEXT_MAIN);
-            g2.drawString(info, hx + 8, hy + 14);
+            int wx = 0;
+            int wy = 0;
+            boolean inside = false;
+            if (mousePos != null && mousePos.x >= cx && mousePos.x < cx + w && mousePos.y >= cy && mousePos.y < cy + h && w > 0 && h > 0) {
+                float normX = (float) (mousePos.x - cx) / w;
+                float normY = (float) (mousePos.y - cy) / h;
+                wx = Math.round(normX * mw);
+                wy = Math.round(normY * mh);
+                inside = true;
+            }
+
+            int sizeUnitW = Math.max(1, mw / 64);
+            int sizeUnitH = Math.max(1, mh / 64);
+            String coordStr;
+            if (activeMap != null) {
+                coordStr = String.format("Pos: [%d, %d] | Mappa: %dx%d (%d x %d km) | Zoom: %.0f%% | Vista: %s",
+                    wx, wy, sizeUnitW, sizeUnitH, sizeUnitW, sizeUnitH, zoom * 100, currentViewMode.label);
+                if (inside) {
+                    float hAt = activeMap.getHeightAtWorld(wx, wy);
+                    float sAt = activeMap.getSlopeAtWorld(wx, wy);
+                    double deg = Math.toDegrees(Math.atan(sAt));
+                    coordStr += String.format(Locale.ROOT, " | Quota: %.1fm | Pend: %.2f (%.1f deg)", hAt, sAt, deg);
+                }
+            } else {
+                coordStr = String.format("Pos: [%d, %d] | Risoluzione: %dx%d | Zoom: %.0f%% | Vista: %s",
+                    wx, wy, imgW, imgH, zoom * 100, currentViewMode.label);
+            }
+
+            drawHudChip(g2, coordStr);
 
             g2.dispose();
+        }
+
+        private void drawHudChip(Graphics2D g2, String coordStr) {
+            g2.setFont(BarMapStudio.font(Font.BOLD, 11));
+            int strW = g2.getFontMetrics().stringWidth(coordStr);
+            int hx = 16;
+            int hy = (hudDock != null) ? (getHeight() - 52) : (getHeight() - 28);
+
+            g2.setColor(new Color(11, 14, 20, 230));
+            g2.fillRoundRect(hx - 6, hy - 14, strW + 16, 22, 8, 8);
+            g2.setColor(new Color(0, 229, 255, 140));
+            g2.setStroke(new BasicStroke(1.2f));
+            g2.drawRoundRect(hx - 6, hy - 14, strW + 16, 22, 8, 8);
+
+            g2.setColor(new Color(240, 244, 250));
+            g2.drawString(coordStr, hx + 2, hy + 2);
         }
 
         private BufferedImage getActiveViewImage() {

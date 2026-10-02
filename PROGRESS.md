@@ -244,5 +244,27 @@
   - Introdotto l'helper `vstrut(int height)` che imposta `alignmentX = 0f` su tutti i distanziatori verticali (evitando che `Box.Filler` erediti 0.5f).
 - [x] Tutte le 3 sezioni sono ora perfettamente allineate a sinistra con margini puliti, testo 100% leggibile e zero troncamenti.
 
+### 25. Controlli HUD Slope Map, Opacita' e Zoom 1:1 in Texture Studio [Commit: in arrivo]
+- [x] **Dock Controlli HUD Flottante in Texture Studio:** Integrato il dock HUD identico a quello di `MAPS` nell'angolo inferiore sinistro del canvas di Texture Studio (`TextureCanvas`), contenente:
+  - Tasto `[Slope Map [L]]` / `[Slope Map: ON [L]]` con illuminazione ambra/arancione e sincronizzazione tasto di scelta rapida `L`.
+  - Slider `Opacita':` (10% - 100%, default 70%) con traccia e cursore ciano antialiased FlatLaf per modulare la trasparenza dello slope map.
+  - Separatore grafico verticale sottile.
+  - Tasti Zoom Rapido: `[-]` (Zoom Indietro), `[+]` (Zoom Avanti), `[1:1 Scala]` (Ripristino zoom e centratura vista).
+- [x] **Pill Badge Overlay Coordinate e Stato:** Introdotto il badge rettangolare arrotondato a sfondo scuro semitrasparente e bordo ciano posizionato direttamente sopra il dock HUD (`getHeight() - 52px`), con tracking in tempo reale:
+  - Posizione cursore nel mondo di gioco `Pos: [X, Y]` o nella texture attiva.
+  - Dimensioni mappa in unita' BAR e km effettivi (es. `Mappa: 4x4 (4 x 4 km)`).
+  - Percentuale di Zoom live (es. `Zoom: 100%`).
+  - Modalita' di visualizzazione attiva (`Vista: ...`).
+  - Quota in metri e Pendenza in gradi con notazione pulita ASCII `(deg)` quando il mouse e' posizionato sul terreno.
+- [x] **Calcolo e Rendering Sovrapposizione Slope Map:**
+  - `triggerAsyncGeneration()` genera `renderedSlopeOverlay` alla medesima risoluzione `resW x resH` della texture, con codifica cromatica standard Beyond All Reason (Blu acqua, Verde transitabile tutti, Giallo difficoltoso veicoli, Arancio solo bot bipedi, Rosso dirupo impraticabile).
+  - Se la mappa e' gia' presente in `MAPS`, il layer di slope map viene trasferito e sincronizzato istantaneamente senza necessita' di ricalcolo.
+  - Il layer viene fuso in `AlphaComposite.SRC_OVER` con trasparenza regolabile in tempo reale dallo slider.
+- [x] **Hotkeys e Guard Typing:**
+  - Tasto `L`: attiva/disattiva Slope Map.
+  - Tasti `+`, `-`, `=`, `0`, tastierino numerico: regolazione e reset zoom.
+  - Protezione da digitazione (`!isTypingInText()`): le scorciatoie non interferiscono quando si digita testo o numeri nei campi della UI.
+- [x] **Rigida Aderenza alle Regole MUST:** Zero caratteri non-ASCII (`deg` al posto del simbolo di grado, apici singoli standard), icone e pulsanti Swing vettoriali conformi.
+
 
 

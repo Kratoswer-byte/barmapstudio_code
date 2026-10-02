@@ -278,17 +278,17 @@ public class BarMapStudio {
             );
 
             editorPanel.setOpenTextureStudioCallback(() -> {
-                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround());
+                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround(), editorPanel.getCurrentSlopeOverlay());
                 masterCards.show(masterViewPanel, "TEXTURES");
                 if (texturesTabHolder[0] != null) texturesTabHolder[0].setSelected(true);
             });
 
             editorPanel.setOnMapChangedCallback(() -> {
-                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround());
+                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround(), editorPanel.getCurrentSlopeOverlay());
             });
 
             if (editorPanel.getCurrentMap() != null) {
-                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround());
+                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround(), editorPanel.getCurrentSlopeOverlay());
             }
 
             masterViewPanel.add(mapsMasterPanel, "MAPS");
@@ -462,7 +462,7 @@ public class BarMapStudio {
         texturesTab.addActionListener(e -> {
             if (textureStudioPanel != null && editorPanel != null) {
                 if (editorPanel.getCurrentMap() != null) {
-                    textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround());
+                    textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround(), editorPanel.getCurrentSlopeOverlay());
                 }
             }
             masterCards.show(masterViewPanel, "TEXTURES");

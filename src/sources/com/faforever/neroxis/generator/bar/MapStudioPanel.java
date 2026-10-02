@@ -200,6 +200,10 @@ public final class MapStudioPanel extends JPanel {
         return canvas != null ? canvas.getGroundPreview() : null;
     }
 
+    public BufferedImage getCurrentSlopeOverlay() {
+        return canvas != null ? canvas.getSlopeOverlay() : null;
+    }
+
     public SCMap getCurrentMap() {
         return canvas != null ? canvas.getMap() : null;
     }
