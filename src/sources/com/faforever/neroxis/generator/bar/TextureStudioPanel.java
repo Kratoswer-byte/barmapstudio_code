@@ -395,126 +395,149 @@ public class TextureStudioPanel extends JPanel {
      * 2. REGOLE TERRENO & SLIDERS (Metodo A)
      * 3. PARAMETRI DETTAGLIO MATERIALI PBR
      */
+    private static Component vstrut(int height) {
+        JComponent c = (JComponent) Box.createVerticalStrut(height);
+        c.setAlignmentX(0f);
+        return c;
+    }
+
+    /**
+     * Sidebar Compatta (240px-260px) con le 3 Sezioni Complete:
+     * 1. MASCHERE DELLE 4 ZONE (Default Metodo B: File)
+     * 2. REGOLE TERRENO & SLIDERS (Metodo A)
+     * 3. PARAMETRI DETTAGLIO MATERIALI PBR
+     */
     private JComponent buildCompactSidebar() {
         ScrollableTrackWidthPanel panel = new ScrollableTrackWidthPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
+        panel.setAlignmentX(0f);
         panel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         // --- SEZIONE 1: 4 ZONE & MASCHERE ---
         JLabel sec1Title = new JLabel("1. MASCHERE 4 ZONE (METODO B)");
+        sec1Title.setAlignmentX(0f);
         sec1Title.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         sec1Title.setForeground(ACCENT_CYAN);
         panel.add(sec1Title);
-        panel.add(Box.createVerticalStrut(2));
+        panel.add(vstrut(2));
 
         JLabel sec1Desc = new JLabel("<html>Carica le maschere da file (default), o usa le regole automatiche sottostanti.</html>");
+        sec1Desc.setAlignmentX(0f);
         sec1Desc.setFont(BarMapStudio.font(Font.PLAIN, 10));
         sec1Desc.setForeground(TEXT_MUTED);
         panel.add(sec1Desc);
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(buildZoneCard(zone1, "Pianure / Valli (Erba)", "Fondo Mappa"));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
         panel.add(buildZoneCard(zone2, "Scarpate / Monti (Roccia)", "Pendenza > 22 deg"));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
         panel.add(buildZoneCard(zone3, "Costa / Spiaggia (Sabbia)", "Livello Acqua"));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
         panel.add(buildZoneCard(zone4, "Cime / Vette (Neve)", "Alta Quota"));
-        panel.add(Box.createVerticalStrut(14));
+        panel.add(vstrut(14));
 
         // --- SEZIONE 2: SLIDERS & REGOLE TERRENO (METODO A) ---
         JLabel sec2Title = new JLabel("2. REGOLE AUTOMATICHE (SLIDERS)");
+        sec2Title.setAlignmentX(0f);
         sec2Title.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         sec2Title.setForeground(ACCENT_AMBER);
         panel.add(sec2Title);
-        panel.add(Box.createVerticalStrut(2));
+        panel.add(vstrut(2));
 
         JLabel sec2Desc = new JLabel("<html>Regolano dove si stendono roccia, sabbia e neve sull'Heightmap.</html>");
+        sec2Desc.setAlignmentX(0f);
         sec2Desc.setFont(BarMapStudio.font(Font.PLAIN, 10));
         sec2Desc.setForeground(TEXT_MUTED);
         panel.add(sec2Desc);
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(createCompactSliderRow("Soglia Pendenza Roccia:", (int)(slopeThreshold * 100), 10, 80, "%", val -> {
             slopeThreshold = val / 100.0f;
             queueRegen();
         }));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(createCompactSliderRow("Morbidezza Pendenza (Falloff):", (int)(slopeFalloff * 100), 2, 40, "%", val -> {
             slopeFalloff = val / 100.0f;
             queueRegen();
         }));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(createCompactSliderRow("Quota Acqua / Mare:", (int)waterElevation, 0, 150, "m", val -> {
             waterElevation = val;
             queueRegen();
         }));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(createCompactSliderRow("Fascia Spiaggia (Offset):", (int)beachBand, 2, 40, "m", val -> {
             beachBand = val;
             queueRegen();
         }));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(createCompactSliderRow("Quota Attivazione Picchi:", (int)(peakAltitude * 100), 40, 95, "%", val -> {
             peakAltitude = val / 100.0f;
             queueRegen();
         }));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(createCompactSliderRow("Perturbazione Bordi (Noise):", (int)(noisePerturbation * 100), 0, 70, "%", val -> {
             noisePerturbation = val / 100.0f;
             queueRegen();
         }));
-        panel.add(Box.createVerticalStrut(14));
+        panel.add(vstrut(14));
 
         // --- SEZIONE 3: PARAMETRI DETTAGLIO MATERIALI PBR ---
         JLabel sec3Title = new JLabel("3. DETTAGLIO & RILIEVO PBR");
+        sec3Title.setAlignmentX(0f);
         sec3Title.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         sec3Title.setForeground(ACCENT_GREEN);
         panel.add(sec3Title);
-        panel.add(Box.createVerticalStrut(2));
+        panel.add(vstrut(2));
 
         JLabel sec3Desc = new JLabel("<html>Personalizza la grana frattale e il rilievo 3D della Normal Map.</html>");
+        sec3Desc.setAlignmentX(0f);
         sec3Desc.setFont(BarMapStudio.font(Font.PLAIN, 10));
         sec3Desc.setForeground(TEXT_MUTED);
         panel.add(sec3Desc);
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(createCompactSliderRow("Scala Frequenza Frattale:", (int)(matScale * 10), 10, 100, "", val -> {
             matScale = val / 10.0f;
             queueRegen();
         }));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(createCompactSliderRow("Ottave di Dettaglio:", matOctaves, 1, 8, "", val -> {
             matOctaves = val;
             queueRegen();
         }));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(createCompactSliderRow("Rugosita' (Persistenza):", (int)(matPersistence * 100), 20, 80, "%", val -> {
             matPersistence = val / 100.0f;
             queueRegen();
         }));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(createCompactSliderRow("Contrasto Cromatico:", (int)(matContrast * 50), 25, 120, "", val -> {
             matContrast = val / 50.0f;
             queueRegen();
         }));
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(vstrut(6));
 
         panel.add(createCompactSliderRow("Intensita' Normal Map (Bump):", (int)(matBump * 50), 10, 150, "", val -> {
             matBump = val / 50.0f;
             queueRegen();
         }));
 
-        panel.add(Box.createVerticalGlue());
+        Component glue = Box.createVerticalGlue();
+        if (glue instanceof JComponent jc) {
+            jc.setAlignmentX(0f);
+        }
+        panel.add(glue);
 
         JScrollPane sp = new JScrollPane(panel);
         sp.setBorder(null);
@@ -531,6 +554,7 @@ public class TextureStudioPanel extends JPanel {
     private JPanel buildZoneCard(ZoneConfig z, String roleDesc, String autoRuleDesc) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setAlignmentX(0f);
         card.setBackground(CARD_INNER);
         card.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
@@ -540,6 +564,7 @@ public class TextureStudioPanel extends JPanel {
 
         // Riga 1: Pallino + Titolo
         JPanel r1 = new JPanel(new BorderLayout(6, 0));
+        r1.setAlignmentX(0f);
         r1.setOpaque(false);
 
         JPanel dot = new JPanel() {
@@ -562,10 +587,11 @@ public class TextureStudioPanel extends JPanel {
         r1.add(title, BorderLayout.CENTER);
 
         card.add(r1);
-        card.add(Box.createVerticalStrut(4));
+        card.add(vstrut(4));
 
         // Riga 2: Maschera File o Auto
         JPanel r2 = new JPanel(new BorderLayout(4, 0));
+        r2.setAlignmentX(0f);
         r2.setOpaque(false);
 
         JLabel maskStatusBadge = new JLabel(z.maskFile != null ? z.maskFile.getName() : "Auto (" + autoRuleDesc + ")");
@@ -634,10 +660,11 @@ public class TextureStudioPanel extends JPanel {
         r2.add(maskStatusBadge, BorderLayout.WEST);
         r2.add(maskBtns, BorderLayout.EAST);
         card.add(r2);
-        card.add(Box.createVerticalStrut(4));
+        card.add(vstrut(4));
 
         // Riga 3: Materiale / Texture
         JPanel r3 = new JPanel(new BorderLayout(4, 0));
+        r3.setAlignmentX(0f);
         r3.setOpaque(false);
 
         JComboBox<MaterialPreset> combo = new JComboBox<>(MaterialPreset.values());
@@ -693,11 +720,13 @@ public class TextureStudioPanel extends JPanel {
     private JPanel createCompactSliderRow(String label, int initialValue, int min, int max, String unit, Consumer<Integer> onChange) {
         JPanel container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+        container.setAlignmentX(0f);
         container.setOpaque(false);
         container.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
 
         // Riga 1: Testo + Valore
         JPanel top = new JPanel(new BorderLayout());
+        top.setAlignmentX(0f);
         top.setOpaque(false);
 
         JLabel l = new JLabel(label);
@@ -714,6 +743,7 @@ public class TextureStudioPanel extends JPanel {
 
         // Riga 2: Slider 100%
         JSlider slider = new JSlider(min, max, initialValue);
+        slider.setAlignmentX(0f);
         slider.setOpaque(false);
         slider.setBackground(CARD_BG);
         slider.setForeground(ACCENT_CYAN);

@@ -33,6 +33,7 @@
 | `69e19c9` | `feat/fix` | 02/10/2026 11:00 | Avvio pulito senza generazioni fake in Texture Studio, supporto Heightmap esterne con Empty State e sync bidirezionale a MAPS |
 | `810d1d6` | `feat/fix` | 02/10/2026 14:49 | Risoluzione vincolo 256px in SCMap.setPreview per BAR e icone native Java2D (stella, cartella, dadi) |
 | `4d149cb` | `feat/fix` | 02/10/2026 15:30 | Supporto mappe rettangolari in Texture Studio ed esportazione texture personalizzate in BAR |
+| `PENDING` | `fix` | 02/10/2026 16:10 | Allineamento a sinistra titoli e descrizioni sezioni in Texture Studio (BoxLayout alignmentX) |
 
 ---
 
@@ -232,5 +233,16 @@
   - Vengono preservati e modulati l'illuminazione solare 3D e il relief shading (`brightness = shading3`), le bruciature dei mex e dei geo vents e lo scurimento dell'acqua, garantendo una perfetta integrazione nel motore 3D di Beyond All Reason.
 - [x] **Rigida Aderenza alle Regole di Progetto:** Zero emoji e zero caratteri non-ASCII su tutti i sorgenti (utilizzati solo caratteri ASCII standard e icone Java2D native).
 - [x] **Collaudo e Validazione Binaria:** Test programmatico automatizzato con generazione di mappa rettangolare (256x384 -> 8x12 unità BAR) ed esportazione `.sdz`, verificando che la texture custom venga effettivamente scritta e campionata nei tile `.smt` e nell'anteprima `.png`.
+
+### 24. Allineamento a Sinistra Intestazioni Sezioni in Texture Studio [Commit: PENDING]
+- [x] **Risoluzione Spostamento a Destra (Swing BoxLayout Misalignment):** In `TextureStudioPanel.java`, i titoli e le descrizioni delle sezioni 1, 2 e 3 venivano disegnati a partire dal centro orizzontale della sidebar anziché a filo margine sinistro, causando anche il troncamento del testo `2. REGOLE AUTOMATICHE (SLIDE...`.
+- [x] **Radice del Problema:** I `JPanel` (schede delle zone e contenitori degli slider) avevano il default Swing `alignmentX = 0.5f`, mentre i `JLabel` avevano `alignmentX = 0.0f`. In `BoxLayout.Y_AXIS`, Swing fissa l'asse verticale al centro dei componenti 0.5f, posizionando l'angolo sinistro dei componenti 0.0f sulla linea mediana (x = 120px-130px).
+- [x] **Fix Completo su Tutta la Gerarchia:**
+  - Applicato `setAlignmentX(0f)` su `sec1Title`, `sec1Desc`, `sec2Title`, `sec2Desc`, `sec3Title`, `sec3Desc`.
+  - Applicato `setAlignmentX(0f)` su `card` e tutti i pannelli interni di riga (`r1`, `r2`, `r3`) in `buildZoneCard`.
+  - Applicato `setAlignmentX(0f)` su `container`, `top` e `slider` in `createCompactSliderRow`.
+  - Introdotto l'helper `vstrut(int height)` che imposta `alignmentX = 0f` su tutti i distanziatori verticali (evitando che `Box.Filler` erediti 0.5f).
+- [x] Tutte le 3 sezioni sono ora perfettamente allineate a sinistra con margini puliti, testo 100% leggibile e zero troncamenti.
+
 
 
