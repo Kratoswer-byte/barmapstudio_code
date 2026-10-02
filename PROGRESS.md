@@ -34,6 +34,7 @@
 | `810d1d6` | `feat/fix` | 02/10/2026 14:49 | Risoluzione vincolo 256px in SCMap.setPreview per BAR e icone native Java2D (stella, cartella, dadi) |
 | `4d149cb` | `feat/fix` | 02/10/2026 15:30 | Supporto mappe rettangolari in Texture Studio ed esportazione texture personalizzate in BAR |
 | `a040f9e` | `fix` | 02/10/2026 16:10 | Allineamento a sinistra titoli e descrizioni sezioni in Texture Studio (BoxLayout alignmentX) |
+| `9e800db` | `feat` | 02/10/2026 16:40 | Integrati comandi HUD Slope Map, opacita' e zoom 1:1 in Texture Studio |
 
 ---
 
@@ -244,7 +245,7 @@
   - Introdotto l'helper `vstrut(int height)` che imposta `alignmentX = 0f` su tutti i distanziatori verticali (evitando che `Box.Filler` erediti 0.5f).
 - [x] Tutte le 3 sezioni sono ora perfettamente allineate a sinistra con margini puliti, testo 100% leggibile e zero troncamenti.
 
-### 25. Controlli HUD Slope Map, Opacita' e Zoom 1:1 in Texture Studio [Commit: in arrivo]
+### 25. Controlli HUD Slope Map, Opacita' e Zoom 1:1 in Texture Studio [Commit: 9e800db]
 - [x] **Dock Controlli HUD Flottante in Texture Studio:** Integrato il dock HUD identico a quello di `MAPS` nell'angolo inferiore sinistro del canvas di Texture Studio (`TextureCanvas`), contenente:
   - Tasto `[Slope Map [L]]` / `[Slope Map: ON [L]]` con illuminazione ambra/arancione e sincronizzazione tasto di scelta rapida `L`.
   - Slider `Opacita':` (10% - 100%, default 70%) con traccia e cursore ciano antialiased FlatLaf per modulare la trasparenza dello slope map.
