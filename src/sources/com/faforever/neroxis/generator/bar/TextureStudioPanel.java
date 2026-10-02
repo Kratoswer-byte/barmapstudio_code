@@ -10,7 +10,9 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
+import java.awt.image.WritableRaster;
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -27,7 +29,7 @@ import java.util.function.Consumer;
 public class TextureStudioPanel extends JPanel {
 
     public interface TerrainApplyCallback {
-        void applyToMap(BufferedImage diffuseMap, BufferedImage splatLow, BufferedImage splatHigh, String name);
+        void applyToMap(BufferedImage diffuseMap, BufferedImage splatLow, BufferedImage splatHigh, BufferedImage customHeightmap, String name);
     }
 
     private static final Color BG_DARK = new Color(15, 17, 23);
@@ -152,6 +154,8 @@ public class TextureStudioPanel extends JPanel {
     private long currentSeed = 133742L;
     private SCMap activeMap = null;
     private BufferedImage activeGround = null;
+    private BufferedImage customLoadedHeightmap = null;
+    private String customLoadedHeightmapName = null;
 
     // Buffer Immagini
     private BufferedImage renderedDiffuse;
@@ -198,7 +202,12 @@ public class TextureStudioPanel extends JPanel {
         add(mainSplit, BorderLayout.CENTER);
         add(buildBottomActionBar(), BorderLayout.SOUTH);
 
-        triggerAsyncGeneration();
+        // All'avvio NON generiamo nulla: stato pulito in attesa di azione utente
+        setStatus("In attesa di terreno attivo. Genera in [MAPS] o carica un'Heightmap con [📂 Carica Heightmap].", TEXT_MUTED);
+    }
+
+    public boolean hasCustomHeightmap() {
+        return customLoadedHeightmap != null;
     }
 
     public void setActiveMap(SCMap map) {
@@ -210,6 +219,8 @@ public class TextureStudioPanel extends JPanel {
         this.activeMap = map;
         this.activeGround = currentGround;
         if (map != null) {
+            this.customLoadedHeightmap = null;
+            this.customLoadedHeightmapName = null;
             if (map.getBiome() != null && map.getBiome().waterSettings() != null) {
                 this.waterElevation = map.getBiome().waterSettings().elevation();
             } else {
@@ -221,14 +232,72 @@ public class TextureStudioPanel extends JPanel {
                 lblMapStatus.setText("  MAPPA ATTIVA: " + w + "x" + h + "  ");
                 lblMapStatus.setForeground(ACCENT_GREEN);
             }
+            if (isNew || activeMap != null) {
+                triggerAsyncGeneration();
+            }
         } else {
-            if (lblMapStatus != null) {
-                lblMapStatus.setText("  NESSUNA MAPPA ATTIVA IN [MAPS]  ");
-                lblMapStatus.setForeground(ACCENT_AMBER);
+            if (customLoadedHeightmap == null) {
+                this.renderedDiffuse = null;
+                this.renderedNormal = null;
+                this.renderedSplatRGBA = null;
+                this.renderedChannelR = null;
+                this.renderedChannelG = null;
+                this.renderedChannelB = null;
+                this.renderedChannelA = null;
+                if (lblMapStatus != null) {
+                    lblMapStatus.setText("  NESSUN TERRENO ATTIVO  ");
+                    lblMapStatus.setForeground(ACCENT_AMBER);
+                }
+                setStatus("In attesa di terreno attivo. Genera in [MAPS] o carica un'Heightmap.", TEXT_MUTED);
+                if (canvas != null) canvas.repaint();
             }
         }
-        if (isNew || activeMap != null) {
-            triggerAsyncGeneration();
+    }
+
+    private void doLoadHeightmap() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Seleziona File Heightmap (PNG, RAW, BMP)");
+        chooser.setFileFilter(new FileNameExtensionFilter("Immagini Heightmap (*.png, *.raw, *.bmp)", "png", "raw", "bmp"));
+        int ret = chooser.showOpenDialog(this);
+        if (ret == JFileChooser.APPROVE_OPTION) {
+            File f = chooser.getSelectedFile();
+            try {
+                BufferedImage loaded = ImageIO.read(f);
+                if (loaded == null) {
+                    byte[] bytes = Files.readAllBytes(f.toPath());
+                    int side = (int) Math.round(Math.sqrt(bytes.length / 2.0));
+                    if (side * side * 2 == bytes.length) {
+                        loaded = new BufferedImage(side, side, BufferedImage.TYPE_USHORT_GRAY);
+                        WritableRaster wr = loaded.getRaster();
+                        int idx = 0;
+                        int[] p = new int[1];
+                        for (int y = 0; y < side; y++) {
+                            for (int x = 0; x < side; x++) {
+                                int b1 = bytes[idx++] & 0xFF;
+                                int b2 = bytes[idx++] & 0xFF;
+                                p[0] = (b2 << 8) | b1;
+                                wr.setPixel(x, y, p);
+                            }
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Formato file non supportato o non riconosciuto.", "Errore Import", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                }
+                this.customLoadedHeightmap = loaded;
+                this.customLoadedHeightmapName = f.getName();
+                this.activeMap = null;
+                this.activeGround = null;
+                if (lblMapStatus != null) {
+                    lblMapStatus.setText("  HEIGHTMAP: " + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + ")  ");
+                    lblMapStatus.setForeground(ACCENT_GREEN);
+                }
+                setStatus("Heightmap caricata: " + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + ")", ACCENT_CYAN);
+                triggerAsyncGeneration();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Errore caricamento heightmap:\n" + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -247,7 +316,7 @@ public class TextureStudioPanel extends JPanel {
         lblTitle.setForeground(ACCENT_CYAN);
         left.add(lblTitle);
 
-        lblMapStatus = new JLabel("  NESSUNA MAPPA ATTIVA IN [MAPS]  ");
+        lblMapStatus = new JLabel("  NESSUN TERRENO ATTIVO  ");
         lblMapStatus.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
         lblMapStatus.setForeground(ACCENT_AMBER);
         lblMapStatus.setBackground(CARD_INNER);
@@ -257,9 +326,14 @@ public class TextureStudioPanel extends JPanel {
 
         bar.add(left, BorderLayout.WEST);
 
-        // Destra: Risoluzione, Roll Seed e Sync
+        // Destra: Carica Heightmap, Risoluzione, Varia Rumore e Sync
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 6));
         right.setOpaque(false);
+
+        JButton btnLoadHm = createGhostButton("📂 Carica Heightmap");
+        btnLoadHm.setToolTipText("Carica file Heightmap esterno (.png 16-bit/8-bit, .raw, .bmp)");
+        btnLoadHm.addActionListener(e -> doLoadHeightmap());
+        right.add(btnLoadHm);
 
         JLabel resLbl = new JLabel("Risoluzione:");
         resLbl.setFont(BarMapStudio.font(Font.BOLD, 11));
@@ -279,7 +353,8 @@ public class TextureStudioPanel extends JPanel {
         });
         right.add(resCombo);
 
-        JButton btnSeed = createGhostButton("Roll Seed");
+        JButton btnSeed = createGhostButton("🎲 Varia Rumore");
+        btnSeed.setToolTipText("Varia la micro-rugosità procedurale dei materiali");
         btnSeed.addActionListener(e -> {
             currentSeed = new SplittableRandom().nextLong();
             triggerAsyncGeneration();
@@ -775,6 +850,20 @@ public class TextureStudioPanel extends JPanel {
     }
 
     private void triggerAsyncGeneration() {
+        final BufferedImage sourceHm = (activeMap != null && activeMap.getHeightmap() != null) ? activeMap.getHeightmap() : customLoadedHeightmap;
+        if (sourceHm == null) {
+            renderedDiffuse = null;
+            renderedNormal = null;
+            renderedSplatRGBA = null;
+            renderedChannelR = null;
+            renderedChannelG = null;
+            renderedChannelB = null;
+            renderedChannelA = null;
+            setStatus("Nessun terreno attivo. Genera in [MAPS] o carica un'Heightmap con [📂 Carica Heightmap].", TEXT_MUTED);
+            if (canvas != null) canvas.repaint();
+            return;
+        }
+
         setStatus("Generazione ed elaborazione in corso...", ACCENT_AMBER);
         final int res = currentRes;
         final long seed = currentSeed;
@@ -787,61 +876,33 @@ public class TextureStudioPanel extends JPanel {
                 float minH = Float.MAX_VALUE;
                 float maxH = -Float.MAX_VALUE;
 
-                if (activeMap != null && activeMap.getHeightmap() != null) {
-                    BufferedImage mapHm = activeMap.getHeightmap();
-                    float scale = activeMap.getHeightMapScale();
-                    if (scale <= 0) scale = 0.0078125f;
-                    int hmW = mapHm.getWidth();
-                    int hmH = mapHm.getHeight();
-                    Raster r = mapHm.getRaster();
-                    int[] pixelH = new int[1];
+                float scale = (activeMap != null && activeMap.getHeightMapScale() > 0) ? activeMap.getHeightMapScale() : 0.0078125f;
+                int hmW = sourceHm.getWidth();
+                int hmH = sourceHm.getHeight();
+                Raster r = sourceHm.getRaster();
+                int[] pixelH = new int[1];
 
-                    for (int y = 0; y < res; y++) {
-                        int sy = Math.min(hmH - 1, (y * hmH) / res);
-                        for (int x = 0; x < res; x++) {
-                            int sx = Math.min(hmW - 1, (x * hmW) / res);
-                            r.getPixel(sx, sy, pixelH);
-                            float h = pixelH[0] * scale;
-                            heightmap[y][x] = h;
-                            if (h < minH) minH = h;
-                            if (h > maxH) maxH = h;
-                        }
+                for (int y = 0; y < res; y++) {
+                    int sy = Math.min(hmH - 1, (y * hmH) / res);
+                    for (int x = 0; x < res; x++) {
+                        int sx = Math.min(hmW - 1, (x * hmW) / res);
+                        r.getPixel(sx, sy, pixelH);
+                        float h = (pixelH[0] > 255) ? (pixelH[0] * scale) : (pixelH[0] * 0.5f);
+                        heightmap[y][x] = h;
+                        if (h < minH) minH = h;
+                        if (h > maxH) maxH = h;
                     }
+                }
 
-                    for (int y = 0; y < res; y++) {
-                        int yPrev = Math.max(0, y - 1);
-                        int yNext = Math.min(res - 1, y + 1);
-                        for (int x = 0; x < res; x++) {
-                            int xPrev = Math.max(0, x - 1);
-                            int xNext = Math.min(res - 1, x + 1);
-                            float dx = (heightmap[y][xNext] - heightmap[y][xPrev]) * 0.5f;
-                            float dy = (heightmap[yNext][x] - heightmap[yPrev][x]) * 0.5f;
-                            slopeMap[y][x] = (float) Math.min(1.0, Math.sqrt(dx * dx + dy * dy) * 0.35);
-                        }
-                    }
-                } else {
-                    for (int y = 0; y < res; y++) {
-                        float ny = (float) y / res;
-                        for (int x = 0; x < res; x++) {
-                            float nx = (float) x / res;
-                            float base = (float) (Math.sin(nx * Math.PI) * Math.sin(ny * Math.PI) * 90.0);
-                            float ridge = fbmPeriodic2D(nx * 4f, ny * 4f, 4, 3, 0.5f, seed + 10) * 45.0f;
-                            float h = Math.max(0f, base + ridge);
-                            heightmap[y][x] = h;
-                            if (h < minH) minH = h;
-                            if (h > maxH) maxH = h;
-                        }
-                    }
-                    for (int y = 0; y < res; y++) {
-                        int yPrev = Math.max(0, y - 1);
-                        int yNext = Math.min(res - 1, y + 1);
-                        for (int x = 0; x < res; x++) {
-                            int xPrev = Math.max(0, x - 1);
-                            int xNext = Math.min(res - 1, x + 1);
-                            float dx = (heightmap[y][xNext] - heightmap[y][xPrev]) * 0.5f;
-                            float dy = (heightmap[yNext][x] - heightmap[yPrev][x]) * 0.5f;
-                            slopeMap[y][x] = (float) Math.min(1.0, Math.sqrt(dx * dx + dy * dy) * 0.15);
-                        }
+                for (int y = 0; y < res; y++) {
+                    int yPrev = Math.max(0, y - 1);
+                    int yNext = Math.min(res - 1, y + 1);
+                    for (int x = 0; x < res; x++) {
+                        int xPrev = Math.max(0, x - 1);
+                        int xNext = Math.min(res - 1, x + 1);
+                        float dx = (heightmap[y][xNext] - heightmap[y][xPrev]) * 0.5f;
+                        float dy = (heightmap[yNext][x] - heightmap[yPrev][x]) * 0.5f;
+                        slopeMap[y][x] = (float) Math.min(1.0, Math.sqrt(dx * dx + dy * dy) * 0.35);
                     }
                 }
 
@@ -1069,7 +1130,8 @@ public class TextureStudioPanel extends JPanel {
                 }
             }
 
-            applyCallback.applyToMap(renderedDiffuse, splatLow, splatHigh, "Terreno 4 Zone");
+            String name = (activeMap != null) ? activeMap.getName() : (customLoadedHeightmapName != null ? customLoadedHeightmapName : "Terreno 4 Zone");
+            applyCallback.applyToMap(renderedDiffuse, splatLow, splatHigh, customLoadedHeightmap, name);
         }
     }
 
@@ -1257,9 +1319,32 @@ public class TextureStudioPanel extends JPanel {
 
             BufferedImage toDraw = getActiveViewImage();
             if (toDraw == null) {
-                g2.setColor(TEXT_MUTED);
-                g2.setFont(BarMapStudio.font(Font.PLAIN, 12));
-                g2.drawString("Elaborazione texture in corso...", getWidth() / 2 - 90, getHeight() / 2);
+                int boxW = Math.min(480, getWidth() - 40);
+                int boxH = 150;
+                int bx = (getWidth() - boxW) / 2;
+                int by = (getHeight() - boxH) / 2;
+                if (boxW > 100 && by > 0) {
+                    g2.setColor(CARD_BG);
+                    g2.fillRoundRect(bx, by, boxW, boxH, 12, 12);
+                    g2.setColor(BORDER_COLOR);
+                    g2.drawRoundRect(bx, by, boxW, boxH, 12, 12);
+
+                    g2.setColor(ACCENT_CYAN);
+                    g2.setFont(BarMapStudio.fontCond(Font.BOLD, 15));
+                    g2.drawString("NESSUN TERRENO ATTIVO", bx + 24, by + 34);
+
+                    g2.setColor(TEXT_MUTED);
+                    g2.setFont(BarMapStudio.font(Font.PLAIN, 12));
+                    g2.drawString("All'avvio non e' stato generato alcun terreno.", bx + 24, by + 60);
+
+                    g2.setColor(TEXT_MAIN);
+                    g2.drawString("1. Puoi generare una mappa procedurale nella scheda [MAPS]", bx + 24, by + 88);
+                    g2.drawString("2. Oppure carica un'Heightmap con il tasto in alto [📂 Carica Heightmap]", bx + 24, by + 112);
+                } else {
+                    g2.setColor(TEXT_MUTED);
+                    g2.setFont(BarMapStudio.font(Font.PLAIN, 12));
+                    g2.drawString("Nessun terreno attivo.", getWidth() / 2 - 60, getHeight() / 2);
+                }
                 g2.dispose();
                 return;
             }
@@ -1296,7 +1381,7 @@ public class TextureStudioPanel extends JPanel {
             g2.setColor(BORDER_COLOR);
             g2.drawRect(cx - 1, cy - 1, w + 1, h + 1);
 
-            String mapInfo = (activeMap != null) ? ("Mappa: " + (activeMap.getWidth() > 0 ? activeMap.getWidth() : activeMap.getSize()) + "x" + (activeMap.getHeight() > 0 ? activeMap.getHeight() : activeMap.getSize())) : "Modalità Sintetica";
+            String mapInfo = (activeMap != null) ? ("Mappa: " + (activeMap.getWidth() > 0 ? activeMap.getWidth() : activeMap.getSize()) + "x" + (activeMap.getHeight() > 0 ? activeMap.getHeight() : activeMap.getSize())) : (customLoadedHeightmap != null ? ("Heightmap: " + customLoadedHeightmap.getWidth() + "x" + customLoadedHeightmap.getHeight()) : "Nessun Terreno");
             String info = mapInfo + " | Vista: " + currentViewMode.label + " | Risoluzione: " + currentRes + "x" + currentRes + " | Zoom: " + Math.round(zoom * 100) + "%";
             g2.setFont(BarMapStudio.font(Font.BOLD, 10));
             FontMetrics fm = g2.getFontMetrics();

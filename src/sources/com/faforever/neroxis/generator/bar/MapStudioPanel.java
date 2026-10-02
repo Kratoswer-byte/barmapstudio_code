@@ -1145,6 +1145,10 @@ public final class MapStudioPanel extends JPanel {
     }
 
     private void doRegenerateFromHeightmap(BufferedImage customHm) {
+        doRegenerateFromHeightmap(customHm, null);
+    }
+
+    private void doRegenerateFromHeightmap(BufferedImage customHm, Runnable onDone) {
         SCMap existing = canvas.getMap();
         if (existing == null && customHm == null) {
             JOptionPane.showMessageDialog(this,
@@ -1210,6 +1214,9 @@ public final class MapStudioPanel extends JPanel {
                     btnSmoothSlopes.setEnabled(true);
                     if (onMapChangedCallback != null) {
                         onMapChangedCallback.run();
+                    }
+                    if (onDone != null) {
+                        onDone.run();
                     }
                 });
             } catch (Throwable ex) {
@@ -1315,8 +1322,18 @@ public final class MapStudioPanel extends JPanel {
     }
 
     public void applyComposedTerrain(BufferedImage diffuseMap, BufferedImage splatLow, BufferedImage splatHigh, String name) {
+        applyComposedTerrain(diffuseMap, splatLow, splatHigh, null, name);
+    }
+
+    public void applyComposedTerrain(BufferedImage diffuseMap, BufferedImage splatLow, BufferedImage splatHigh, BufferedImage customHeightmap, String name) {
         SCMap currentMap = canvas != null ? canvas.getMap() : null;
         if (currentMap == null) {
+            if (customHeightmap != null) {
+                doRegenerateFromHeightmap(customHeightmap, () -> {
+                    applyComposedTerrain(diffuseMap, splatLow, splatHigh, null, name);
+                });
+                return;
+            }
             JOptionPane.showMessageDialog(this, "Nessuna mappa attiva trovata nell'Editor. Genera prima una mappa base su cui applicare la composizione!", "Attenzione", JOptionPane.WARNING_MESSAGE);
             return;
         }

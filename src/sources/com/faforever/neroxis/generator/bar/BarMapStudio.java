@@ -270,8 +270,8 @@ public class BarMapStudio {
             TextureStudioPanel textureStudioPanel = new TextureStudioPanel(
                 home,
                 finalBarData,
-                (diffuseMap, splatLow, splatHigh, name) -> {
-                    editorPanel.applyComposedTerrain(diffuseMap, splatLow, splatHigh, name);
+                (diffuseMap, splatLow, splatHigh, customHeightmap, name) -> {
+                    editorPanel.applyComposedTerrain(diffuseMap, splatLow, splatHigh, customHeightmap, name);
                     masterCards.show(masterViewPanel, "MAPS");
                     if (mapsTabHolder[0] != null) mapsTabHolder[0].setSelected(true);
                 }
@@ -461,7 +461,9 @@ public class BarMapStudio {
 
         texturesTab.addActionListener(e -> {
             if (textureStudioPanel != null && editorPanel != null) {
-                textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround());
+                if (editorPanel.getCurrentMap() != null) {
+                    textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround());
+                }
             }
             masterCards.show(masterViewPanel, "TEXTURES");
         });

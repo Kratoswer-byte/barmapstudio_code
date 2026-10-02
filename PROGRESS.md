@@ -30,6 +30,7 @@
 | `eea4450` | `feat/fix` | 01/10/2026 17:40 | Riprogettazione Texture Studio: layout compatto 240px, default Metodo B (file maschera) e fallback Metodo A |
 | `8975273` | `feat/fix` | 01/10/2026 18:00 | Sblocco pulsante Pialla Pendenze [Ramps] e integrazione completa Sliders Metodo A & PBR in sidebar compatta 240px |
 | `13aa881` | `feat/fix` | 02/10/2026 09:20 | Sincronizzazione live Mappa Attiva in Texture Studio, eliminazione anelli sinusoidali con Perlin periodico e aggiornamento canvas |
+| `PENDING` | `feat/fix` | 02/10/2026 11:00 | Avvio pulito senza generazioni fake in Texture Studio, supporto Heightmap esterne con Empty State e sync bidirezionale a MAPS |
 
 ---
 
