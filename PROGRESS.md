@@ -32,7 +32,7 @@
 | `13aa881` | `feat/fix` | 02/10/2026 09:20 | Sincronizzazione live Mappa Attiva in Texture Studio, eliminazione anelli sinusoidali con Perlin periodico e aggiornamento canvas |
 | `69e19c9` | `feat/fix` | 02/10/2026 11:00 | Avvio pulito senza generazioni fake in Texture Studio, supporto Heightmap esterne con Empty State e sync bidirezionale a MAPS |
 | `810d1d6` | `feat/fix` | 02/10/2026 14:49 | Risoluzione vincolo 256px in SCMap.setPreview per BAR e icone native Java2D (stella, cartella, dadi) |
-| `PENDING` | `feat/fix` | 02/10/2026 15:30 | Supporto mappe rettangolari in Texture Studio ed esportazione texture personalizzate in BAR |
+| `4d149cb` | `feat/fix` | 02/10/2026 15:30 | Supporto mappe rettangolari in Texture Studio ed esportazione texture personalizzate in BAR |
 
 ---
 
@@ -221,7 +221,7 @@
 - [x] **Disegno Vettoriale Antialiased:** Implementate icone Java2D native per la stella (`createVectorStarIcon` con `Path2D`), cartella (`createVectorFolderIcon`), e dadi (`createVectorDiceIcon`), integrate sia nei pulsanti ghost che nel pulsante primario `[APPLICA AL TERRENO DELLA MAPPA]`.
 - [x] **Verifica e Integrazione Beyond All Reason:** Test di generazione procedurale ed esportazione `.sdz` convalidato al 100% da CLI e verifica diretta del metodo `SCMap.setPreview` su mappe 256x256 con runtime Java 25.
 
-### 23. Supporto Mappe Rettangolari in Texture Studio ed Esportazione Texture Personalizzate in BAR [Commit: PENDING]
+### 23. Supporto Mappe Rettangolari in Texture Studio ed Esportazione Texture Personalizzate in BAR [Commit: 4d149cb]
 - [x] **Supporto Mappe Rettangolari (Eliminato lo Schiacciamento):** In `TextureStudioPanel.java`, implementato `computeTargetResolution()` che calcola dinamicamente le dimensioni `resW x resH` preservando l'esatto aspect ratio della mappa (es. mappe 256x384 generano texture e anteprime a 512x768).
 - [x] **Campionamento Isotropo Seamless dei Materiali:** Il calcolo delle coordinate di tiling `tx` e `ty` avanza allo stesso identico passo su X e Y con `tileScale`, impedendo qualsiasi deformazione ellittica o allungamento dei granuli e dei dettagli PBR su mappe non quadrate.
 - [x] **Maschere e Mappe Normali Rettangolari:** Aggiornati `computeZoneMask` e `createNormalMap` per operare con matrici bidimensionali `float[resH][resW]` e immagini `BufferedImage(resW, resH)`.
