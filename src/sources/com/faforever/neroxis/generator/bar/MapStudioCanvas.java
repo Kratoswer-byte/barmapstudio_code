@@ -29,7 +29,8 @@ public final class MapStudioCanvas extends JPanel {
         RECLAIM_ROCK,
         RECLAIM_TREE,
         RECLAIM_WRECK,
-        ERASE
+        ERASE,
+        CUSTOM_OBJECT
     }
 
     private BufferedImage groundPreview;
@@ -58,6 +59,10 @@ public final class MapStudioCanvas extends JPanel {
     private final Map<Marker, Float> mexMetalValues = new HashMap<>();
     private Consumer<Float> onMexSelected = null;
 
+    private final List<PlacedCustomEntity> customEntities = new ArrayList<>();
+    private ObjectEntity activeCustomEntity = null;
+    private JComponent readyTray = null;
+
     private Runnable changeListener = null;
 
     private static final record CanvasState(
@@ -65,7 +70,8 @@ public final class MapStudioCanvas extends JPanel {
         List<Marker> mexes,
         List<Marker> hydros,
         List<Prop> props,
-        Map<Marker, Float> mexMetalValues
+        Map<Marker, Float> mexMetalValues,
+        List<PlacedCustomEntity> customEntities
     ) {}
     private final Deque<CanvasState> undoStack = new ArrayDeque<>();
     private final Deque<CanvasState> redoStack = new ArrayDeque<>();
@@ -163,7 +169,7 @@ public final class MapStudioCanvas extends JPanel {
                         } else {
                             desc = "Invalicabile / Dirupo";
                         }
-                        String info = String.format(Locale.ROOT, "Pos: [%d, %d] | Quota: %.1fm | Pendenza: %.2f (%.1f°) | %s", Math.round(wx), Math.round(wy), h, s, deg, desc);
+                        String info = String.format(Locale.ROOT, "Pos: [%d, %d] | Quota: %.1fm | Pendenza: %.2f (%.1f deg) | %s", Math.round(wx), Math.round(wy), h, s, deg, desc);
                         onTerrainHover.accept(info);
                     } else {
                         onTerrainHover.accept("");
@@ -220,10 +226,49 @@ public final class MapStudioCanvas extends JPanel {
         }
     }
 
+    public void setReadyTray(JComponent tray) {
+        if (this.readyTray != null) {
+            remove(this.readyTray);
+        }
+        this.readyTray = tray;
+        if (tray != null) {
+            add(tray);
+            layoutReadyTray();
+        }
+        revalidate();
+        repaint();
+    }
+
+    private void layoutReadyTray() {
+        if (readyTray != null) {
+            Dimension ps = readyTray.getPreferredSize();
+            int w = Math.min(240, ps.width);
+            int h = Math.min(220, ps.height);
+            readyTray.setBounds(Math.max(10, getWidth() - w - 16), Math.max(10, getHeight() - h - 14), w, h);
+        }
+    }
+
     @Override
     public void doLayout() {
         super.doLayout();
         layoutHudDock();
+        layoutReadyTray();
+    }
+
+    public List<PlacedCustomEntity> getCustomEntities() {
+        return Collections.unmodifiableList(customEntities);
+    }
+
+    public void setActiveCustomEntity(ObjectEntity entity) {
+        this.activeCustomEntity = entity;
+        if (entity != null) {
+            setTool(Tool.CUSTOM_OBJECT);
+        }
+        repaint();
+    }
+
+    public ObjectEntity getActiveCustomEntity() {
+        return activeCustomEntity;
     }
 
     public void setChangeListener(Runnable r) {
@@ -468,7 +513,8 @@ public final class MapStudioCanvas extends JPanel {
             new ArrayList<>(map.getMexes()),
             new ArrayList<>(map.getHydros()),
             new ArrayList<>(map.getProps()),
-            new HashMap<>(mexMetalValues)
+            new HashMap<>(mexMetalValues),
+            new ArrayList<>(customEntities)
         ));
         redoStack.clear();
         if (undoStack.size() > 50) {
@@ -483,7 +529,8 @@ public final class MapStudioCanvas extends JPanel {
             new ArrayList<>(map.getMexes()),
             new ArrayList<>(map.getHydros()),
             new ArrayList<>(map.getProps()),
-            new HashMap<>(mexMetalValues)
+            new HashMap<>(mexMetalValues),
+            new ArrayList<>(customEntities)
         ));
         CanvasState state = undoStack.pop();
         map.getSpawns().clear();
@@ -496,6 +543,8 @@ public final class MapStudioCanvas extends JPanel {
         map.getProps().addAll(state.props());
         mexMetalValues.clear();
         mexMetalValues.putAll(state.mexMetalValues());
+        customEntities.clear();
+        if (state.customEntities() != null) customEntities.addAll(state.customEntities());
         selectedEntity = null;
         repaint();
         notifyChange();
@@ -508,7 +557,8 @@ public final class MapStudioCanvas extends JPanel {
             new ArrayList<>(map.getMexes()),
             new ArrayList<>(map.getHydros()),
             new ArrayList<>(map.getProps()),
-            new HashMap<>(mexMetalValues)
+            new HashMap<>(mexMetalValues),
+            new ArrayList<>(customEntities)
         ));
         CanvasState state = redoStack.pop();
         map.getSpawns().clear();
@@ -521,6 +571,8 @@ public final class MapStudioCanvas extends JPanel {
         map.getProps().addAll(state.props());
         mexMetalValues.clear();
         mexMetalValues.putAll(state.mexMetalValues());
+        customEntities.clear();
+        if (state.customEntities() != null) customEntities.addAll(state.customEntities());
         selectedEntity = null;
         repaint();
         notifyChange();
@@ -592,6 +644,13 @@ public final class MapStudioCanvas extends JPanel {
             case RECLAIM_WRECK -> {
                 for (Vector2 p : points) {
                     map.getProps().add(new Prop("corraid_dead", p, (float) (Math.random() * Math.PI * 2), false));
+                }
+            }
+            case CUSTOM_OBJECT -> {
+                if (activeCustomEntity != null) {
+                    for (Vector2 p : points) {
+                        customEntities.add(new PlacedCustomEntity(activeCustomEntity, p, (float) (Math.random() * Math.PI * 2)));
+                    }
                 }
             }
             default -> {}
@@ -729,6 +788,7 @@ public final class MapStudioCanvas extends JPanel {
         if (entity instanceof Spawn s) return s.getPosition();
         if (entity instanceof Marker m) return m.getPosition();
         if (entity instanceof Prop p) return p.getPosition();
+        if (entity instanceof PlacedCustomEntity ce) return new Vector3(ce.getPosition().x(), 0, ce.getPosition().y());
         return null;
     }
 
@@ -750,6 +810,10 @@ public final class MapStudioCanvas extends JPanel {
             Point sp = normToScreen(pr.getPosition().x() / map.getWidth(), pr.getPosition().z() / map.getHeight());
             if (screenPt.distance(sp) <= radiusPx) return pr;
         }
+        for (PlacedCustomEntity ce : customEntities) {
+            Point sp = normToScreen(ce.getPosition().x() / map.getWidth(), ce.getPosition().y() / map.getHeight());
+            if (screenPt.distance(sp) <= radiusPx + 4) return ce;
+        }
         return null;
     }
 
@@ -763,6 +827,8 @@ public final class MapStudioCanvas extends JPanel {
             m.setPosition(new Vector3(cx, 0, cy));
         } else if (entity instanceof Prop p) {
             p.setPosition(new Vector3(cx, 0, cy));
+        } else if (entity instanceof PlacedCustomEntity ce) {
+            ce.setPosition(new Vector2(cx, cy));
         }
     }
 
@@ -788,6 +854,8 @@ public final class MapStudioCanvas extends JPanel {
                 }
             } else if (obj instanceof Prop p) {
                 map.getProps().remove(p);
+            } else if (obj instanceof PlacedCustomEntity ce) {
+                customEntities.remove(ce);
             }
         }
         selectedEntity = null;
@@ -821,6 +889,8 @@ public final class MapStudioCanvas extends JPanel {
                 }
             } else if (obj instanceof Prop p) {
                 map.getProps().remove(p);
+            } else if (obj instanceof PlacedCustomEntity ce) {
+                customEntities.remove(ce);
             }
         }
     }
@@ -1053,6 +1123,17 @@ public final class MapStudioCanvas extends JPanel {
                 }
             }
 
+            // 5b. Draw Placed Custom Entities
+            if (map != null) {
+                int mw = map.getWidth();
+                int mh = map.getHeight();
+                for (PlacedCustomEntity ce : customEntities) {
+                    Point sp = normToScreen(ce.getPosition().x() / mw, ce.getPosition().y() / mh);
+                    boolean isSelected = (ce == selectedEntity);
+                    drawCustomEntity(g, sp.x, sp.y, ce, isSelected);
+                }
+            }
+
             // 6. Draw Symmetry Ghosts if active placement tool
             if (isPlacementTool(activeTool) && b.contains(mousePos)) {
                 float[] norm = screenToNorm(mousePos);
@@ -1086,7 +1167,7 @@ public final class MapStudioCanvas extends JPanel {
     }
 
     private boolean isPlacementTool(Tool t) {
-        return t == Tool.MEX || t == Tool.GEO || t == Tool.SPAWN || t == Tool.RECLAIM_ROCK || t == Tool.RECLAIM_TREE || t == Tool.RECLAIM_WRECK;
+        return t == Tool.MEX || t == Tool.GEO || t == Tool.SPAWN || t == Tool.RECLAIM_ROCK || t == Tool.RECLAIM_TREE || t == Tool.RECLAIM_WRECK || t == Tool.CUSTOM_OBJECT;
     }
 
     public static Color getMexFillColor(float metal) {
@@ -1233,8 +1314,90 @@ public final class MapStudioCanvas extends JPanel {
                 g.setColor(new Color(50, 200, 90, alpha));
                 g.drawOval(x - 4, y - 4, 8, 8);
             }
+            case CUSTOM_OBJECT -> {
+                if (activeCustomEntity != null) {
+                    int fpX = activeCustomEntity.getFootprintX();
+                    int fpZ = activeCustomEntity.getFootprintZ();
+                    int bw = Math.max(16, (int) (fpX * 4 * zoom));
+                    int bh = Math.max(16, (int) (fpZ * 4 * zoom));
+                    g.setColor(new Color(0, 210, 255, alpha));
+                    g.drawRect(x - bw / 2, y - bh / 2, bw, bh);
+                    g.setFont(BarMapStudio.font(Font.BOLD, 10));
+                    g.drawString(activeCustomEntity.getName(), x + bw / 2 + 4, y + 4);
+                }
+            }
             default -> {}
         }
+    }
+
+    private void drawCustomEntity(Graphics2D g, int x, int y, PlacedCustomEntity ce, boolean isSelected) {
+        ObjectEntity ent = ce.getEntity();
+        int fpX = ent.getFootprintX();
+        int fpZ = ent.getFootprintZ();
+        int bw = Math.max(16, (int) (fpX * 4 * zoom));
+        int bh = Math.max(16, (int) (fpZ * 4 * zoom));
+
+        Color col;
+        switch (ent.getCategory()) {
+            case ANIMATED_SCENERY -> col = new Color(0, 210, 255);
+            case BOSS_UNIT -> col = new Color(255, 150, 30);
+            case STATIC_PROP -> col = new Color(50, 205, 120);
+            case CUSTOM_MESH -> col = new Color(180, 100, 255);
+            default -> col = new Color(74, 158, 255);
+        }
+
+        // Bordo di selezione
+        if (isSelected) {
+            g.setColor(new Color(255, 255, 255, 220));
+            g.setStroke(new BasicStroke(2.0f));
+            g.drawRect(x - bw / 2 - 2, y - bh / 2 - 2, bw + 4, bh + 4);
+        }
+
+        // Riempimento footprint
+        g.setColor(new Color(col.getRed(), col.getGreen(), col.getBlue(), 120));
+        g.fillRect(x - bw / 2, y - bh / 2, bw, bh);
+
+        // Bordo footprint
+        g.setColor(col);
+        g.setStroke(new BasicStroke(1.2f));
+        g.drawRect(x - bw / 2, y - bh / 2, bw, bh);
+
+        // Icona vettoriale centrale
+        if (ent.getCategory() == ObjectEntity.Category.ANIMATED_SCENERY) {
+            int pr = Math.min(bw, bh) / 2 - 2;
+            g.drawLine(x - pr, y - pr, x + pr, y + pr);
+            g.drawLine(x - pr, y + pr, x + pr, y - pr);
+        } else if (ent.getCategory() == ObjectEntity.Category.BOSS_UNIT) {
+            int pr = Math.min(bw, bh) / 2 - 2;
+            g.drawOval(x - pr, y - pr, pr * 2, pr * 2);
+            g.drawLine(x - pr - 2, y, x + pr + 2, y);
+            g.drawLine(x, y - pr - 2, x, y + pr + 2);
+        } else {
+            int pr = Math.min(bw, bh) / 2 - 2;
+            Path2D.Float diamond = new Path2D.Float();
+            diamond.moveTo(x, y - pr);
+            diamond.lineTo(x + pr, y);
+            diamond.lineTo(x, y + pr);
+            diamond.lineTo(x - pr, y);
+            diamond.closePath();
+            g.draw(diamond);
+        }
+
+        // Badge nome sotto
+        String label = ent.getName();
+        g.setFont(BarMapStudio.font(Font.BOLD, Math.max(9, (int) (10 * zoom))));
+        int sw = g.getFontMetrics().stringWidth(label);
+        int badgeW = sw + 6;
+        int badgeH = 13;
+        int bx = x - badgeW / 2;
+        int by = y + bh / 2 + 2;
+
+        g.setColor(new Color(11, 14, 20, 220));
+        g.fillRoundRect(bx, by, badgeW, badgeH, 4, 4);
+        g.setColor(col);
+        g.setStroke(new BasicStroke(0.8f));
+        g.drawRoundRect(bx, by, badgeW, badgeH, 4, 4);
+        g.drawString(label, bx + 3, by + 10);
     }
 
     private void drawHud(Graphics2D g, Rectangle b) {
@@ -1256,7 +1419,7 @@ public final class MapStudioCanvas extends JPanel {
             float hAt = map.getHeightAtWorld(wx, wy);
             float sAt = map.getSlopeAtWorld(wx, wy);
             double deg = Math.toDegrees(Math.atan(sAt));
-            coordStr += String.format(Locale.ROOT, " | Quota: %.1fm | Pend: %.2f (%.1f°)", hAt, sAt, deg);
+            coordStr += String.format(Locale.ROOT, " | Quota: %.1fm | Pend: %.2f (%.1f deg)", hAt, sAt, deg);
         }
 
         if (selectedEntity instanceof Marker m && map != null && map.getMexes().contains(m)) {
@@ -1320,28 +1483,28 @@ public final class MapStudioCanvas extends JPanel {
             g.setColor(new Color(34, 197, 94));
             g.fillRect(legX + 12, cy - 8, 12, 10);
             g.setColor(new Color(240, 244, 250));
-            g.drawString("< 12°  Veicoli OK & Costruibile", legX + 30, cy);
+            g.drawString("< 12 deg  Veicoli OK & Costruibile", legX + 30, cy);
             cy += 18;
 
             // 2. Yellow
             g.setColor(new Color(234, 179, 8));
             g.fillRect(legX + 12, cy - 8, 12, 10);
             g.setColor(new Color(240, 244, 250));
-            g.drawString("12°-20° Veicoli Rallentati", legX + 30, cy);
+            g.drawString("12-20 deg Veicoli Rallentati", legX + 30, cy);
             cy += 18;
 
             // 3. Orange
             g.setColor(new Color(249, 115, 22));
             g.fillRect(legX + 12, cy - 8, 12, 10);
             g.setColor(new Color(240, 244, 250));
-            g.drawString("20°-33° Solo Kbot / Bot", legX + 30, cy);
+            g.drawString("20-33 deg Solo Kbot / Bot", legX + 30, cy);
             cy += 18;
 
             // 4. Red
             g.setColor(new Color(239, 68, 68));
             g.fillRect(legX + 12, cy - 8, 12, 10);
             g.setColor(new Color(240, 244, 250));
-            g.drawString("> 33°  Invalicabile (Scarpata)", legX + 30, cy);
+            g.drawString("> 33 deg  Invalicabile (Scarpata)", legX + 30, cy);
             cy += 18;
 
             // 5. Blue

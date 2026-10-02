@@ -237,6 +237,16 @@ public final class MapStudioPanel extends JPanel {
         centerWrapper.add(canvas, BorderLayout.CENTER);
         canvas.setHudDock(buildCanvasHudDock());
 
+        // Ready Objects Tray in basso a destra
+        ReadyObjectsTray readyTray = new ReadyObjectsTray(entity -> {
+            if (entity != null) {
+                selectCustomEntityTool(entity);
+            } else {
+                selectTool(MapStudioCanvas.Tool.SELECT);
+            }
+        });
+        canvas.setReadyTray(readyTray);
+
         // 3. Resizable Panels Architecture with JSplitPane
         JComponent leftSidebar = buildLeftSidebar();
         JComponent rightSidebar = buildRightSidebar();
@@ -422,6 +432,13 @@ public final class MapStudioPanel extends JPanel {
         JToggleButton b = toolButtons.get(tool);
         if (b != null && !b.isSelected()) {
             b.setSelected(true);
+        }
+    }
+
+    public void selectCustomEntityTool(ObjectEntity entity) {
+        canvas.setActiveCustomEntity(entity);
+        for (JToggleButton b : toolButtons.values()) {
+            b.setSelected(false);
         }
     }
 
@@ -1456,6 +1473,9 @@ public final class MapStudioPanel extends JPanel {
         float maxMetal = ((Number) maxMetalSpinner.getValue()).floatValue();
         float reclaimVal = reclaimSlider.getValue() / 10.0f;
         int numTeams = Math.max(2, (int) m.getSpawns().stream().mapToInt(com.faforever.neroxis.map.Spawn::getTeamID).distinct().count());
+
+        m.getCustomEntities().clear();
+        m.getCustomEntities().addAll(canvas.getCustomEntities());
 
         BarExportOptions options = new BarExportOptions(
             2,

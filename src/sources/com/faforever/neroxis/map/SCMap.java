@@ -93,6 +93,7 @@ public class SCMap {
     private SkyBox skyBox = new SkyBox();
     private BufferedImage preview = new BufferedImage(PreviewGenerator.PREVIEW_SIZE, PreviewGenerator.PREVIEW_SIZE, 2);
     private BufferedImage customTexture = null;
+    private final List<Object> customEntities = new ArrayList<>();
     private int cartographicContourInterval = 100;
     private int cartographicDeepWaterColor = new Color(71, 140, 181).getRGB();
     private int cartographicMapContourColor = new Color(0, 0, 0).getRGB();
@@ -764,6 +765,10 @@ public class SCMap {
     @Generated
     public List<Prop> getProps() {
         return this.props;
+    }
+
+    public List<Object> getCustomEntities() {
+        return this.customEntities;
     }
 
     @Generated

@@ -348,6 +348,9 @@ public final class BarMapExporter {
                     zip.closeEntry();
                 }
             }
+            // Scrittura oggetti ed entità custom, script di animazione e gadget spawner
+            writeCustomEntities(zip);
+
             zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_normals.tga"));
             zip.write(buildNormalsTexture());
             zip.closeEntry();
@@ -929,8 +932,87 @@ public final class BarMapExporter {
                 keptMetal += (long) feature.metal();
             }
         }
+        // Aggiunta Features statiche personalizzate posizionate sulla mappa
+        for (Object customObj : this.map.getCustomEntities()) {
+            if (customObj instanceof com.faforever.neroxis.generator.bar.PlacedCustomEntity ce) {
+                com.faforever.neroxis.generator.bar.ObjectEntity ent = ce.getEntity();
+                if (ent.getCategory() == com.faforever.neroxis.generator.bar.ObjectEntity.Category.STATIC_PROP) {
+                    float fx = ce.getPosition().x() * this.elmosPerCell;
+                    float fz = ce.getPosition().y() * this.elmosPerCell;
+                    addFeature(features, featureTypes, ent.getId(), fx, fz, ce.getRotation());
+                }
+            }
+        }
+
         System.out.printf(Locale.ROOT, "Reclaim: %d of %d metal in rocks and wrecks kept (budget %.0f)%n", Long.valueOf(keptMetal), Long.valueOf(totalMetal), Float.valueOf(budget));
         return features;
+    }
+
+    private void writeCustomEntities(ZipOutputStream zip) throws IOException {
+        List<com.faforever.neroxis.generator.bar.PlacedCustomEntity> toSpawn = new ArrayList<>();
+        for (Object obj : this.map.getCustomEntities()) {
+            if (obj instanceof com.faforever.neroxis.generator.bar.PlacedCustomEntity ce) {
+                com.faforever.neroxis.generator.bar.ObjectEntity ent = ce.getEntity();
+                // 1. Modello 3D OBJ personalizzato
+                if (ent.getObjFilePath() != null && Files.isRegularFile(ent.getObjFilePath())) {
+                    zip.putNextEntry(new ZipEntry("objects3d/" + ent.getId() + ".obj"));
+                    Files.copy(ent.getObjFilePath(), zip);
+                    zip.closeEntry();
+                }
+                // 2. Texture personalizzata
+                if (ent.getTexturePath() != null && Files.isRegularFile(ent.getTexturePath())) {
+                    String ext = ent.getTexturePath().getFileName().toString();
+                    zip.putNextEntry(new ZipEntry("unittextures/" + ent.getId() + "_" + ext));
+                    Files.copy(ent.getTexturePath(), zip);
+                    zip.closeEntry();
+                }
+                // 3. Entità animate (mulini), boss o unità con script Lua personalizzato
+                if (ent.getCategory() == com.faforever.neroxis.generator.bar.ObjectEntity.Category.ANIMATED_SCENERY
+                    || ent.getCategory() == com.faforever.neroxis.generator.bar.ObjectEntity.Category.BOSS_UNIT
+                    || (ent.getLuaScript() != null && !ent.getLuaScript().isBlank())) {
+                    toSpawn.add(ce);
+                    if (ent.getLuaScript() != null && !ent.getLuaScript().isBlank()) {
+                        zip.putNextEntry(new ZipEntry("scripts/" + ent.getId() + ".lua"));
+                        zip.write(ent.getLuaScript().getBytes(StandardCharsets.UTF_8));
+                        zip.closeEntry();
+                    }
+                }
+            }
+        }
+
+        // Generazione del Map Gadget per spawnare le entità in-game
+        if (!toSpawn.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("function gadget:GetInfo()\n");
+            sb.append("    return {\n");
+            sb.append("        name = \"Map Custom Entities Spawner\",\n");
+            sb.append("        desc = \"Spawns animated scenery and custom units placed in BAR Map Studio\",\n");
+            sb.append("        author = \"BAR Map Studio\",\n");
+            sb.append("        date = \"2026\",\n");
+            sb.append("        license = \"GNU GPL, v2 or later\",\n");
+            sb.append("        layer = 0,\n");
+            sb.append("        enabled = true\n");
+            sb.append("    }\n");
+            sb.append("end\n\n");
+            sb.append("if not gadgetHandler:IsSyncedCode() then return end\n\n");
+            sb.append("function gadget:GameStart()\n");
+            for (com.faforever.neroxis.generator.bar.PlacedCustomEntity ce : toSpawn) {
+                com.faforever.neroxis.generator.bar.ObjectEntity ent = ce.getEntity();
+                float wx = ce.getPosition().x() * this.elmosPerCell;
+                float wz = ce.getPosition().y() * this.elmosPerCell;
+                float wy = heightAt(wx, wz);
+                int team = 0;
+                sb.append(String.format(Locale.ROOT,
+                    "    Spring.CreateUnit(\"%s\", %.1f, %.1f, %.1f, \"s\", %d)\n",
+                    ent.getId(), wx, wy, wz, team
+                ));
+            }
+            sb.append("end\n");
+
+            zip.putNextEntry(new ZipEntry("luarules/gadgets/map_custom_spawner.lua"));
+            zip.write(sb.toString().getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+        }
     }
 
     private int symmetricHash(float x, float z) {

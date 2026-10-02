@@ -18,6 +18,7 @@ import java.util.Locale;
 import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.awt.geom.Path2D;
 
 public class BarMapStudio {
 
@@ -26,8 +27,10 @@ public class BarMapStudio {
     public static final Color BG_DARK = new Color(11, 14, 20);
     public static final Color BG_HEADER = new Color(14, 19, 31);
     public static final Color BG_CARD = new Color(18, 24, 38);
+    public static final Color CARD_INNER = new Color(13, 17, 26);
     public static final Color BORDER_COLOR = new Color(30, 38, 56);
     public static final Color TEXT_WHITE = new Color(241, 245, 249);
+    public static final Color TEXT_MAIN = new Color(241, 245, 249);
     public static final Color TEXT_MUTED = new Color(148, 163, 184);
 
     public static final String FONT_MAIN;
@@ -291,9 +294,10 @@ public class BarMapStudio {
                 textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround(), editorPanel.getCurrentSlopeOverlay());
             }
 
+            ObjectsUnitsStudioPanel objectsStudioPanel = new ObjectsUnitsStudioPanel(() -> finalBarData);
             masterViewPanel.add(mapsMasterPanel, "MAPS");
             masterViewPanel.add(textureStudioPanel, "TEXTURES");
-            masterViewPanel.add(unitsView, "UNITS");
+            masterViewPanel.add(objectsStudioPanel, "OBJECTS");
 
             // Build Brand-New Modern Header
             JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj, mapsTabHolder, texturesTabHolder, textureStudioPanel, editorPanel);
@@ -446,14 +450,14 @@ public class BarMapStudio {
         ButtonGroup navGroup = new ButtonGroup();
         JToggleButton mapsTab = createTopNavButton("MAPS", "MAP", true);
         JToggleButton texturesTab = createTopNavButton("TEXTURES", "PALETTE", false);
-        JToggleButton unitsTab = createTopNavButton("UNITS", "SWORDS", false);
+        JToggleButton objectsTab = createTopNavButton("OBJECTS & UNITS", "CUBE", false);
 
         if (mapsTabHolder != null && mapsTabHolder.length > 0) mapsTabHolder[0] = mapsTab;
         if (texturesTabHolder != null && texturesTabHolder.length > 0) texturesTabHolder[0] = texturesTab;
 
         navGroup.add(mapsTab);
         navGroup.add(texturesTab);
-        navGroup.add(unitsTab);
+        navGroup.add(objectsTab);
 
         mapsTab.addActionListener(e -> {
             masterCards.show(masterViewPanel, "MAPS");
@@ -468,18 +472,13 @@ public class BarMapStudio {
             masterCards.show(masterViewPanel, "TEXTURES");
         });
 
-        unitsTab.addActionListener(e -> {
-            try {
-                mEnsureLoaded.invoke(unitsObj);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-            masterCards.show(masterViewPanel, "UNITS");
+        objectsTab.addActionListener(e -> {
+            masterCards.show(masterViewPanel, "OBJECTS");
         });
 
         center.add(mapsTab);
         center.add(texturesTab);
-        center.add(unitsTab);
+        center.add(objectsTab);
         header.add(center, BorderLayout.CENTER);
 
         // Right: Window Controls Only (Clean & Symmetrical)
@@ -811,7 +810,7 @@ public class BarMapStudio {
             super(text, selected);
             this.iconType = iconType;
             setFont(fontCond(Font.BOLD, 13));
-            setPreferredSize(new Dimension(130, 34));
+            setPreferredSize(new Dimension(text.length() > 8 ? 164 : 130, 34));
             setFocusPainted(false);
             setBorderPainted(false);
             setContentAreaFilled(false);
@@ -862,6 +861,8 @@ public class BarMapStudio {
                 drawMapVector(g, startX, iconY, iconSize, iconSize, fg);
             } else if ("PALETTE".equals(iconType)) {
                 drawPaletteVector(g, startX, iconY, iconSize, iconSize, fg);
+            } else if ("CUBE".equals(iconType)) {
+                drawCubeVector(g, startX, iconY, iconSize, iconSize, fg);
             } else if ("SWORDS".equals(iconType)) {
                 drawSwordsVector(g, startX, iconY, iconSize, iconSize, fg);
             }
@@ -871,6 +872,36 @@ public class BarMapStudio {
 
             g.dispose();
         }
+    }
+
+    public static void drawCubeVector(Graphics2D g, int x, int y, int w, int h, Color c) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setColor(c);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setStroke(new BasicStroke(1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+        float cx = x + w * 0.5f;
+        float cy = y + h * 0.5f;
+        float rx = w * 0.44f;
+        float ry = h * 0.24f;
+        float dy = h * 0.30f;
+
+        Path2D.Float top = new Path2D.Float();
+        top.moveTo(cx, cy - dy);
+        top.lineTo(cx + rx, cy - dy + ry);
+        top.lineTo(cx, cy - dy + ry * 2);
+        top.lineTo(cx - rx, cy - dy + ry);
+        top.closePath();
+        g2.draw(top);
+
+        g2.drawLine(Math.round(cx - rx), Math.round(cy - dy + ry), Math.round(cx - rx), Math.round(cy + ry));
+        g2.drawLine(Math.round(cx + rx), Math.round(cy - dy + ry), Math.round(cx + rx), Math.round(cy + ry));
+        g2.drawLine(Math.round(cx), Math.round(cy - dy + ry * 2), Math.round(cx), Math.round(cy + ry * 2));
+
+        g2.drawLine(Math.round(cx - rx), Math.round(cy + ry), Math.round(cx), Math.round(cy + ry * 2));
+        g2.drawLine(Math.round(cx + rx), Math.round(cy + ry), Math.round(cx), Math.round(cy + ry * 2));
+
+        g2.dispose();
     }
 
     public static void drawPaletteVector(Graphics2D g, int x, int y, int w, int h, Color c) {
