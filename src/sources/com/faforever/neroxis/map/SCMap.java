@@ -1096,9 +1096,6 @@ public class SCMap {
     }
 
     public void setPreview(BufferedImage preview) {
-        if (preview != null && (width <= 0 || width == height)) {
-            checkImageSize(preview, PreviewGenerator.PREVIEW_SIZE);
-        }
         this.preview = preview;
     }
 

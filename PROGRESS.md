@@ -208,3 +208,14 @@
 - [x] **Nuova Modalità Ispezione Bioma:** Aggiunta la vista `2. Texture Bioma Originale (MAPS)` nel selettore delle viste per confrontare in ogni momento il terreno generato dal motore BAR con la nuova composizione procedurale multi-materiale.
 - [x] **Aggiornamento Immediato Canvas:** Implementato `MapStudioCanvas.setGroundPreview(scaled)` per fare in modo che la pressione di `[ ★ APPLICA AL TERRENO DELLA MAPPA ]` ridipinga istantaneamente il canvas 3D dell'editor senza residui della vecchia texture.
 
+### 21. Avvio Pulito in Texture Studio, Supporto Heightmap Esterne e Sync Bidirezionale [Commit: 69e19c9]
+- [x] **Avvio Pulito (Clean Slate):** Texture Studio si avvia senza generazioni sintetiche fittizie in background, mostrando un messaggio chiaro di Empty State con istruzioni per iniziare.
+- [x] **Caricamento Diretto Heightmap Esterne:** Aggiunto pulsante `[Carica Heightmap]` nella toolbar superiore di Texture Studio per importare heightmap PNG (16-bit/8-bit), RAW o BMP indipendentemente dalla mappa attiva.
+- [x] **Sincronizzazione Bidirezionale con MAPS:** Trasferimento coerente di heightmap personalizzate, texture composte e maschere di splatting all'editor principale `MAPS` tramite `applyCallback`.
+
+### 22. Risoluzione Vincolo 256px in `SCMap.setPreview` e Icone Vettoriali Native Java2D
+- [x] **Risoluzione Errore "Image size does not match required size":** Rimosso il vecchio controllo `checkImageSize(preview, 256)` in `SCMap.setPreview`. Questo vincolo legacy di Supreme Commander bloccava l'applicazione di anteprime e texture fusi a 512px o 1024px sulle mappe quadrate (`width == height`). Ora qualsiasi risoluzione valida viene accettata sia in `applyComposedTerrain` che in `loadCustomTexture`.
+- [x] **Regola MUST di Progetto & Icone Vettoriali Native Java2D:** Eliminati definitivamente tutti i caratteri Unicode ed emoji da `TextureStudioPanel.java` (`★`, `📂`, `🎲`, `°`) per prevenire glifi tofu (`☒`).
+- [x] **Disegno Vettoriale Antialiased:** Implementate icone Java2D native per la stella (`createVectorStarIcon` con `Path2D`), cartella (`createVectorFolderIcon`), e dadi (`createVectorDiceIcon`), integrate sia nei pulsanti ghost che nel pulsante primario `[APPLICA AL TERRENO DELLA MAPPA]`.
+- [x] **Verifica e Integrazione Beyond All Reason:** Test di generazione procedurale ed esportazione `.sdz` convalidato al 100% da CLI e verifica diretta del metodo `SCMap.setPreview` su mappe 256x256 con runtime Java 25.
+

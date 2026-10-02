@@ -8,6 +8,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
@@ -203,7 +204,7 @@ public class TextureStudioPanel extends JPanel {
         add(buildBottomActionBar(), BorderLayout.SOUTH);
 
         // All'avvio NON generiamo nulla: stato pulito in attesa di azione utente
-        setStatus("In attesa di terreno attivo. Genera in [MAPS] o carica un'Heightmap con [📂 Carica Heightmap].", TEXT_MUTED);
+        setStatus("In attesa di terreno attivo. Genera in [MAPS] o carica un'Heightmap con [Carica Heightmap].", TEXT_MUTED);
     }
 
     public boolean hasCustomHeightmap() {
@@ -330,7 +331,7 @@ public class TextureStudioPanel extends JPanel {
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 6));
         right.setOpaque(false);
 
-        JButton btnLoadHm = createGhostButton("📂 Carica Heightmap");
+        JButton btnLoadHm = createGhostButton("Carica Heightmap", createVectorFolderIcon(12, TEXT_MAIN));
         btnLoadHm.setToolTipText("Carica file Heightmap esterno (.png 16-bit/8-bit, .raw, .bmp)");
         btnLoadHm.addActionListener(e -> doLoadHeightmap());
         right.add(btnLoadHm);
@@ -353,8 +354,8 @@ public class TextureStudioPanel extends JPanel {
         });
         right.add(resCombo);
 
-        JButton btnSeed = createGhostButton("🎲 Varia Rumore");
-        btnSeed.setToolTipText("Varia la micro-rugosità procedurale dei materiali");
+        JButton btnSeed = createGhostButton("Varia Rumore", createVectorDiceIcon(12, TEXT_MAIN));
+        btnSeed.setToolTipText("Varia la micro-rugosita' procedurale dei materiali");
         btnSeed.addActionListener(e -> {
             currentSeed = new SplittableRandom().nextLong();
             triggerAsyncGeneration();
@@ -415,7 +416,7 @@ public class TextureStudioPanel extends JPanel {
 
         panel.add(buildZoneCard(zone1, "Pianure / Valli (Erba)", "Fondo Mappa"));
         panel.add(Box.createVerticalStrut(6));
-        panel.add(buildZoneCard(zone2, "Scarpate / Monti (Roccia)", "Pendenza > 22°"));
+        panel.add(buildZoneCard(zone2, "Scarpate / Monti (Roccia)", "Pendenza > 22 deg"));
         panel.add(Box.createVerticalStrut(6));
         panel.add(buildZoneCard(zone3, "Costa / Spiaggia (Sabbia)", "Livello Acqua"));
         panel.add(Box.createVerticalStrut(6));
@@ -496,7 +497,7 @@ public class TextureStudioPanel extends JPanel {
         }));
         panel.add(Box.createVerticalStrut(6));
 
-        panel.add(createCompactSliderRow("Rugosità (Persistenza):", (int)(matPersistence * 100), 20, 80, "%", val -> {
+        panel.add(createCompactSliderRow("Rugosita' (Persistenza):", (int)(matPersistence * 100), 20, 80, "%", val -> {
             matPersistence = val / 100.0f;
             queueRegen();
         }));
@@ -508,7 +509,7 @@ public class TextureStudioPanel extends JPanel {
         }));
         panel.add(Box.createVerticalStrut(6));
 
-        panel.add(createCompactSliderRow("Intensità Normal Map (Bump):", (int)(matBump * 50), 10, 150, "", val -> {
+        panel.add(createCompactSliderRow("Intensita' Normal Map (Bump):", (int)(matBump * 50), 10, 150, "", val -> {
             matBump = val / 50.0f;
             queueRegen();
         }));
@@ -809,7 +810,7 @@ public class TextureStudioPanel extends JPanel {
         btnSaveNormal.addActionListener(e -> saveCurrentTexture(true));
         actions.add(btnSaveNormal);
 
-        JButton btnApplyToMap = new JButton("★ APPLICA AL TERRENO DELLA MAPPA") {
+        JButton btnApplyToMap = new JButton("APPLICA AL TERRENO DELLA MAPPA") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -823,6 +824,8 @@ public class TextureStudioPanel extends JPanel {
                 super.paintComponent(g);
             }
         };
+        btnApplyToMap.setIcon(createVectorStarIcon(13, new Color(11, 14, 20)));
+        btnApplyToMap.setIconTextGap(6);
         btnApplyToMap.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         btnApplyToMap.setForeground(new Color(11, 14, 20));
         btnApplyToMap.setContentAreaFilled(false);
@@ -859,7 +862,7 @@ public class TextureStudioPanel extends JPanel {
             renderedChannelG = null;
             renderedChannelB = null;
             renderedChannelA = null;
-            setStatus("Nessun terreno attivo. Genera in [MAPS] o carica un'Heightmap con [📂 Carica Heightmap].", TEXT_MUTED);
+            setStatus("Nessun terreno attivo. Genera in [MAPS] o carica un'Heightmap con [Carica Heightmap].", TEXT_MUTED);
             if (canvas != null) canvas.repaint();
             return;
         }
@@ -1339,7 +1342,7 @@ public class TextureStudioPanel extends JPanel {
 
                     g2.setColor(TEXT_MAIN);
                     g2.drawString("1. Puoi generare una mappa procedurale nella scheda [MAPS]", bx + 24, by + 88);
-                    g2.drawString("2. Oppure carica un'Heightmap con il tasto in alto [📂 Carica Heightmap]", bx + 24, by + 112);
+                    g2.drawString("2. Oppure carica un'Heightmap con il tasto in alto [Carica Heightmap]", bx + 24, by + 112);
                 } else {
                     g2.setColor(TEXT_MUTED);
                     g2.setFont(BarMapStudio.font(Font.PLAIN, 12));
@@ -1422,7 +1425,86 @@ public class TextureStudioPanel extends JPanel {
         @Override public boolean getScrollableTracksViewportHeight() { return false; }
     }
 
+    private static Icon createVectorStarIcon(int size, Color color) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                Path2D.Double star = new Path2D.Double();
+                double cx = x + size / 2.0;
+                double cy = y + size / 2.0;
+                double rOuter = size * 0.48;
+                double rInner = size * 0.20;
+                for (int i = 0; i < 10; i++) {
+                    double r = (i % 2 == 0) ? rOuter : rInner;
+                    double angle = -Math.PI / 2.0 + (i * Math.PI / 5.0);
+                    double px = cx + r * Math.cos(angle);
+                    double py = cy + r * Math.sin(angle);
+                    if (i == 0) star.moveTo(px, py);
+                    else star.lineTo(px, py);
+                }
+                star.closePath();
+                g2.fill(star);
+                g2.dispose();
+            }
+            @Override public int getIconWidth() { return size; }
+            @Override public int getIconHeight() { return size; }
+        };
+    }
+
+    private static Icon createVectorFolderIcon(int size, Color color) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                g2.setStroke(new BasicStroke(1.2f));
+                int fx = x + 1;
+                int fy = y + 2;
+                int fw = size - 2;
+                int fh = size - 4;
+                g2.drawRoundRect(fx, fy + 2, fw, fh - 2, 2, 2);
+                g2.drawLine(fx, fy + 2, fx + 3, fy + 2);
+                g2.drawLine(fx + 3, fy, fx + 6, fy);
+                g2.drawLine(fx + 6, fy + 2, fx + fw, fy + 2);
+                g2.dispose();
+            }
+            @Override public int getIconWidth() { return size; }
+            @Override public int getIconHeight() { return size; }
+        };
+    }
+
+    private static Icon createVectorDiceIcon(int size, Color color) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                g2.setStroke(new BasicStroke(1.2f));
+                int dx = x + 1;
+                int dy = y + 1;
+                int dw = size - 2;
+                int dh = size - 2;
+                g2.drawRoundRect(dx, dy, dw, dh, 3, 3);
+                g2.fillOval(dx + 2, dy + 2, 2, 2);
+                g2.fillOval(dx + dw / 2 - 1, dy + dh / 2 - 1, 2, 2);
+                g2.fillOval(dx + dw - 4, dy + dh - 4, 2, 2);
+                g2.dispose();
+            }
+            @Override public int getIconWidth() { return size; }
+            @Override public int getIconHeight() { return size; }
+        };
+    }
+
     private static JButton createGhostButton(String text) {
+        return createGhostButton(text, null);
+    }
+
+    private static JButton createGhostButton(String text, Icon icon) {
         JButton btn = new JButton(text) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -1436,6 +1518,10 @@ public class TextureStudioPanel extends JPanel {
                 super.paintComponent(g);
             }
         };
+        if (icon != null) {
+            btn.setIcon(icon);
+            btn.setIconTextGap(5);
+        }
         btn.setFont(BarMapStudio.font(Font.BOLD, 10));
         btn.setForeground(TEXT_MAIN);
         btn.setContentAreaFilled(false);
