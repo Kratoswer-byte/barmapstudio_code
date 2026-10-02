@@ -300,7 +300,7 @@ public class BarMapStudio {
             masterViewPanel.add(objectsStudioPanel, "OBJECTS");
 
             // Build Brand-New Modern Header
-            JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj, mapsTabHolder, texturesTabHolder, textureStudioPanel, editorPanel);
+            JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj, mapsTabHolder, texturesTabHolder, textureStudioPanel, editorPanel, objectsStudioPanel);
 
             // Build Slim Modern Footer with Status & Help Overlays
             JPanel customFooter = buildCustomFooter(frame, launcher, barStatus, lobby);
@@ -405,7 +405,8 @@ public class BarMapStudio {
         JToggleButton[] mapsTabHolder,
         JToggleButton[] texturesTabHolder,
         TextureStudioPanel textureStudioPanel,
-        MapStudioPanel editorPanel
+        MapStudioPanel editorPanel,
+        ObjectsUnitsStudioPanel objectsStudioPanel
     ) {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(BG_HEADER);
@@ -473,6 +474,9 @@ public class BarMapStudio {
         });
 
         objectsTab.addActionListener(e -> {
+            if (objectsStudioPanel != null) {
+                objectsStudioPanel.ensureOfficialUnitsLoaded();
+            }
             masterCards.show(masterViewPanel, "OBJECTS");
         });
 

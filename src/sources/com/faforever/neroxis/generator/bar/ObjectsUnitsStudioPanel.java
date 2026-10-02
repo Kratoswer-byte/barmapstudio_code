@@ -22,9 +22,9 @@ import java.util.function.Supplier;
 /**
  * Schermata "OBJECTS & UNITS STUDIO" per BAR MAP STUDIO.
  * Layout moderno a 3 colonne conforme al tema dark-tech:
- * - Colonna 1: Catalogo completo (unità BAR, props, animati, boss) + Importazione mesh OBJ
- * - Colonna 2: Viewport 3D interattivo Java2D con Orbit 360°, Pan e Zoom
- * - Colonna 3: Proprietà entità, editor pulito per script Lua con convalidatore ANTLR4 e pulsante "INVIA ALLA MAPPA"
+ * - Colonna 1: Catalogo completo (unita' BAR, props, animati, boss) + Importazione mesh OBJ
+ * - Colonna 2: Viewport 3D interattivo Java2D con Orbit 360 deg, Pan e Zoom
+ * - Colonna 3: Proprieta' entita', editor pulito per script Lua con convalidatore ANTLR4 e pulsante "INVIA ALLA MAPPA"
  */
 public final class ObjectsUnitsStudioPanel extends JPanel {
 
@@ -58,6 +58,9 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
 
     private ObjectEntity selectedEntity = null;
 
+    private boolean officialUnitsLoaded = false;
+    private boolean officialUnitsLoading = false;
+
     public ObjectsUnitsStudioPanel(Supplier<Path> barDataSupplier) {
         this.barDataSupplier = barDataSupplier;
         setLayout(new BorderLayout());
@@ -65,7 +68,6 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
 
         initDefaultEntities();
         initUI();
-        loadOfficialUnitsAsync();
     }
 
     private void initDefaultEntities() {
@@ -76,7 +78,9 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         refillList();
     }
 
-    private void loadOfficialUnitsAsync() {
+    public void ensureOfficialUnitsLoaded() {
+        if (officialUnitsLoaded || officialUnitsLoading) return;
+        officialUnitsLoading = true;
         Thread t = new Thread(() -> {
             try {
                 Path data = barDataSupplier != null ? barDataSupplier.get() : null;
@@ -92,13 +96,17 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
                         }
                         SwingUtilities.invokeLater(() -> {
                             allEntities.addAll(loaded);
+                            officialUnitsLoaded = true;
+                            officialUnitsLoading = false;
                             refillList();
                         });
+                        return;
                     }
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
+            officialUnitsLoading = false;
         }, "objects-units-loader");
         t.setDaemon(true);
         t.start();
@@ -177,6 +185,9 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
             styleFilterToggle(btn);
             btn.addActionListener(e -> {
                 activeCategoryFilter = cat;
+                if ("BAR".equals(cat) || "TUTTI".equals(cat)) {
+                    ensureOfficialUnitsLoaded();
+                }
                 refillList();
             });
             filters.add(btn);
@@ -189,37 +200,39 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         entityList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         entityList.setBackground(BarMapStudio.CARD_INNER);
         entityList.setFixedCellHeight(46);
-        entityList.setCellRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                JPanel cell = new JPanel(new BorderLayout(6, 2));
-                cell.setOpaque(true);
-                cell.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
 
-                if (isSelected) {
-                    cell.setBackground(new Color(24, 38, 56));
-                } else {
-                    cell.setBackground(index % 2 == 0 ? BarMapStudio.CARD_INNER : new Color(17, 21, 31));
-                }
+        // Reusable Flyweight cell renderer (zero garbage, maximum performance)
+        JPanel cell = new JPanel(new BorderLayout(6, 2));
+        cell.setOpaque(true);
+        cell.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        JLabel nameLbl = new JLabel();
+        nameLbl.setFont(BarMapStudio.font(Font.BOLD, 12));
+        JLabel subLbl = new JLabel();
+        subLbl.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        cell.add(nameLbl, BorderLayout.NORTH);
+        cell.add(subLbl, BorderLayout.SOUTH);
 
-                if (value instanceof ObjectEntity entity) {
-                    JLabel nameLbl = new JLabel(entity.getName());
-                    nameLbl.setFont(BarMapStudio.font(Font.BOLD, 12));
-                    nameLbl.setForeground(isSelected ? BarMapStudio.ACCENT_CYAN : BarMapStudio.TEXT_MAIN);
-
-                    Color badgeColor = getCategoryColor(entity.getCategory(), entity.getFaction());
-                    String sub = entity.getCategory().getLabel() + " | " + entity.getFaction();
-                    if (entity.getTier() > 0) sub += " | T" + entity.getTier();
-
-                    JLabel subLbl = new JLabel(sub);
-                    subLbl.setFont(BarMapStudio.font(Font.PLAIN, 10));
-                    subLbl.setForeground(badgeColor);
-
-                    cell.add(nameLbl, BorderLayout.NORTH);
-                    cell.add(subLbl, BorderLayout.SOUTH);
-                }
-                return cell;
+        entityList.setCellRenderer((list, value, index, isSelected, cellHasFocus) -> {
+            if (isSelected) {
+                cell.setBackground(new Color(24, 38, 56));
+                nameLbl.setForeground(BarMapStudio.ACCENT_CYAN);
+            } else {
+                cell.setBackground(index % 2 == 0 ? BarMapStudio.CARD_INNER : new Color(17, 21, 31));
+                nameLbl.setForeground(BarMapStudio.TEXT_MAIN);
             }
+
+            if (value instanceof ObjectEntity entity) {
+                nameLbl.setText(entity.getName());
+                Color badgeColor = getCategoryColor(entity.getCategory(), entity.getFaction());
+                String sub = entity.getCategory().getLabel() + " | " + entity.getFaction();
+                if (entity.getTier() > 0) sub += " | T" + entity.getTier();
+                subLbl.setText(sub);
+                subLbl.setForeground(badgeColor);
+            } else {
+                nameLbl.setText("");
+                subLbl.setText("");
+            }
+            return cell;
         });
 
         entityList.addListSelectionListener(e -> {
@@ -294,7 +307,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
 
     private void refillList() {
         String filter = searchField.getText().trim().toLowerCase(Locale.ROOT);
-        listModel.clear();
+        List<ObjectEntity> filtered = new ArrayList<>();
 
         for (ObjectEntity e : allEntities) {
             if (!activeCategoryFilter.equals("TUTTI")) {
@@ -309,11 +322,16 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
                 if (!searchTarget.contains(filter)) continue;
             }
 
-            listModel.addElement(e);
+            filtered.add(e);
         }
 
-        if (!listModel.isEmpty() && entityList.getSelectedIndex() < 0) {
-            entityList.setSelectedIndex(0);
+        ObjectEntity prev = selectedEntity;
+        listModel.clear();
+        listModel.addAll(filtered);
+
+        if (!listModel.isEmpty()) {
+            int selIdx = (prev != null) ? filtered.indexOf(prev) : 0;
+            entityList.setSelectedIndex(Math.max(0, selIdx));
         }
     }
 
@@ -333,7 +351,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
     }
 
     // =========================================================================
-    // COLONNA 3: PROPRIETÀ & EDITOR SCRIPT LUA
+    // COLONNA 3: PROPRIETA' & EDITOR SCRIPT LUA
     // =========================================================================
     private JPanel buildRightColumn() {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
@@ -341,7 +359,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         panel.setBorder(BorderFactory.createEmptyBorder(10, 8, 10, 12));
         panel.setPreferredSize(new Dimension(380, 100));
 
-        // 1. Scheda Dati & Proprietà
+        // 1. Scheda Dati & Proprieta'
         JPanel propsCard = new JPanel(new GridLayout(0, 2, 8, 6));
         propsCard.setOpaque(false);
         propsCard.setBorder(BorderFactory.createTitledBorder(
@@ -588,7 +606,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
             centerContainer.removeAll();
             centerContainer.add(canvas3D, BorderLayout.CENTER);
         } else if (entity.getOfficialUnit() != null) {
-            // Unità ufficiale BAR: carica buildpic se non ha mesh
+            // Unita' ufficiale BAR: carica buildpic se non ha mesh
             loadOfficialPreview(entity.getOfficialUnit());
         } else {
             // Crea un modello placeholder procedurale
@@ -616,10 +634,11 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
 
         Thread loader = new Thread(() -> {
             BufferedImage img = Units.readPicture(finalData, unit);
+            ImageIcon icon = (img != null) ? new ImageIcon(img.getScaledInstance(256, 256, Image.SCALE_SMOOTH)) : null;
             SwingUtilities.invokeLater(() -> {
-                if (img != null) {
+                if (icon != null) {
                     preview2dLabel.setText("");
-                    preview2dLabel.setIcon(new ImageIcon(img.getScaledInstance(256, 256, Image.SCALE_SMOOTH)));
+                    preview2dLabel.setIcon(icon);
                 } else {
                     // Fallback a modello procedurale
                     ObjModel3D cube = ObjModel3D.createProceduralCube(2.5f);

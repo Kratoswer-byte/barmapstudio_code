@@ -4,14 +4,14 @@ import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 
 /**
- * Entità unificata per Objects & Units Studio:
- * rappresenta unità ufficiali di BAR, props di scenario (alberi, rocce, relitti),
+ * Entita' unificata per Objects & Units Studio:
+ * rappresenta unita' ufficiali di BAR, props di scenario (alberi, rocce, relitti),
  * elementi animati (mulini a vento, radar), boss e mesh 3D esterne importate.
  */
 public final class ObjectEntity {
 
     public enum Category {
-        OFFICIAL_UNIT("Unità BAR"),
+        OFFICIAL_UNIT("Unita' BAR"),
         STATIC_PROP("Oggetto Statico"),
         ANIMATED_SCENERY("Scenery Animato"),
         BOSS_UNIT("Boss / Titano"),
@@ -45,6 +45,12 @@ public final class ObjectEntity {
     public ObjectEntity(String id, String name, Category category, String faction,
                         int footprintX, int footprintZ, int health, int metal, int energy,
                         String tooltip, ObjModel3D model3D, String luaScript) {
+        this(id, name, category, faction, footprintX, footprintZ, health, metal, energy, tooltip, model3D, luaScript, null);
+    }
+
+    public ObjectEntity(String id, String name, Category category, String faction,
+                        int footprintX, int footprintZ, int health, int metal, int energy,
+                        String tooltip, ObjModel3D model3D, String luaScript, Units.Unit officialUnit) {
         this.id = id;
         this.name = name;
         this.category = category;
@@ -59,7 +65,7 @@ public final class ObjectEntity {
         this.tooltip = tooltip != null ? tooltip : "";
         this.model3D = model3D;
         this.luaScript = luaScript != null ? luaScript : "";
-        this.officialUnit = null;
+        this.officialUnit = officialUnit;
     }
 
     /**
@@ -77,7 +83,8 @@ public final class ObjectEntity {
             unit.energy(),
             unit.tooltip(),
             null,
-            ""
+            "",
+            unit
         );
         entity.tier = unit.tier();
         entity.speed = unit.speed();
