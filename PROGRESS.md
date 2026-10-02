@@ -1,6 +1,6 @@
 # STATO AVANZAMENTO: BAR MAP STUDIO
 
-**Ultimo Aggiornamento:** 01 Ottobre 2026  
+**Ultimo Aggiornamento:** 02 Ottobre 2026  
 **Stato Generale:** In Corso (Step 0 completato)
 
 ---
@@ -35,6 +35,7 @@
 | `4d149cb` | `feat/fix` | 02/10/2026 15:30 | Supporto mappe rettangolari in Texture Studio ed esportazione texture personalizzate in BAR |
 | `a040f9e` | `fix` | 02/10/2026 16:10 | Allineamento a sinistra titoli e descrizioni sezioni in Texture Studio (BoxLayout alignmentX) |
 | `9e800db` | `feat` | 02/10/2026 16:40 | Integrati comandi HUD Slope Map, opacita' e zoom 1:1 in Texture Studio |
+| `432ad9c` | `feat` | 02/10/2026 17:55 | Nuova suite Objects & Units Studio: viewport 3D, validatore Lua, import Wavefront .obj e placement tray in MAPS |
 
 ---
 
@@ -266,6 +267,31 @@
   - Tasti `+`, `-`, `=`, `0`, tastierino numerico: regolazione e reset zoom.
   - Protezione da digitazione (`!isTypingInText()`): le scorciatoie non interferiscono quando si digita testo o numeri nei campi della UI.
 - [x] **Rigida Aderenza alle Regole MUST:** Zero caratteri non-ASCII (`deg` al posto del simbolo di grado, apici singoli standard), icone e pulsanti Swing vettoriali conformi.
+
+### 26. Nuova Suite "Objects & Units Studio" con Viewport 3D, Validatore Lua e Placement Tray in MAPS [Commit: 432ad9c]
+- [x] **Sostituzione Completa della Tab UNITS:** La precedente scheda `UNITS` e' stata interamente sostituita dal nuovo modulo professionale `OBJECTS & UNITS` (tasto `OBJECTS & UNITS` con icona 3D isometrica nativa Java2D `drawCubeVector`).
+- [x] **Architettura a 3 Colonne Dark-Tech:**
+  - *Colonna Sinistra (Catalogo Asset):* Barra di ricerca in tempo reale, filtri per categoria (`TUTTI`, `UNITÀ`, `PROP`, `ANIMATI`, `BOSS`, `CUSTOM`), pulsante di importazione mesh esterne `[ + CARICA MESH .OBJ ]` e lista interattiva ad alto contrasto con badge cromatici per fazione/categoria.
+  - *Colonna Centrale (Viewport 3D Vettoriale Software):* Rasterizzatore Java2D puro a 60 FPS con Orbit 360 deg (LMB drag), Pan (RMB drag), Zoom (rotellina e bottoni HUD), griglia prospettica a terra, modalita' solida con shading direzionale `SHADED` e blueprint wireframe `WIREFRAME`, con indicatore quote, vertici e poligoni live.
+  - *Colonna Destra (Inspector & Editor Lua):* Scheda parametri (ID, Nome, Categoria, File Modello, Coordinate, Scala, Raggio), editor di codice Lua pulito con numeri di riga e pulsanti Rapidi Copia/Incolla, e pulsante **"VALIDA SINTASSI LUA"** collegato direttamente al motore ANTLR4 `LuaLexer` & `LuaParser` con feedback di sintassi in tempo reale (linea, colonna, token errato). Nessun pulsante template invadente, conforme alla richiesta utente.
+  - *Pulsante di Invio Palette:* Tasto `[ ★ INVIA ALLA MAPPA ]` che spinge l'oggetto configurato nel bus condiviso `ReadyObjectsManager`.
+- [x] **Docking Tray Flottante in MAPS ("OGGETTI & UNITÀ PRONTI"):**
+  - Pannello a cassetto richiudibile posizionato in basso a destra nell'editor `MAPS` (`ReadyObjectsTray`).
+  - Mostra l'elenco delle entita' pronte con pulsante di selezione attiva e cestino rapido `[x]` per rimuoverle.
+  - Cliccando su un elemento viene attivato lo strumento dedicato `CUSTOM_OBJECT` nel canvas della mappa.
+- [x] **Piazzamento, Trascinamento e Simmetria in `MapStudioCanvas`:**
+  - Supporto per ghost preview sotto il cursore con calcolo automatico dei punti simmetrici (X, Y, Puntuale, Diagonale).
+  - Posizionamento con LMB, drag & drop per spostare gli oggetti gia' posizionati, selezione con bounding box e cancellazione rapida con `Delete` / `Backspace`.
+  - Integrazione completa nello stack di Undo/Redo dell'editor.
+- [x] **Parser Wavefront .OBJ & Modelli Procedurali:**
+  - `ObjParser.java`: parser ad alte prestazioni senza dipendenze native, con triangolazione automatica a ventaglio dei poligoni, ricalcolo normali d'area e calcolo bounding box AABB.
+  - `ObjModel3D.java`: generatori procedurali integrati per cubi dimensionali e mulini a vento animati BAR-compliant.
+- [x] **Pipeline di Esportazione Mappa .SDZ BAR (`BarMapExporter.java`):**
+  - Gli elementi statici di tipo `STATIC_PROP` vengono scritti direttamente nel blocco `buildFeatures` del file binario `.smf` con rotazione e coordinate esatte.
+  - Le entita' custom (mesh `.obj` e texture) vengono automaticamente confezionate nelle cartelle dedicate dell'archivio `.sdz` (`objects3d/` e `unittextures/`).
+  - Per gli oggetti animati e le unita' boss viene generato il gadget Lua `luarules/gadgets/map_custom_spawner.lua` che effettua lo spawn automatico delle unita' all'avvio partita (`gadget:GameStart()`).
+- [x] **Rigida Aderenza alle Regole MUST:** Zero caratteri non-ASCII o emoji (icone native Java2D con `Path2D`), tipografia conforme e compatibilita' totale con il runtime Java 25.
+
 
 
 
