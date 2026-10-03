@@ -3,25 +3,27 @@ package com.faforever.neroxis.generator.bar;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.io.File;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 
 /**
- * Contenitore integrato nel pannello destro di MAPS (sotto Densita' Reclaim e sopra Genera Mappa).
- * Mostra l'elenco degli oggetti e unita' preparati nello Studio e pronti per essere piazzati
- * interattivamente sul canvas della mappa con supporto per selezione, rimozione e svuotamento.
+ * Pannello dedicato alla Palette degli Oggetti & Unità Pronti per il piazzamento in MAPS.
+ * Permette di selezionare elementi, importare direttamente file .obj 3D,
+ * aprire lo studio completo e monitorare gli oggetti piazzati.
  */
 public final class ReadyObjectsTray extends JPanel {
 
     private final JPanel cardsPanel = new JPanel();
     private final JLabel headerTitle = new JLabel("OGGETTI & UNITA' PRONTI (0)");
-    private final JButton openStudioBtn = new JButton("+ Studio");
-    private final JButton toggleBtn = new JButton("[-]");
+    private final JButton openStudioBtn = new JButton("+ Studio 3D");
+    private final JButton importObjBtn = new JButton("+ Importa .OBJ");
+    private final JLabel activeStatusLabel = new JLabel("Clicca un oggetto per piazzarlo sulla mappa.");
     private final JScrollPane scrollPane;
-    private final JLabel placedCountLabel = new JLabel("Piazzati: 0");
-    private final JButton clearPlacedBtn = new JButton("Svuota");
+    private final JLabel placedCountLabel = new JLabel("Piazzati: 0 oggetti");
+    private final JButton clearPlacedBtn = new JButton("Svuota Piazzati");
     private final JPanel footerPanel = new JPanel(new BorderLayout(6, 0));
-    private boolean isCollapsed = false;
 
     private ObjectEntity activeSelectedEntity = null;
     private Consumer<ObjectEntity> onEntitySelectedCallback = null;
@@ -41,54 +43,74 @@ public final class ReadyObjectsTray extends JPanel {
         this.onOpenStudioCallback = onOpenStudio;
         this.onClearPlacedCallback = onClearPlaced;
 
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        setBackground(BarMapStudio.CARD_INNER);
-        setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BarMapStudio.BORDER_COLOR, 1, true),
-            new EmptyBorder(8, 8, 8, 8)
-        ));
-        setAlignmentX(0f);
-        setMaximumSize(new Dimension(Integer.MAX_VALUE, 260));
+        setLayout(new BorderLayout(0, 8));
+        setBackground(BarMapStudio.BG_CARD);
+        setOpaque(false);
 
-        // 1. Header Tray
+        // 1. Header con titolo, azioni veloci e banner di selezione attiva
+        JPanel topBox = new JPanel();
+        topBox.setLayout(new BoxLayout(topBox, BoxLayout.Y_AXIS));
+        topBox.setOpaque(false);
+
         JPanel header = new JPanel(new BorderLayout(6, 0));
         header.setOpaque(false);
-        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-        header.setAlignmentX(0f);
+        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
 
-        headerTitle.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
+        headerTitle.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         headerTitle.setForeground(BarMapStudio.ACCENT_CYAN);
-        header.add(headerTitle, BorderLayout.CENTER);
+        header.add(headerTitle, BorderLayout.WEST);
 
         JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         headerActions.setOpaque(false);
 
+        importObjBtn.setFont(BarMapStudio.font(Font.BOLD, 10));
+        importObjBtn.setForeground(new Color(255, 190, 70));
+        importObjBtn.setBackground(new Color(36, 30, 20));
+        importObjBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(150, 100, 20), 1, true),
+            new EmptyBorder(3, 7, 3, 7)
+        ));
+        importObjBtn.setFocusPainted(false);
+        importObjBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        importObjBtn.setToolTipText("Importa un file .obj 3D Wavefront direttamente nella palette");
+        importObjBtn.addActionListener(e -> importCustomObj());
+        headerActions.add(importObjBtn);
+
         openStudioBtn.setFont(BarMapStudio.font(Font.BOLD, 10));
         openStudioBtn.setForeground(BarMapStudio.ACCENT_CYAN);
+        openStudioBtn.setBackground(new Color(18, 32, 48));
+        openStudioBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BarMapStudio.BORDER_COLOR, 1, true),
+            new EmptyBorder(3, 7, 3, 7)
+        ));
         openStudioBtn.setFocusPainted(false);
-        openStudioBtn.setBorderPainted(false);
-        openStudioBtn.setContentAreaFilled(false);
         openStudioBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        openStudioBtn.setToolTipText("Apri Objects & Units Studio");
+        openStudioBtn.setToolTipText("Apri Objects & Units Studio per gestire tutti i parametri e script");
         openStudioBtn.addActionListener(e -> {
             if (onOpenStudioCallback != null) onOpenStudioCallback.run();
         });
         headerActions.add(openStudioBtn);
 
-        toggleBtn.setFont(BarMapStudio.font(Font.BOLD, 10));
-        toggleBtn.setForeground(BarMapStudio.TEXT_MUTED);
-        toggleBtn.setFocusPainted(false);
-        toggleBtn.setBorderPainted(false);
-        toggleBtn.setContentAreaFilled(false);
-        toggleBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        toggleBtn.addActionListener(e -> toggleCollapse());
-        headerActions.add(toggleBtn);
-
         header.add(headerActions, BorderLayout.EAST);
-        add(header);
-        add(Box.createVerticalStrut(6));
+        topBox.add(header);
+        topBox.add(Box.createVerticalStrut(4));
 
-        // 2. Contenitore Cards Scrollabile
+        // Banner di stato selezione attiva
+        activeStatusLabel.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        activeStatusLabel.setForeground(BarMapStudio.TEXT_MUTED);
+        activeStatusLabel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(30, 42, 60), 1, true),
+            new EmptyBorder(4, 6, 4, 6)
+        ));
+        activeStatusLabel.setOpaque(true);
+        activeStatusLabel.setBackground(BarMapStudio.CARD_INNER);
+        activeStatusLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+        activeStatusLabel.setAlignmentX(0f);
+        topBox.add(activeStatusLabel);
+
+        add(topBox, BorderLayout.NORTH);
+
+        // 2. Contenitore Cards Scrollabile a tutta altezza
         cardsPanel.setLayout(new BoxLayout(cardsPanel, BoxLayout.Y_AXIS));
         cardsPanel.setOpaque(false);
 
@@ -96,27 +118,28 @@ public final class ReadyObjectsTray extends JPanel {
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
         scrollPane.setBorder(BorderFactory.createLineBorder(new Color(30, 42, 60), 1));
-        scrollPane.setPreferredSize(new Dimension(240, 110));
-        scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
-        scrollPane.setAlignmentX(0f);
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.getVerticalScrollBar().setUnitIncrement(18);
-        add(scrollPane);
+        add(scrollPane, BorderLayout.CENTER);
 
         // 3. Footer Tray (Piazzati sulla mappa + Tasto Svuota)
         footerPanel.setOpaque(false);
-        footerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
-        footerPanel.setAlignmentX(0f);
-        footerPanel.setBorder(new EmptyBorder(6, 2, 0, 2));
+        footerPanel.setPreferredSize(new Dimension(Integer.MAX_VALUE, 26));
+        footerPanel.setBorder(new EmptyBorder(4, 2, 2, 2));
 
         placedCountLabel.setFont(BarMapStudio.font(Font.PLAIN, 10));
         placedCountLabel.setForeground(BarMapStudio.TEXT_MUTED);
         footerPanel.add(placedCountLabel, BorderLayout.CENTER);
 
-        clearPlacedBtn.setFont(BarMapStudio.font(Font.BOLD, 9));
+        clearPlacedBtn.setFont(BarMapStudio.font(Font.BOLD, 10));
         clearPlacedBtn.setForeground(new Color(255, 120, 120));
+        clearPlacedBtn.setBackground(new Color(40, 20, 20));
+        clearPlacedBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(120, 40, 40), 1, true),
+            new EmptyBorder(2, 8, 2, 8)
+        ));
         clearPlacedBtn.setFocusPainted(false);
-        clearPlacedBtn.setBorderPainted(false);
-        clearPlacedBtn.setContentAreaFilled(false);
         clearPlacedBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         clearPlacedBtn.setToolTipText("Rimuove tutti gli oggetti personalizzati piazzati sulla mappa");
         clearPlacedBtn.addActionListener(e -> {
@@ -124,11 +147,52 @@ public final class ReadyObjectsTray extends JPanel {
         });
         footerPanel.add(clearPlacedBtn, BorderLayout.EAST);
 
-        add(footerPanel);
+        add(footerPanel, BorderLayout.SOUTH);
 
         // Iscriviti agli aggiornamenti di ReadyObjectsManager
         ReadyObjectsManager.getInstance().addListener(this::refreshCards);
         refreshCards(ReadyObjectsManager.getInstance().getReadyObjects());
+    }
+
+    private void importCustomObj() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Seleziona File Modello 3D Wavefront (.obj)");
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Modelli Wavefront (.obj)", "obj"));
+
+        int res = chooser.showOpenDialog(this);
+        if (res == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            try {
+                ObjModel3D parsed = ObjParser.parse(file);
+                String baseName = file.getName().replaceAll("(?i)\\.obj$", "");
+                String cleanId = "custom_" + baseName.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_]", "_");
+
+                ObjectEntity custom = new ObjectEntity(
+                    cleanId,
+                    baseName,
+                    ObjectEntity.Category.CUSTOM_MESH,
+                    "Custom",
+                    3, 3,
+                    1000, 200, 0,
+                    "Mesh 3D importata da " + file.getName(),
+                    parsed,
+                    ""
+                );
+                custom.setObjFilePath(file.toPath());
+
+                ReadyObjectsManager.getInstance().addReadyObject(custom);
+                activeSelectedEntity = custom;
+                refreshCards(ReadyObjectsManager.getInstance().getReadyObjects());
+                if (onEntitySelectedCallback != null) {
+                    onEntitySelectedCallback.accept(custom);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Errore durante l'importazione del file .obj:\n" + ex.getMessage(),
+                    "Errore Importazione Mesh",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     public void setOnEntitySelected(Consumer<ObjectEntity> callback) {
@@ -149,6 +213,10 @@ public final class ReadyObjectsTray extends JPanel {
 
     public void clearSelection() {
         this.activeSelectedEntity = null;
+        if (activeStatusLabel != null) {
+            activeStatusLabel.setText("Clicca un oggetto per piazzarlo sulla mappa.");
+            activeStatusLabel.setForeground(BarMapStudio.TEXT_MUTED);
+        }
         refreshCards(ReadyObjectsManager.getInstance().getReadyObjects());
     }
 
@@ -158,32 +226,31 @@ public final class ReadyObjectsTray extends JPanel {
         clearPlacedBtn.setVisible(count > 0);
     }
 
-    private void toggleCollapse() {
-        isCollapsed = !isCollapsed;
-        scrollPane.setVisible(!isCollapsed);
-        footerPanel.setVisible(!isCollapsed);
-        toggleBtn.setText(isCollapsed ? "[+]" : "[-]");
-        revalidate();
-        repaint();
-    }
-
     private void refreshCards(List<ObjectEntity> list) {
         cardsPanel.removeAll();
-        headerTitle.setText("OGGETTI PRONTI (" + list.size() + ")");
+        headerTitle.setText("OGGETTI & UNITA' PRONTI (" + list.size() + ")");
+
+        if (activeSelectedEntity != null) {
+            activeStatusLabel.setText("▶ ATTIVO: " + activeSelectedEntity.getName() + " (Piazza con Click)");
+            activeStatusLabel.setForeground(BarMapStudio.ACCENT_CYAN);
+        } else {
+            activeStatusLabel.setText("Clicca un oggetto per piazzarlo sulla mappa.");
+            activeStatusLabel.setForeground(BarMapStudio.TEXT_MUTED);
+        }
 
         if (list.isEmpty()) {
             JPanel emptyBox = new JPanel();
             emptyBox.setLayout(new BoxLayout(emptyBox, BoxLayout.Y_AXIS));
             emptyBox.setOpaque(false);
-            emptyBox.setBorder(BorderFactory.createEmptyBorder(8, 4, 8, 4));
+            emptyBox.setBorder(BorderFactory.createEmptyBorder(16, 8, 16, 8));
             emptyBox.setAlignmentX(0f);
 
-            JLabel emptyLbl = new JLabel("Nessun oggetto pronto in lista.");
-            emptyLbl.setFont(BarMapStudio.font(Font.PLAIN, 10));
+            JLabel emptyLbl = new JLabel("Nessun oggetto pronto nella palette.");
+            emptyLbl.setFont(BarMapStudio.font(Font.PLAIN, 11));
             emptyLbl.setForeground(BarMapStudio.TEXT_MUTED);
             emptyLbl.setAlignmentX(0.5f);
             emptyBox.add(emptyLbl);
-            emptyBox.add(Box.createVerticalStrut(4));
+            emptyBox.add(Box.createVerticalStrut(8));
 
             JButton gotoStudioBtn = new JButton("+ Apri Studio Oggetti");
             gotoStudioBtn.setFont(BarMapStudio.font(Font.BOLD, 10));
@@ -230,10 +297,10 @@ public final class ReadyObjectsTray extends JPanel {
             }
         };
         card.setOpaque(false);
-        card.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 6));
+        card.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 6));
         card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-        card.setPreferredSize(new Dimension(220, 44));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        card.setPreferredSize(new Dimension(220, 46));
         card.setAlignmentX(0f);
 
         JLabel nameLbl = new JLabel(entity.getName());

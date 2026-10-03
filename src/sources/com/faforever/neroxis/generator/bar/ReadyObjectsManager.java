@@ -17,8 +17,11 @@ public final class ReadyObjectsManager {
     private final List<Consumer<List<ObjectEntity>>> listeners = new CopyOnWriteArrayList<>();
 
     private ReadyObjectsManager() {
-        // Pre-popoliamo con un elemento di default per immediatezza
+        // Pre-popoliamo con elementi di default pronti per test immediati
         readyObjects.add(ObjectEntity.createDefaultWindmill());
+        readyObjects.add(ObjectEntity.createDefaultPineTree());
+        readyObjects.add(ObjectEntity.createDefaultRock());
+        readyObjects.add(ObjectEntity.createDefaultMissileBoss());
     }
 
     public static ReadyObjectsManager getInstance() {

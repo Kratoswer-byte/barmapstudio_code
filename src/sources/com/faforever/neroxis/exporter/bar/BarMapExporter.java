@@ -960,56 +960,75 @@ public final class BarMapExporter {
                 com.faforever.neroxis.generator.bar.ObjectEntity ent = ce.getEntity();
                 if (ent != null) {
                     uniqueEntities.putIfAbsent(ent.getId(), ent);
-                    // Solo le feature statiche senza logica inserite direttamente in .smf non necessitano di spawn runtime via gadget
-                    if (ent.getCategory() != com.faforever.neroxis.generator.bar.ObjectEntity.Category.STATIC_PROP) {
-                        toSpawn.add(ce);
-                    }
+                    toSpawn.add(ce);
                 }
             }
         }
 
-        // 1. Scrittura asset unici (Modelli 3D, Texture, Script Lua, Definizioni) - SENZA DUPLICATI
+        boolean defaultMatWritten = false;
+
+        // 1. Scrittura asset unici (Modelli 3D nativi S3O per Spring/BAR, Texture, Script Lua, Definizioni)
         for (com.faforever.neroxis.generator.bar.ObjectEntity ent : uniqueEntities.values()) {
             String entId = ent.getId();
 
-            // A) Modello 3D .OBJ
-            String objEntry = "objects3d/" + entId + ".obj";
-            if (writtenEntries.add(objEntry)) {
-                if (ent.getObjFilePath() != null && Files.isRegularFile(ent.getObjFilePath())) {
-                    zip.putNextEntry(new ZipEntry(objEntry));
-                    Files.copy(ent.getObjFilePath(), zip);
-                    zip.closeEntry();
-                } else if (ent.getModel3D() != null) {
-                    zip.putNextEntry(new ZipEntry(objEntry));
-                    zip.write(ent.getModel3D().toObjBytes(ent.getName()));
-                    zip.closeEntry();
-                }
-            }
-
-            // B) Texture personalizzata
-            if (ent.getTexturePath() != null && Files.isRegularFile(ent.getTexturePath())) {
-                String ext = ent.getTexturePath().getFileName().toString();
-                String texEntry = "unittextures/" + entId + "_" + ext;
-                if (writtenEntries.add(texEntry)) {
-                    zip.putNextEntry(new ZipEntry(texEntry));
-                    Files.copy(ent.getTexturePath(), zip);
-                    zip.closeEntry();
-                }
-            }
-
-            // C) Script di animazione / logica Lua
-            if (ent.getLuaScript() != null && !ent.getLuaScript().isBlank()) {
-                String scriptEntry = "scripts/" + entId + ".lua";
-                if (writtenEntries.add(scriptEntry)) {
-                    zip.putNextEntry(new ZipEntry(scriptEntry));
-                    zip.write(ent.getLuaScript().getBytes(StandardCharsets.UTF_8));
-                    zip.closeEntry();
-                }
-            }
-
-            // D) Per entita' custom (non unita' ufficiali di BAR gia' note al gioco),
-            // generiamo sia la definizione unita' (units/<id>.lua) sia feature (features/<id>.lua)
+            // Modelli 3D personalizzati (NON unita' ufficiali BAR che risiedono gia' nel gioco base)
             if (ent.getCategory() != com.faforever.neroxis.generator.bar.ObjectEntity.Category.OFFICIAL_UNIT) {
+                String s3oEntry = "objects3d/" + entId + ".s3o";
+                if (writtenEntries.add(s3oEntry)) {
+                    com.faforever.neroxis.generator.bar.ObjModel3D model = ent.getModel3D();
+                    if (model == null && ent.getObjFilePath() != null && Files.isRegularFile(ent.getObjFilePath())) {
+                        try {
+                            model = com.faforever.neroxis.generator.bar.ObjParser.parse(ent.getObjFilePath());
+                            ent.setModel3D(model);
+                        } catch (Exception ex) {
+                            System.err.println("Impossibile parsare OBJ per " + entId + ": " + ex.getMessage());
+                        }
+                    }
+                    if (model == null) {
+                        model = com.faforever.neroxis.generator.bar.ObjModel3D.createProceduralCube(3.0f);
+                    }
+
+                    String tex1Name = "default_mat.tga";
+                    if (ent.getTexturePath() != null && Files.isRegularFile(ent.getTexturePath())) {
+                        String ext = ent.getTexturePath().getFileName().toString();
+                        tex1Name = entId + "_" + ext;
+                    } else if (!defaultMatWritten) {
+                        String defTexEntry = "unittextures/default_mat.tga";
+                        if (writtenEntries.add(defTexEntry)) {
+                            zip.putNextEntry(new ZipEntry(defTexEntry));
+                            zip.write(createDefaultTgaBytes());
+                            zip.closeEntry();
+                            defaultMatWritten = true;
+                        }
+                    }
+
+                    zip.putNextEntry(new ZipEntry(s3oEntry));
+                    zip.write(model.toS3OBytes(ent.getName(), tex1Name, ""));
+                    zip.closeEntry();
+                }
+
+                // Texture personalizzata
+                if (ent.getTexturePath() != null && Files.isRegularFile(ent.getTexturePath())) {
+                    String ext = ent.getTexturePath().getFileName().toString();
+                    String texEntry = "unittextures/" + entId + "_" + ext;
+                    if (writtenEntries.add(texEntry)) {
+                        zip.putNextEntry(new ZipEntry(texEntry));
+                        Files.copy(ent.getTexturePath(), zip);
+                        zip.closeEntry();
+                    }
+                }
+
+                // Script di animazione / logica Lua
+                if (ent.getLuaScript() != null && !ent.getLuaScript().isBlank()) {
+                    String scriptEntry = "scripts/" + entId + ".lua";
+                    if (writtenEntries.add(scriptEntry)) {
+                        zip.putNextEntry(new ZipEntry(scriptEntry));
+                        zip.write(ent.getLuaScript().getBytes(StandardCharsets.UTF_8));
+                        zip.closeEntry();
+                    }
+                }
+
+                // Definizioni unita' e feature
                 String unitDefEntry = "units/" + entId + ".lua";
                 if (writtenEntries.add(unitDefEntry)) {
                     zip.putNextEntry(new ZipEntry(unitDefEntry));
@@ -1062,15 +1081,17 @@ public final class BarMapExporter {
             sb.append("    local teamList = Spring.GetTeamList()\n");
             sb.append("    local armadaTeam = nil\n");
             sb.append("    local cortexTeam = nil\n");
+            sb.append("    local firstPlayerTeam = 0\n");
             sb.append("    for _, tId in ipairs(teamList) do\n");
             sb.append("        if tId ~= gaiaTeamID then\n");
+            sb.append("            firstPlayerTeam = tId\n");
             sb.append("            local _, _, _, _, side = Spring.GetTeamInfo(tId)\n");
             sb.append("            if side and string.lower(side) == \"armada\" and not armadaTeam then armadaTeam = tId end\n");
             sb.append("            if side and string.lower(side) == \"cortex\" and not cortexTeam then cortexTeam = tId end\n");
             sb.append("        end\n");
             sb.append("    end\n");
-            sb.append("    if not armadaTeam then armadaTeam = 0 end\n");
-            sb.append("    if not cortexTeam then cortexTeam = 1 end\n\n");
+            sb.append("    if not armadaTeam then armadaTeam = firstPlayerTeam end\n");
+            sb.append("    if not cortexTeam then cortexTeam = firstPlayerTeam end\n\n");
 
             sb.append("    for _, e in ipairs(placedEntities) do\n");
             sb.append("        local teamID = gaiaTeamID\n");
@@ -1088,24 +1109,42 @@ public final class BarMapExporter {
             sb.append("        end\n\n");
 
             sb.append("        local y = Spring.GetGroundHeight(e.x, e.z)\n");
+            sb.append("        local heading = 0\n");
             sb.append("        local facing = \"s\"\n");
             sb.append("        if e.rot then\n");
             sb.append("            local deg = (math.deg(e.rot) % 360 + 360) % 360\n");
+            sb.append("            heading = math.floor((deg / 360.0) * 65536) % 65536\n");
             sb.append("            if deg >= 45 and deg < 135 then facing = \"e\"\n");
             sb.append("            elseif deg >= 135 and deg < 225 then facing = \"n\"\n");
             sb.append("            elseif deg >= 225 and deg < 315 then facing = \"w\"\n");
             sb.append("            else facing = \"s\" end\n");
             sb.append("        end\n\n");
 
-            sb.append("        local unitID = Spring.CreateUnit(e.id, e.x, y, e.z, facing, teamID)\n");
+            sb.append("        local unitID = nil\n");
+            sb.append("        local nameLower = string.lower(e.id)\n");
+            sb.append("        if UnitDefNames and (UnitDefNames[nameLower] or UnitDefNames[e.id]) then\n");
+            sb.append("            local actualDef = UnitDefNames[nameLower] and nameLower or e.id\n");
+            sb.append("            local ok, uId = pcall(Spring.CreateUnit, actualDef, e.x, y, e.z, facing, teamID)\n");
+            sb.append("            if ok and uId then\n");
+            sb.append("                unitID = uId\n");
+            sb.append("            else\n");
+            sb.append("                local ok2, uId2 = pcall(Spring.CreateUnit, actualDef, e.x, y, e.z, facing, gaiaTeamID)\n");
+            sb.append("                if ok2 and uId2 then\n");
+            sb.append("                    unitID = uId2\n");
+            sb.append("                    teamID = gaiaTeamID\n");
+            sb.append("                end\n");
+            sb.append("            end\n");
+            sb.append("        end\n\n");
+
             sb.append("        if not unitID then\n");
-            sb.append("            unitID = Spring.CreateUnit(e.id, e.x, y, e.z, facing, gaiaTeamID)\n");
-            sb.append("        end\n");
-            sb.append("        if not unitID then\n");
-            sb.append("            Spring.CreateFeature(e.id, e.x, y, e.z, 0)\n");
-            sb.append("        end\n");
-            sb.append("        if unitID and teamID == gaiaTeamID then\n");
-            sb.append("            Spring.SetUnitNeutral(unitID, true)\n");
+            sb.append("            local featOk, featID = pcall(Spring.CreateFeature, e.id, e.x, y, e.z, heading, teamID)\n");
+            sb.append("            if not featOk or not featID then\n");
+            sb.append("                pcall(Spring.CreateFeature, nameLower, e.x, y, e.z, heading, teamID)\n");
+            sb.append("            end\n");
+            sb.append("        else\n");
+            sb.append("            if teamID == gaiaTeamID then\n");
+            sb.append("                pcall(Spring.SetUnitNeutral, unitID, true)\n");
+            sb.append("            end\n");
             sb.append("        end\n");
             sb.append("    end\n");
             sb.append("end\n");
@@ -1114,6 +1153,26 @@ public final class BarMapExporter {
             zip.write(sb.toString().getBytes(StandardCharsets.UTF_8));
             zip.closeEntry();
         }
+    }
+
+    private byte[] createDefaultTgaBytes() {
+        int w = 16, h = 16;
+        byte[] tga = new byte[18 + w * h * 4];
+        tga[2] = 2; // uncompressed true-color
+        tga[12] = (byte) (w & 0xFF);
+        tga[13] = (byte) ((w >> 8) & 0xFF);
+        tga[14] = (byte) (h & 0xFF);
+        tga[15] = (byte) ((h >> 8) & 0xFF);
+        tga[16] = 32; // 32 bits per pixel (BGRA)
+        tga[17] = 8;  // 8 bits alpha
+        int offset = 18;
+        for (int i = 0; i < w * h; i++) {
+            tga[offset++] = (byte) 160; // B
+            tga[offset++] = (byte) 160; // G
+            tga[offset++] = (byte) 160; // R
+            tga[offset++] = (byte) 255; // A
+        }
+        return tga;
     }
 
     private String buildCustomUnitDefLua(com.faforever.neroxis.generator.bar.ObjectEntity ent) {
@@ -1128,7 +1187,7 @@ public final class BarMapExporter {
         sb.append("local unitDef = {\n");
         sb.append("    name = \"").append(ent.getName() != null ? ent.getName().replace("\"", "'") : id).append("\",\n");
         sb.append("    description = \"").append(ent.getTooltip() != null ? ent.getTooltip().replace("\"", "'") : "").append("\",\n");
-        sb.append("    objectName = \"objects3d/").append(id).append(".obj\",\n");
+        sb.append("    objectName = \"").append(id).append(".s3o\",\n");
         sb.append("    maxDamage = ").append(Math.max(10, ent.getHealth())).append(",\n");
         sb.append("    footprintX = ").append(fx).append(",\n");
         sb.append("    footprintZ = ").append(fz).append(",\n");
@@ -1157,7 +1216,7 @@ public final class BarMapExporter {
         sb.append("local featureDef = {\n");
         sb.append("    name = \"").append(id).append("\",\n");
         sb.append("    description = \"").append(ent.getName() != null ? ent.getName().replace("\"", "'") : id).append("\",\n");
-        sb.append("    object = \"objects3d/").append(id).append(".obj\",\n");
+        sb.append("    object = \"").append(id).append(".s3o\",\n");
         sb.append("    blocking = true,\n");
         sb.append("    burnable = false,\n");
         sb.append("    reclaimable = true,\n");

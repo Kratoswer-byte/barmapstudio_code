@@ -200,6 +200,10 @@ public final class MapStudioPanel extends JPanel {
     }
 
     private ReadyObjectsTray readyTray;
+    private CardLayout rightCardsLayout;
+    private JPanel rightCardsPanel;
+    private JToggleButton tabMappaBtn;
+    private JToggleButton tabOggettiBtn;
 
     private Runnable onMapChangedCallback;
 
@@ -468,6 +472,25 @@ public final class MapStudioPanel extends JPanel {
         canvas.setActiveCustomEntity(entity);
         for (JToggleButton b : toolButtons.values()) {
             b.setSelected(false);
+        }
+        switchToObjectsTab();
+    }
+
+    public void switchToObjectsTab() {
+        if (rightCardsLayout != null && rightCardsPanel != null && tabOggettiBtn != null) {
+            rightCardsLayout.show(rightCardsPanel, "OGGETTI");
+            tabOggettiBtn.setSelected(true);
+            tabOggettiBtn.setForeground(ACCENT_CYAN);
+            if (tabMappaBtn != null) tabMappaBtn.setForeground(TEXT_MUTED);
+        }
+    }
+
+    public void switchToMappaTab() {
+        if (rightCardsLayout != null && rightCardsPanel != null && tabMappaBtn != null) {
+            rightCardsLayout.show(rightCardsPanel, "MAPPA");
+            tabMappaBtn.setSelected(true);
+            tabMappaBtn.setForeground(ACCENT_CYAN);
+            if (tabOggettiBtn != null) tabOggettiBtn.setForeground(TEXT_MUTED);
         }
     }
 
@@ -904,19 +927,52 @@ public final class MapStudioPanel extends JPanel {
         return scroll;
     }
 
+    private void styleSidebarTabButton(JToggleButton b) {
+        b.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
+        b.setBackground(CARD_INNER);
+        b.setForeground(TEXT_MAIN);
+        b.setFocusPainted(false);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(5, 8, 5, 8)
+        ));
+    }
+
     private JComponent buildRightSidebar() {
+        JPanel rightContainer = new JPanel(new BorderLayout(0, 0));
+        rightContainer.setBackground(CARD_BG);
+
+        // 1. Top Sub-Tab Navigation Bar
+        JPanel tabBar = new JPanel(new GridLayout(1, 2, 4, 0));
+        tabBar.setBackground(CARD_BG);
+        tabBar.setBorder(new EmptyBorder(8, 10, 6, 10));
+
+        tabMappaBtn = new JToggleButton("Dettagli Mappa", true);
+        tabOggettiBtn = new JToggleButton("Oggetti (" + ReadyObjectsManager.getInstance().getReadyObjects().size() + ")", false);
+
+        styleSidebarTabButton(tabMappaBtn);
+        styleSidebarTabButton(tabOggettiBtn);
+        tabMappaBtn.setForeground(ACCENT_CYAN);
+        tabOggettiBtn.setForeground(TEXT_MUTED);
+
+        ButtonGroup tabGroup = new ButtonGroup();
+        tabGroup.add(tabMappaBtn);
+        tabGroup.add(tabOggettiBtn);
+
+        tabBar.add(tabMappaBtn);
+        tabBar.add(tabOggettiBtn);
+
+        // 2. CardLayout Center Container
+        rightCardsLayout = new CardLayout();
+        rightCardsPanel = new JPanel(rightCardsLayout);
+        rightCardsPanel.setOpaque(false);
+
+        // --- CARD 1: MAPPA (Proprieta', Mex, Reclaim, Eco, Assistenti) ---
         ScrollableTrackWidthPanel side = new ScrollableTrackWidthPanel();
         side.setLayout(new BoxLayout(side, BoxLayout.Y_AXIS));
         side.setBackground(CARD_BG);
-        side.setBorder(new EmptyBorder(12, 12, 12, 12));
-
-        // Title 2
-        JLabel title2 = new JLabel("2. OGGETTI & DETTAGLI MAPPA");
-        title2.setFont(BarMapStudio.fontCond(Font.BOLD, 13));
-        title2.setForeground(ACCENT_CYAN);
-        title2.setAlignmentX(0f);
-        side.add(title2);
-        side.add(Box.createVerticalStrut(12));
+        side.setBorder(new EmptyBorder(4, 10, 10, 10));
 
         // Map Name field
         JLabel nameLbl = new JLabel("Nome Mappa Personalizzato:");
@@ -936,7 +992,7 @@ public final class MapStudioPanel extends JPanel {
         mapNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         mapNameField.setAlignmentX(0f);
         side.add(mapNameField);
-        side.add(Box.createVerticalStrut(12));
+        side.add(Box.createVerticalStrut(10));
 
         // Stats Counters in a 2x2 grid
         JPanel statGrid = new JPanel(new GridLayout(2, 2, 6, 6));
@@ -945,10 +1001,10 @@ public final class MapStudioPanel extends JPanel {
         statGrid.add(geoCountLabel);
         statGrid.add(spawnCountLabel);
         statGrid.add(reclaimCountLabel);
-        statGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
+        statGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
         statGrid.setAlignmentX(0f);
         side.add(statGrid);
-        side.add(Box.createVerticalStrut(12));
+        side.add(Box.createVerticalStrut(10));
 
         // Mex Placement Metal Card
         JPanel mexMetalCard = new JPanel();
@@ -998,7 +1054,7 @@ public final class MapStudioPanel extends JPanel {
         mexMetalCard.add(shadeHint);
 
         side.add(mexMetalCard);
-        side.add(Box.createVerticalStrut(12));
+        side.add(Box.createVerticalStrut(10));
 
         // Auto Assistants Header
         JLabel assistTitle = new JLabel("Assistenti Posizionamento Rapido:");
@@ -1044,7 +1100,7 @@ public final class MapStudioPanel extends JPanel {
         clearRow.setAlignmentX(0f);
         side.add(clearRow);
 
-        side.add(Box.createVerticalStrut(14));
+        side.add(Box.createVerticalStrut(12));
 
         // Economy
         JPanel ecoCard = new JPanel(new GridLayout(0, 2, 6, 6));
@@ -1063,23 +1119,58 @@ public final class MapStudioPanel extends JPanel {
         reclaimValueLabel.setForeground(TEXT_MUTED);
         reclaimValueLabel.setAlignmentX(0f);
         side.add(reclaimValueLabel);
+        side.add(Box.createVerticalStrut(10));
 
-        side.add(Box.createVerticalStrut(12));
+        ScrollableTrackWidthPanel mappaContainer = new ScrollableTrackWidthPanel(new BorderLayout());
+        mappaContainer.setBackground(CARD_BG);
+        mappaContainer.add(side, BorderLayout.NORTH);
+
+        JScrollPane mappaScroll = new JScrollPane(mappaContainer);
+        mappaScroll.setBackground(CARD_BG);
+        mappaScroll.getViewport().setBackground(CARD_BG);
+        mappaScroll.setBorder(null);
+        mappaScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        mappaScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        mappaScroll.getVerticalScrollBar().setUnitIncrement(18);
+
+        // --- CARD 2: OGGETTI (Dedito completamente alla palette oggetti & scenery) ---
+        JPanel oggettiContainer = new JPanel(new BorderLayout());
+        oggettiContainer.setBackground(CARD_BG);
+        oggettiContainer.setBorder(new EmptyBorder(4, 10, 6, 10));
         if (readyTray != null) {
-            side.add(readyTray);
-            side.add(Box.createVerticalStrut(12));
+            oggettiContainer.add(readyTray, BorderLayout.CENTER);
         }
 
-        // Export Actions Card
+        rightCardsPanel.add(mappaScroll, "MAPPA");
+        rightCardsPanel.add(oggettiContainer, "OGGETTI");
+
+        tabMappaBtn.addActionListener(e -> {
+            rightCardsLayout.show(rightCardsPanel, "MAPPA");
+            tabMappaBtn.setForeground(ACCENT_CYAN);
+            tabOggettiBtn.setForeground(TEXT_MUTED);
+        });
+        tabOggettiBtn.addActionListener(e -> {
+            rightCardsLayout.show(rightCardsPanel, "OGGETTI");
+            tabOggettiBtn.setForeground(ACCENT_CYAN);
+            tabMappaBtn.setForeground(TEXT_MUTED);
+        });
+
+        ReadyObjectsManager.getInstance().addListener(list -> {
+            SwingUtilities.invokeLater(() -> {
+                if (tabOggettiBtn != null) {
+                    tabOggettiBtn.setText("Oggetti (" + list.size() + ")");
+                }
+            });
+        });
+
+        // 3. Export Actions Card (Docked in basso, accessibile da entrambi i tab)
         JPanel exportCard = new JPanel();
         exportCard.setLayout(new BoxLayout(exportCard, BoxLayout.Y_AXIS));
         exportCard.setBackground(CARD_INNER);
         exportCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-            new EmptyBorder(10, 10, 10, 10)
+            BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER_COLOR),
+            new EmptyBorder(8, 10, 8, 10)
         ));
-        exportCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
-        exportCard.setAlignmentX(0f);
 
         genFinalMapBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         genFinalMapBtn.setAlignmentX(0f);
@@ -1089,7 +1180,7 @@ public final class MapStudioPanel extends JPanel {
         genAndPlayBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         genAndPlayBtn.setAlignmentX(0f);
         exportCard.add(genAndPlayBtn);
-        exportCard.add(Box.createVerticalStrut(8));
+        exportCard.add(Box.createVerticalStrut(6));
 
         progressBar.setVisible(false);
         progressBar.setForeground(ACCENT_CYAN);
@@ -1103,21 +1194,11 @@ public final class MapStudioPanel extends JPanel {
         statusLabel.setAlignmentX(0f);
         exportCard.add(statusLabel);
 
-        side.add(exportCard);
-        side.add(Box.createVerticalStrut(12));
+        rightContainer.add(tabBar, BorderLayout.NORTH);
+        rightContainer.add(rightCardsPanel, BorderLayout.CENTER);
+        rightContainer.add(exportCard, BorderLayout.SOUTH);
 
-        ScrollableTrackWidthPanel container = new ScrollableTrackWidthPanel(new BorderLayout());
-        container.setBackground(CARD_BG);
-        container.add(side, BorderLayout.NORTH);
-
-        JScrollPane scroll = new JScrollPane(container);
-        scroll.setBackground(CARD_BG);
-        scroll.getViewport().setBackground(CARD_BG);
-        scroll.setBorder(null);
-        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scroll.getVerticalScrollBar().setUnitIncrement(18);
-        return scroll;
+        return rightContainer;
     }
 
     private void updateCounters() {
@@ -1134,7 +1215,12 @@ public final class MapStudioPanel extends JPanel {
             reclaimCountLabel.setText("Reclaim: 0");
         }
         if (readyTray != null && canvas != null) {
-            readyTray.updatePlacedCount(canvas.getCustomEntities() != null ? canvas.getCustomEntities().size() : 0);
+            int placed = canvas.getCustomEntities() != null ? canvas.getCustomEntities().size() : 0;
+            readyTray.updatePlacedCount(placed);
+        }
+        if (tabOggettiBtn != null) {
+            int readyCount = ReadyObjectsManager.getInstance().getReadyObjects().size();
+            tabOggettiBtn.setText("Oggetti (" + readyCount + ")");
         }
     }
 

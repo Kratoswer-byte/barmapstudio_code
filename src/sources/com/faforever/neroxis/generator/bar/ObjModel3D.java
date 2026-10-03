@@ -1,5 +1,7 @@
 package com.faforever.neroxis.generator.bar;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -237,5 +239,122 @@ public final class ObjModel3D {
             }
         }
         return sb.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Esporta la geometria del modello 3D in formato binario nativo S3O (Spring 3D Object)
+     * supportato al 100% dal motore Beyond All Reason.
+     */
+    public byte[] toS3OBytes(String modelName) {
+        return toS3OBytes(modelName, "default_mat.tga", "");
+    }
+
+    public byte[] toS3OBytes(String modelName, String texture1, String texture2) {
+        String pieceName = "base";
+        byte[] tex1Bytes = (texture1 != null && !texture1.isBlank() ? texture1 : "default_mat.tga").getBytes(StandardCharsets.US_ASCII);
+        byte[] tex2Bytes = (texture2 != null ? texture2 : "").getBytes(StandardCharsets.US_ASCII);
+        byte[] nameBytes = pieceName.getBytes(StandardCharsets.US_ASCII);
+
+        int tex1Offset = 52;
+        int tex2Offset = tex1Offset + tex1Bytes.length + 1;
+        int rootPieceOffset = tex2Offset + tex2Bytes.length + 1;
+
+        int pieceHeaderOffset = rootPieceOffset;
+        int pieceNameOffset = pieceHeaderOffset + 52;
+        int verticesOffset = pieceNameOffset + nameBytes.length + 1;
+
+        List<int[]> triangles = new ArrayList<>();
+        List<float[]> triNormals = new ArrayList<>();
+        for (int f = 0; f < faces.length; f++) {
+            int[] face = faces[f];
+            if (face.length < 3) continue;
+            float[] fn = (f < faceNormals.length && faceNormals[f] != null) ? faceNormals[f] : new float[]{0, 1, 0};
+            for (int i = 1; i < face.length - 1; i++) {
+                triangles.add(new int[]{face[0], face[i], face[i + 1]});
+                triNormals.add(fn);
+            }
+        }
+
+        int totalVertices = triangles.size() * 3;
+        int totalIndices = totalVertices;
+        int indicesOffset = verticesOffset + totalVertices * 32;
+        int totalFileSize = indicesOffset + totalIndices * 4;
+
+        ByteBuffer buf = ByteBuffer.allocate(totalFileSize);
+        buf.order(ByteOrder.LITTLE_ENDIAN);
+
+        // 1. Header S3O (52 bytes)
+        byte[] magic = new byte[] { 'S', 'p', 'r', 'i', 'n', 'g', ' ', 'u', 'n', 'i', 't', 0 };
+        buf.put(magic);
+        buf.putInt(0); // version 0
+        buf.putFloat(Math.max(1.0f, maxDimension * 0.5f)); // radius
+        buf.putFloat(Math.max(1.0f, maxY - minY)); // height
+        buf.putFloat(centerX); // midx
+        buf.putFloat(centerY); // midy
+        buf.putFloat(centerZ); // midz
+        buf.putInt(rootPieceOffset);
+        buf.putInt(0); // collisionDataOffset
+        buf.putInt(tex1Offset);
+        buf.putInt(tex2Offset);
+
+        // 2. Texture Strings (ASCII null-terminated)
+        buf.put(tex1Bytes);
+        buf.put((byte) 0);
+        buf.put(tex2Bytes);
+        buf.put((byte) 0);
+
+        // 3. Root Piece Header (52 bytes)
+        buf.putInt(pieceNameOffset);
+        buf.putInt(0); // numChildren
+        buf.putInt(pieceNameOffset - 1); // childrenOffset
+        buf.putInt(totalVertices);
+        buf.putInt(verticesOffset);
+        buf.putInt(0); // lodsOffset
+        buf.putInt(0); // primitiveType (0 = triangles)
+        buf.putInt(totalIndices);
+        buf.putInt(indicesOffset);
+        buf.putInt(0); // collisionDataOffset
+        buf.putFloat(0.0f); // xOffset
+        buf.putFloat(0.0f); // yOffset
+        buf.putFloat(0.0f); // zOffset
+
+        // 4. Piece Name (ASCII null-terminated)
+        buf.put(nameBytes);
+        buf.put((byte) 0);
+
+        // 5. Vertices (32 bytes each: 3f pos, 3f normal, 2f UV)
+        float rangeX = Math.max(maxX - minX, 0.001f);
+        float rangeZ = Math.max(maxZ - minZ, 0.001f);
+
+        for (int t = 0; t < triangles.size(); t++) {
+            int[] tri = triangles.get(t);
+            float[] fn = triNormals.get(t);
+            for (int vi = 0; vi < 3; vi++) {
+                int idx = tri[vi];
+                float vx = (idx * 3 < vertices.length) ? vertices[idx * 3] : 0f;
+                float vy = (idx * 3 + 1 < vertices.length) ? vertices[idx * 3 + 1] : 0f;
+                float vz = (idx * 3 + 2 < vertices.length) ? vertices[idx * 3 + 2] : 0f;
+
+                buf.putFloat(vx);
+                buf.putFloat(vy);
+                buf.putFloat(vz);
+
+                buf.putFloat(fn[0]);
+                buf.putFloat(fn[1]);
+                buf.putFloat(fn[2]);
+
+                float u = (vx - minX) / rangeX;
+                float v = (vz - minZ) / rangeZ;
+                buf.putFloat(u);
+                buf.putFloat(v);
+            }
+        }
+
+        // 6. Indices (int32 each)
+        for (int i = 0; i < totalIndices; i++) {
+            buf.putInt(i);
+        }
+
+        return buf.array();
     }
 }
