@@ -133,9 +133,13 @@ public final class MapScene3DCanvas extends JPanel {
                     cam.pitchDeg = Math.max(5, Math.min(85, cam.pitchDeg + dy * 0.3));
                     repaint();
                 } else if (panning) {
-                    double s = cam.dist / 600.0;
-                    cam.tx -= dx * 2.0 * s;
-                    cam.tz += dy * 2.0 * s; // grab-style: trascinando giu il mondo segue il cursore
+                    // Pan grab-style nel piano, relativo alla vista (yaw): il mondo segue il cursore
+                    double yaw = Math.toRadians(cam.yawDeg);
+                    double rx = Math.sin(yaw), rz = -Math.cos(yaw); // destra schermo a terra
+                    double ux = -Math.cos(yaw), uz = -Math.sin(yaw); // alto schermo a terra
+                    double s = cam.dist / 600.0 * 2.0;
+                    cam.tx -= (rx * dx + ux * dy) * s;
+                    cam.tz -= (rz * dx + uz * dy) * s;
                     repaint();
                 }
             }
@@ -267,10 +271,15 @@ public final class MapScene3DCanvas extends JPanel {
     }
 
     private void buildHud() {
-        hud = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        hud = new JPanel();
+        hud.setLayout(new BoxLayout(hud, BoxLayout.Y_AXIS));
         hud.setBackground(new Color(16, 22, 32, 230));
         hud.setBorder(BorderFactory.createLineBorder(new Color(38, 50, 70)));
-        infoLabel = new JLabel("3D: click seleziona | Shift+rotella scala tipo | R ruota | F inquadra");
+        JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        row1.setOpaque(false);
+        JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        row2.setOpaque(false);
+        infoLabel = new JLabel("3D: click seleziona | G sposta | R ruota | X/Z asse | F inquadra");
         infoLabel.setForeground(new Color(140, 155, 180));
         infoLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
         scaleSlider = new JSlider(10, 500, 100);
@@ -295,7 +304,8 @@ public final class MapScene3DCanvas extends JPanel {
             if (syncingScale || selected == null) return;
             applyScaleToType(selected.getEntity(), ((Number) scaleSpinner.getValue()).floatValue());
         });
-        hud.add(infoLabel); hud.add(new JLabel("Scala:")); hud.add(scaleSlider); hud.add(scaleSpinner); hud.add(varBtn); hud.add(cmdBtn);
+        hud.add(row1); hud.add(row2);
+        row1.add(infoLabel); row1.add(new JLabel("Scala:")); row1.add(scaleSlider); row1.add(scaleSpinner); row1.add(varBtn); row1.add(cmdBtn);
         moveBtn = new JToggleButton("Sposta [G]", false);
         moveBtn.setToolTipText("Trascina l'oggetto sul terreno (G), vincolo asse con X/Z");
         moveBtn.addActionListener(ev -> setManipMode(moveBtn.isSelected() ? ManipMode.MOVE : ManipMode.ORBIT));
@@ -311,7 +321,7 @@ public final class MapScene3DCanvas extends JPanel {
         axisZBtn = new JToggleButton("Z", false);
         axisZBtn.setToolTipText("Spostamento solo asse Z [tasto Z]");
         axisZBtn.addActionListener(ev -> setAxisLock(AxisLock.Z));
-        hud.add(moveBtn); hud.add(rotBtn); hud.add(axisXZBtn); hud.add(axisXBtn); hud.add(axisZBtn);
+        row2.add(moveBtn); row2.add(rotBtn); row2.add(axisXZBtn); row2.add(axisXBtn); row2.add(axisZBtn);
         add(hud);
     }
 
