@@ -1,6 +1,9 @@
 package com.faforever.neroxis.generator.bar;
 
+import com.faforever.neroxis.map.Marker;
+import com.faforever.neroxis.map.Prop;
 import com.faforever.neroxis.map.SCMap;
+import com.faforever.neroxis.map.Spawn;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
@@ -310,20 +313,43 @@ public final class MapScene3DCanvas extends JPanel {
         if (selectionListener != null) selectionListener.accept(selected);
     }
 
-    // ---- model resolve ----
+    // ---- model resolve (mai I/O su EDT: modelli ufficiali in bg + repaint) ----
+    private final Set<String> loadingOfficials = new HashSet<>();
+
     private SoftRenderer3D.RenderMesh meshFor(ObjectEntity e) {
         String key = "mesh:" + e.getId();
         SoftRenderer3D.RenderMesh m = meshCache.get(key);
         if (m != null) return m.triCount == 0 ? null : m;
         ObjModel3D model = e.getModel3D();
-        if (model == null && e.getOfficialUnit() != null) {
-            model = loadOfficialModel(e);
-            if (model != null) e.setModel3D(model);
+        if (model == null && e.getOfficialUnit() != null && loadingOfficials.add(e.getId())) {
+            bg.execute(() -> {
+                try {
+                    ObjModel3D loaded = loadOfficialModel(e);
+                    if (loaded != null) {
+                        e.setModel3D(loaded);
+                        meshCache.remove(key);
+                    }
+                } finally {
+                    loadingOfficials.remove(e.getId());
+                    javax.swing.SwingUtilities.invokeLater(this::repaint);
+                }
+            });
         }
-        if (model == null) { meshCache.put(key, new SoftRenderer3D.RenderMesh(new float[0], new float[0], new float[0], new int[0])); return null; }
+        if (model == null) return null; // fallback box nel paint
         m = SoftRenderer3D.RenderMesh.fromModel(model);
         meshCache.put(key, m);
         return m.triCount == 0 ? null : m;
+    }
+
+    private int fallbackColor(ObjectEntity e) {
+        if (e == null) return 0x508CBE;
+        switch (e.getCategory()) {
+            case OFFICIAL_UNIT: return 0x4A9EFF;
+            case BOSS_UNIT: return 0xFF5448;
+            case ANIMATED_SCENERY: return 0xFFB020;
+            case STATIC_PROP: return 0x8CA090;
+            default: return 0x508CBE;
+        }
     }
 
     private SoftRenderer3D.Texture texFor(ObjectEntity e) {
@@ -382,12 +408,13 @@ public final class MapScene3DCanvas extends JPanel {
             if (bytes == null) continue;
             S3OParser.S3OModel sm = S3OParser.parseWithFaceUV(bytes);
             if (sm != null && sm.model.getFaceCount() > 0) {
-                // texture tex1 in bg per uso futuro (cache)
-                final String t1 = sm.tex1;
-                if (t1 != null && !t1.isBlank()) bg.execute(() -> {
-                    BufferedImage img = texCache.loadGameTexture(t1);
-                    if (img != null) diffCache.put("tex:" + e.getId(), new SoftRenderer3D.Texture(img));
-                });
+                // texture tex1 subito in cache (siamo gia in bg)
+                try {
+                    if (sm.tex1 != null && !sm.tex1.isBlank()) {
+                        BufferedImage img = texCache.loadGameTexture(sm.tex1);
+                        if (img != null) diffCache.put("tex:" + e.getId(), new SoftRenderer3D.Texture(img));
+                    }
+                } catch (Exception ignored) {}
                 // default icon hook: unita ufficiali = MOBILE con icona
                 e.setIconKind(ObjectEntity.IconKind.MOBILE);
                 e.setShowIcon(true);
@@ -413,6 +440,16 @@ public final class MapScene3DCanvas extends JPanel {
     }
 
     // ---- paint ----
+    private void drawTag(Graphics2D g2, int x, int y, String label, Color col) {
+        FontMetrics fm = g2.getFontMetrics();
+        int w = fm.stringWidth(label) + 10;
+        g2.setColor(new Color(11, 14, 20, 220));
+        g2.fillRoundRect(x - w / 2, y - 9, w, 18, 9, 9);
+        g2.setColor(col);
+        g2.drawRoundRect(x - w / 2, y - 9, w, 18, 9, 9);
+        g2.drawString(label, x - fm.stringWidth(label) / 2, y + 4);
+    }
+
     @Override protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         int W = getWidth(), H = getHeight();
@@ -428,20 +465,53 @@ public final class MapScene3DCanvas extends JPanel {
             // origine 0,0; mappa centrata su cam target gia impostato
             renderer.drawTerrain(terrainHeights, terrainW, terrainH, cellElmos, groundPreview, cam, 0, 0);
         }
-        // entita
+        // entita custom + unita ufficiali (con box fallback se modello non ancora pronto)
         for (PlacedCustomEntity p : entities) {
             ObjectEntity e = p.getEntity();
             SoftRenderer3D.RenderMesh m = meshFor(e);
-            if (m == null) {
-                // fallback: box footprint
-                continue;
-            }
-            SoftRenderer3D.Texture t = texFor(e);
             double wx = p.getPosition().x() * 16.0;
             double wz = p.getPosition().y() * 16.0;
             double wy = getHeightElmosAt(p.getPosition().x(), p.getPosition().y());
+            if (m == null) {
+                double fw = Math.max(16.0, e.getScaledWidth());
+                double fh = Math.max(12.0, e.getScaledHeight());
+                renderer.drawBox(wx, wy, wz, fw, fh, Math.max(16.0, e.getScaledDepth()), p.getRotation(), fallbackColor(e), cam);
+                continue;
+            }
+            SoftRenderer3D.Texture t = texFor(e);
             // centra modello su footprint (S3O gia centrato; OBJ procedurali con minY=0 ok)
             renderer.drawMesh(m, t, 0x508CBE, wx, wy, wz, p.getRotation(), e.getScale(), cam);
+        }
+        // reclaim props della mappa (massi, alberi, relitti)
+        if (map != null && map.getProps() != null) {
+            List<Prop> props = map.getProps();
+            int step = props.size() > 1200 ? (props.size() / 1200 + 1) : 1;
+            for (int i = 0; i < props.size(); i += step) {
+                Prop pr = props.get(i);
+                double wx = pr.getPosition().x() * 16.0;
+                double wz = pr.getPosition().z() * 16.0;
+                double wy = getHeightElmosAt(pr.getPosition().x(), pr.getPosition().z());
+                int col;
+                double sx = 7, sy = 8, sz = 7;
+                if (pr.isBoulder()) { col = 0x828C9B; sx = 11; sy = 10; sz = 11; }
+                else {
+                    String path = pr.getPath() != null ? pr.getPath().toLowerCase() : "";
+                    if (path.contains("tree") || path.contains("pine")) { col = 0x26AA50; sx = 6; sy = 16; sz = 6; }
+                    else { col = 0xE65A32; sx = 9; sy = 5; sz = 9; }
+                }
+                renderer.drawBox(wx, wy, wz, sx, sy, sz, pr.getRotation(), col, cam);
+            }
+        }
+        // piastre mex + geo
+        if (map != null) {
+            if (map.getMexes() != null) for (Marker mk : map.getMexes()) {
+                double wx = mk.getPosition().x() * 16.0, wz = mk.getPosition().z() * 16.0;
+                renderer.drawBox(wx, getHeightElmosAt(mk.getPosition().x(), mk.getPosition().z()), wz, 12, 3, 12, 0, 0x00E5FF, cam);
+            }
+            if (map.getHydros() != null) for (Marker mk : map.getHydros()) {
+                double wx = mk.getPosition().x() * 16.0, wz = mk.getPosition().z() * 16.0;
+                renderer.drawBox(wx, getHeightElmosAt(mk.getPosition().x(), mk.getPosition().z()), wz, 12, 3, 12, 0, 0x00C853, cam);
+            }
         }
         // commander ref vicino a selezione
         if (showCommanderRef && commanderRef != null && selected != null) {
@@ -450,10 +520,39 @@ public final class MapScene3DCanvas extends JPanel {
             double wz = selected.getPosition().y() * 16.0;
             renderer.drawMesh(cm, null, 0x9AA4B5, wx, getHeightElmosAt(selected.getPosition().x(), selected.getPosition().y()), wz, 0, 1.0, cam);
         }
+        // piastre spawn 3D a terra
+        if (map != null && map.getSpawns() != null) for (Spawn s : map.getSpawns()) {
+            double wx = s.getPosition().x() * 16.0, wz = s.getPosition().z() * 16.0;
+            renderer.drawBox(wx, getHeightElmosAt(s.getPosition().x(), s.getPosition().z()), wz, 34, 3, 34, 0, 0xFF9F1C, cam);
+        }
         frame = renderer.present();
         Graphics2D g2 = (Graphics2D) g;
         if (lowResWhileDrag) g2.drawImage(frame, 0, 0, W, H, null);
         else g2.drawImage(frame, 0, 0, null);
+        double kOX = lowResWhileDrag ? (double) W / renderer.getWidth() : 1.0;
+        double kOY = lowResWhileDrag ? (double) H / renderer.getHeight() : 1.0;
+        // overlay marker mappa: mex, geo, spawn (sempre leggibili, come nel 2D)
+        if (map != null && !lowResWhileDrag) {
+            g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+            if (map.getMexes() != null) for (Marker mk : map.getMexes()) {
+                java.awt.Point sp = renderer.project(mk.getPosition().x() * 16.0,
+                    getHeightElmosAt(mk.getPosition().x(), mk.getPosition().z()) + 12,
+                    mk.getPosition().z() * 16.0, cam);
+                if (sp != null) { drawTag(g2, (int) (sp.x * kOX), (int) (sp.y * kOY), "M", new Color(0, 229, 255)); }
+            }
+            if (map.getHydros() != null) for (Marker mk : map.getHydros()) {
+                java.awt.Point sp = renderer.project(mk.getPosition().x() * 16.0,
+                    getHeightElmosAt(mk.getPosition().x(), mk.getPosition().z()) + 12,
+                    mk.getPosition().z() * 16.0, cam);
+                if (sp != null) { drawTag(g2, (int) (sp.x * kOX), (int) (sp.y * kOY), "G", new Color(0, 200, 83)); }
+            }
+            if (map.getSpawns() != null) for (int i = 0; i < map.getSpawns().size(); i++) {
+                Spawn s = map.getSpawns().get(i);
+                double wx = s.getPosition().x() * 16.0, wz = s.getPosition().z() * 16.0;
+                java.awt.Point sp = renderer.project(wx, getHeightElmosAt(s.getPosition().x(), s.getPosition().z()) + 26, wz, cam);
+                if (sp != null) { drawTag(g2, (int) (sp.x * kOX), (int) (sp.y * kOY), "S" + (i + 1), new Color(255, 159, 28)); }
+            }
+        }
         // overlay selezione: footprint + label
         for (PlacedCustomEntity p : entities) {
             if (p != selected) continue;

@@ -158,6 +158,35 @@ public final class SoftRenderer3D {
     public int drawMesh(RenderMesh m, Texture tex, int flatRgbIfNull,
                         double wx, double wy, double wz, double rotYRad, double scale,
                         Camera cam) {
+        return drawMeshScaled(m, tex, flatRgbIfNull, wx, wy, wz, rotYRad, scale, scale, scale, cam);
+    }
+
+    private static RenderMesh unitCube;
+    /** Box 3D pieno (base y=0..1, xz -0.5..0.5) per marker/prop/fallback. */
+    public static synchronized RenderMesh getUnitCube() {
+        if (unitCube != null) return unitCube;
+        float[] p = {
+            -0.5f,0,-0.5f, 0.5f,0,-0.5f, 0.5f,1,-0.5f, -0.5f,1,-0.5f,
+            -0.5f,0,0.5f, 0.5f,0,0.5f, 0.5f,1,0.5f, -0.5f,1,0.5f};
+        float[] n = new float[8 * 3];
+        for (int i = 0; i < 8; i++) { n[i*3] = 0; n[i*3+1] = 1; n[i*3+2] = 0; }
+        float[] u = new float[8 * 2];
+        int[] idx = {0,1,2, 0,2,3, 5,4,7, 5,7,6, 4,0,3, 4,3,7, 1,5,6, 1,6,2, 3,2,6, 3,6,7, 4,5,1, 4,1,0};
+        unitCube = new RenderMesh(p, n, u, idx);
+        return unitCube;
+    }
+
+    /** Box colorato con scala per-asse (rotY attorno al centro). */
+    public int drawBox(double wx, double wy, double wz,
+                       double sx, double sy, double sz, double rotYRad, int rgb, Camera cam) {
+        return drawMeshScaled(getUnitCube(), null, rgb, wx, wy, wz, rotYRad, sx, sy, sz, cam);
+    }
+
+    /** Disegna una mesh con modello (traslazione+rotY+scala per-asse) e camera. */
+    public int drawMeshScaled(RenderMesh m, Texture tex, int flatRgbIfNull,
+                        double wx, double wy, double wz, double rotYRad,
+                        double scx, double scy, double scz,
+                        Camera cam) {
         if (m == null || m.triCount == 0) return 0;
         double yaw = Math.toRadians(cam.yawDeg);
         double pitch = Math.toRadians(cam.pitchDeg);
@@ -184,9 +213,9 @@ public final class SoftRenderer3D {
         float[] shade = new float[n];
 
         for (int i = 0; i < n; i++) {
-            double lx = m.pos[i*3] * scale;
-            double ly = m.pos[i*3+1] * scale;
-            double lz = m.pos[i*3+2] * scale;
+            double lx = m.pos[i*3] * scx;
+            double ly = m.pos[i*3+1] * scy;
+            double lz = m.pos[i*3+2] * scz;
             // rotY
             double rx = lx * cosR + lz * sinR;
             double rz = -lx * sinR + lz * cosR;
