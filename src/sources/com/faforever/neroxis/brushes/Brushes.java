@@ -13,6 +13,14 @@ import javax.imageio.ImageIO;
 
 /* JADX INFO: loaded from: app_classes.zip:com/faforever/neroxis/brushes/Brushes.class */
 public class Brushes {
+    static {
+        // I pennelli sono piccoli: cache in memoria, mai file temporanei.
+        // Su sistemi con %TEMP% non scrivibile ImageIO.read(InputStream)
+        // fallirebbe con "Can't create cache file" bloccando la generazione.
+        try {
+            ImageIO.setUseCache(false);
+        } catch (Exception ignored) {}
+    }
     public static final List<String> MOUNTAIN_BRUSHES = Arrays.asList("mountain1.png", "mountain2.png", "mountain3.png", "mountain4.png", "mountain5.png", "mountain6.png", "mountain7.png", "mountain8.png", "mountain9.png", "volcano2.png", "hill1.png", "hill2.png", "noise1.png", "noise2.png", "hawaii1.png", "hawaii2.png", "volcano2.png");
     public static final List<String> HILL_BRUSHES = Arrays.asList("hill1.png", "hill2.png", "noise1.png", "noise2.png");
     public static final List<String> GENERATOR_BRUSHES = Arrays.asList("mountain1.png", "mountain2.png", "mountain4.png", "mountain5.png", "mountain6.png", "volcano2.png");
