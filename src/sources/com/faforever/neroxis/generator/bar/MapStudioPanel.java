@@ -1726,9 +1726,15 @@ public final class MapStudioPanel extends JPanel {
                         java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
                 } catch (Exception ignored) {}
                 SwingUtilities.invokeLater(() -> {
-                    String msg = ex.getMessage();
-                    if (msg == null || msg.isBlank()) msg = ex.toString();
-                    if (msg.length() > 220) msg = msg.substring(0, 220) + "...";
+                    String msg;
+                    if (ex instanceof java.nio.file.AccessDeniedException ade) {
+                        msg = "Permesso negato su " + ade.getFile()
+                            + ". Chiudi e riavvia l'app come amministratore (tasto destro sull'avvio).";
+                    } else {
+                        msg = ex.getMessage();
+                        if (msg == null || msg.isBlank()) msg = ex.toString();
+                        if (msg.length() > 220) msg = msg.substring(0, 220) + "...";
+                    }
                     setStatus("Errore durante l'esportazione: " + msg + " (dettagli in barmap-error.log)");
                     progressBar.setVisible(false);
                     genFinalMapBtn.setEnabled(true);

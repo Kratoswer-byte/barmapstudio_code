@@ -138,8 +138,8 @@ public final class MapScene3DCanvas extends JPanel {
                     double rx = Math.sin(yaw), rz = -Math.cos(yaw); // destra schermo a terra
                     double ux = -Math.cos(yaw), uz = -Math.sin(yaw); // alto schermo a terra
                     double s = cam.dist / 600.0 * 2.0;
-                    cam.tx -= (rx * dx + ux * dy) * s;
-                    cam.tz -= (rz * dx + uz * dy) * s;
+                    cam.tx -= (rx * dx - ux * dy) * s;
+                    cam.tz -= (rz * dx - uz * dy) * s;
                     repaint();
                 }
             }
