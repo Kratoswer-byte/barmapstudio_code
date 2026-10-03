@@ -1714,8 +1714,22 @@ public final class MapStudioPanel extends JPanel {
                 });
             } catch (Throwable ex) {
                 ex.printStackTrace();
+                StringWriter swx = new StringWriter();
+                ex.printStackTrace(new java.io.PrintWriter(swx));
+                final String entry = "[" + new java.util.Date() + "] EXPORT MAPPA " + finalMapName
+                    + " entita=" + m.getCustomEntities().size() + "\n" + swx + "\n";
+                try {
+                    java.nio.file.Path log = homeFolder != null
+                        ? homeFolder.resolve("barmap-error.log")
+                        : java.nio.file.Path.of("barmap-error.log");
+                    java.nio.file.Files.writeString(log, entry,
+                        java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+                } catch (Exception ignored) {}
                 SwingUtilities.invokeLater(() -> {
-                    setStatus("Errore durante l'esportazione: " + ex.getMessage());
+                    String msg = ex.getMessage();
+                    if (msg == null || msg.isBlank()) msg = ex.toString();
+                    if (msg.length() > 220) msg = msg.substring(0, 220) + "...";
+                    setStatus("Errore durante l'esportazione: " + msg + " (dettagli in barmap-error.log)");
                     progressBar.setVisible(false);
                     genFinalMapBtn.setEnabled(true);
                     genAndPlayBtn.setEnabled(true);

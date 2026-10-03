@@ -978,6 +978,15 @@ public final class BarMapExporter {
                 String s3oEntry = "objects3d/" + entId + ".s3o";
                 if (writtenEntries.add(s3oEntry)) {
                     com.faforever.neroxis.generator.bar.ObjModel3D model = ent.getModel3D();
+                    // Varianti di unita ufficiali: base = S3O originale del gioco (mai cubo fallback)
+                    if (model == null && ent.hasOfficialUnit()) {
+                        try {
+                            model = com.faforever.neroxis.generator.bar.OfficialModels.load(ent.getOfficialUnitId());
+                            if (model != null) ent.setModel3D(model);
+                        } catch (Exception ex) {
+                            System.err.println("Modello ufficiale non trovato per " + entId + ": " + ex.getMessage());
+                        }
+                    }
                     if (model == null && ent.getObjFilePath() != null && Files.isRegularFile(ent.getObjFilePath())) {
                         try {
                             model = com.faforever.neroxis.generator.bar.ObjParser.parse(ent.getObjFilePath());

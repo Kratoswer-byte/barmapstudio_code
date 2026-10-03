@@ -60,7 +60,16 @@ public final class MapScene3DCanvas extends JPanel {
     private boolean syncingScale = false;
 
     private Point dragStart;
-    private boolean orbiting, panning;
+    private boolean orbiting, panning, manipulating;
+
+    /** Modalita manipolazione stile Blender: orbita libera, sposta su terreno, ruota yaw. */
+    public enum ManipMode { ORBIT, MOVE, ROTATE }
+    /** Vincolo asse per lo spostamento. */
+    public enum AxisLock { XZ, X, Z }
+    private ManipMode manipMode = ManipMode.ORBIT;
+    private AxisLock axisLock = AxisLock.XZ;
+    private JToggleButton moveBtn, rotBtn, axisXBtn, axisZBtn, axisXZBtn;
+    private int lastRw = 640, lastRh = 480;
 
     public MapScene3DCanvas(java.util.function.Supplier<Path> dataSupplier) {
         texCache = new ModelTextureCache(dataSupplier);
@@ -82,11 +91,25 @@ public final class MapScene3DCanvas extends JPanel {
                 if (SwingUtilities.isMiddleMouseButton(e) || SwingUtilities.isRightMouseButton(e)) {
                     panning = true; dragStart = e.getPoint();
                 } else if (SwingUtilities.isLeftMouseButton(e)) {
-                    orbiting = true; dragStart = e.getPoint();
-                    lowResWhileDrag = true;
+                    if (manipMode != ManipMode.ORBIT && selected != null) {
+                        manipulating = true; dragStart = e.getPoint();
+                        lowResWhileDrag = false;
+                        setCursor(manipMode == ManipMode.MOVE ? Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
+                            : Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                    } else {
+                        orbiting = true; dragStart = e.getPoint();
+                        lowResWhileDrag = true;
+                    }
                 }
             }
             @Override public void mouseReleased(MouseEvent e) {
+                if (manipulating) {
+                    manipulating = false;
+                    updateCursorForMode();
+                    if (scaleChangeListener != null) scaleChangeListener.run(); // sync 2D + contatori
+                    repaint();
+                    return;
+                }
                 if (orbiting || panning) { orbiting = false; panning = false; lowResWhileDrag = false; repaint(); return; }
             }
             @Override public void mouseClicked(MouseEvent e) {
@@ -96,6 +119,15 @@ public final class MapScene3DCanvas extends JPanel {
                 if (dragStart == null) return;
                 int dx = e.getX() - dragStart.x, dy = e.getY() - dragStart.y;
                 dragStart = e.getPoint();
+                if (manipulating && selected != null) {
+                    if (manipMode == ManipMode.MOVE) dragMoveSelected(e.getPoint());
+                    else if (manipMode == ManipMode.ROTATE) {
+                        selected.setRotation(selected.getRotation() + dx * 0.012f);
+                        syncScaleUi();
+                        repaint();
+                    }
+                    return;
+                }
                 if (orbiting) {
                     cam.yawDeg = (cam.yawDeg + dx * 0.5) % 360;
                     cam.pitchDeg = Math.max(5, Math.min(85, cam.pitchDeg + dy * 0.3));
@@ -103,7 +135,7 @@ public final class MapScene3DCanvas extends JPanel {
                 } else if (panning) {
                     double s = cam.dist / 600.0;
                     cam.tx -= dx * 2.0 * s;
-                    cam.tz -= dy * 2.0 * s;
+                    cam.tz += dy * 2.0 * s; // grab-style: trascinando giu il mondo segue il cursore
                     repaint();
                 }
             }
@@ -132,15 +164,106 @@ public final class MapScene3DCanvas extends JPanel {
             @Override public void keyPressed(KeyEvent e) {
                 if (e.getKeyChar() == 'f' || e.getKeyChar() == 'F') { frameSelection(); e.consume(); }
                 else if (e.getKeyCode() == KeyEvent.VK_HOME) { frameAll(); e.consume(); }
-                else if ((e.getKeyChar() == 'r' || e.getKeyChar() == 'R') && selected != null) {
-                    float step = (float) Math.toRadians(15) * (e.isShiftDown() ? -1 : 1);
-                    selected.setRotation(selected.getRotation() + step);
-                    repaint();
-                    if (scaleChangeListener != null) scaleChangeListener.run();
+                else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) { setManipMode(ManipMode.ORBIT); e.consume(); }
+                else if ((e.getKeyChar() == 'g' || e.getKeyChar() == 'G')) {
+                    setManipMode(manipMode == ManipMode.MOVE ? ManipMode.ORBIT : ManipMode.MOVE);
                     e.consume();
-                }
+                } else if ((e.getKeyChar() == 'r' || e.getKeyChar() == 'R')) {
+                    if (manipMode == ManipMode.ROTATE && selected != null && !manipulating) {
+                        float step = (float) Math.toRadians(15) * (e.isShiftDown() ? -1 : 1);
+                        selected.setRotation(selected.getRotation() + step);
+                        syncScaleUi();
+                        repaint();
+                        if (scaleChangeListener != null) scaleChangeListener.run();
+                    } else setManipMode(manipMode == ManipMode.ROTATE ? ManipMode.ORBIT : ManipMode.ROTATE);
+                    e.consume();
+                } else if ((e.getKeyChar() == 'x' || e.getKeyChar() == 'X')) { setAxisLock(AxisLock.X); e.consume(); }
+                else if ((e.getKeyChar() == 'z' || e.getKeyChar() == 'Z')) { setAxisLock(AxisLock.Z); e.consume(); }
             }
         });
+    }
+
+    public void setManipMode(ManipMode m) {
+        manipMode = m != null ? m : ManipMode.ORBIT;
+        if (moveBtn != null) moveBtn.setSelected(manipMode == ManipMode.MOVE);
+        if (rotBtn != null) rotBtn.setSelected(manipMode == ManipMode.ROTATE);
+        updateCursorForMode();
+        syncScaleUi();
+        repaint();
+    }
+
+    public void setAxisLock(AxisLock a) {
+        axisLock = a != null ? a : AxisLock.XZ;
+        if (axisXBtn != null) axisXBtn.setSelected(axisLock == AxisLock.X);
+        if (axisZBtn != null) axisZBtn.setSelected(axisLock == AxisLock.Z);
+        if (axisXZBtn != null) axisXZBtn.setSelected(axisLock == AxisLock.XZ);
+        syncScaleUi();
+        repaint();
+    }
+
+    private void updateCursorForMode() {
+        if (manipMode == ManipMode.MOVE) setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+        else if (manipMode == ManipMode.ROTATE) setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        else setCursor(Cursor.getDefaultCursor());
+    }
+
+    /** Trascina il selezionato sul piano terreno (vincolo asse), quota segue il rilievo. */
+    private void dragMoveSelected(java.awt.Point screenPt) {
+        if (selected == null || map == null) return;
+        double[] hit = unprojectToGround(screenPt.x, screenPt.y);
+        if (hit == null) return;
+        float nx = (float) (hit[0] / 16.0);
+        float nz = (float) (hit[1] / 16.0);
+        float mw = map.getWidth(), mh = map.getHeight();
+        nx = Math.max(0, Math.min(mw - 1, nx));
+        nz = Math.max(0, Math.min(mh - 1, nz));
+        float cx = selected.getPosition().x(), cz = selected.getPosition().y();
+        if (axisLock == AxisLock.X) nz = cz;
+        else if (axisLock == AxisLock.Z) nx = cx;
+        selected.setPosition(new com.faforever.neroxis.util.vector.Vector2(nx, nz));
+        syncScaleUi();
+        repaint();
+    }
+
+    /** Raggio dal pixel allo spazio mondo, intersezione col terreno (2 iterazioni). */
+    private double[] unprojectToGround(int px, int py) {
+        int w = Math.max(8, lastRw), h = Math.max(8, lastRh);
+        double yaw = Math.toRadians(cam.yawDeg);
+        double pitch = Math.toRadians(cam.pitchDeg);
+        double cx = Math.cos(pitch) * Math.cos(yaw);
+        double cy = Math.sin(pitch);
+        double cz = Math.cos(pitch) * Math.sin(yaw);
+        double ex = cam.tx + cx * cam.dist;
+        double ey = cam.ty + cy * cam.dist;
+        double ez = cam.tz + cz * cam.dist;
+        double[] fwd = norm3(new double[]{cam.tx - ex, cam.ty - ey, cam.tz - ez});
+        double[] right = norm3(new double[]{fwd[2], 0, -fwd[0]});
+        if (Math.sqrt(right[0]*right[0]+right[2]*right[2]) < 1e-6) right = new double[]{1, 0, 0};
+        double[] up = cross3(fwd, right);
+        double focal = (h * 0.5) / Math.tan(Math.toRadians(cam.fovY * 0.5));
+        double nx = (px - w * 0.5) / focal;
+        double ny = -(py - h * 0.5) / focal;
+        double[] d = norm3(new double[]{fwd[0] + right[0]*nx + up[0]*ny, fwd[1] + right[1]*nx + up[1]*ny, fwd[2] + right[2]*nx + up[2]*ny});
+        if (d[1] >= -1e-6) return null;
+        double gx = ex, gz = ez;
+        for (int i = 0; i < 3; i++) {
+            float hgt = getHeightElmosAt((float) (gx / 16.0), (float) (gz / 16.0));
+            double t = (hgt - ey) / d[1];
+            if (t < 0) return null;
+            gx = ex + d[0] * t;
+            gz = ez + d[2] * t;
+        }
+        return new double[]{gx, gz};
+    }
+
+    private static double[] norm3(double[] v) {
+        double l = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+        if (l < 1e-9) return new double[]{0, 0, 0};
+        return new double[]{v[0]/l, v[1]/l, v[2]/l};
+    }
+
+    private static double[] cross3(double[] a, double[] b) {
+        return new double[]{a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]};
     }
 
     private void buildHud() {
@@ -173,6 +296,22 @@ public final class MapScene3DCanvas extends JPanel {
             applyScaleToType(selected.getEntity(), ((Number) scaleSpinner.getValue()).floatValue());
         });
         hud.add(infoLabel); hud.add(new JLabel("Scala:")); hud.add(scaleSlider); hud.add(scaleSpinner); hud.add(varBtn); hud.add(cmdBtn);
+        moveBtn = new JToggleButton("Sposta [G]", false);
+        moveBtn.setToolTipText("Trascina l'oggetto sul terreno (G), vincolo asse con X/Z");
+        moveBtn.addActionListener(ev -> setManipMode(moveBtn.isSelected() ? ManipMode.MOVE : ManipMode.ORBIT));
+        rotBtn = new JToggleButton("Ruota [R]", false);
+        rotBtn.setToolTipText("Trascina per ruotare yaw (R); R a fermo = +15 gradi");
+        rotBtn.addActionListener(ev -> setManipMode(rotBtn.isSelected() ? ManipMode.ROTATE : ManipMode.ORBIT));
+        axisXZBtn = new JToggleButton("XZ", true);
+        axisXZBtn.setToolTipText("Spostamento libero sul piano");
+        axisXZBtn.addActionListener(ev -> setAxisLock(AxisLock.XZ));
+        axisXBtn = new JToggleButton("X", false);
+        axisXBtn.setToolTipText("Spostamento solo asse X [tasto X]");
+        axisXBtn.addActionListener(ev -> setAxisLock(AxisLock.X));
+        axisZBtn = new JToggleButton("Z", false);
+        axisZBtn.setToolTipText("Spostamento solo asse Z [tasto Z]");
+        axisZBtn.addActionListener(ev -> setAxisLock(AxisLock.Z));
+        hud.add(moveBtn); hud.add(rotBtn); hud.add(axisXZBtn); hud.add(axisXBtn); hud.add(axisZBtn);
         add(hud);
     }
 
@@ -216,7 +355,7 @@ public final class MapScene3DCanvas extends JPanel {
                 scaleSlider.setValue(Math.max(10, Math.min(500, Math.round(sc * 100))));
                 scaleSpinner.setValue((double) sc);
                 infoLabel.setText(selText());
-            } else infoLabel.setText("3D: click seleziona | Shift+rotella scala tipo | R ruota | F inquadra");
+            } else infoLabel.setText("3D: click seleziona | G sposta | R ruota | X/Z asse | F inquadra");
         } finally { syncingScale = false; }
     }
 
@@ -321,7 +460,7 @@ public final class MapScene3DCanvas extends JPanel {
         SoftRenderer3D.RenderMesh m = meshCache.get(key);
         if (m != null) return m.triCount == 0 ? null : m;
         ObjModel3D model = e.getModel3D();
-        if (model == null && e.getOfficialUnit() != null && loadingOfficials.add(e.getId())) {
+        if (model == null && e.hasOfficialUnit() && loadingOfficials.add(e.getId())) {
             bg.execute(() -> {
                 try {
                     ObjModel3D loaded = loadOfficialModel(e);
@@ -394,34 +533,19 @@ public final class MapScene3DCanvas extends JPanel {
     }
 
     private ObjModel3D loadOfficialModel(ObjectEntity e) {
-        if (e.getOfficialUnit() == null) return null;
-        String id = e.getOfficialUnit().id().toLowerCase();
-        String[] cands = {"objects3d/units/" + id + ".s3o", "objects3d/" + id + ".s3o"};
-        Path data = null;
+        if (!e.hasOfficialUnit()) return null;
+        S3OParser.S3OModel sm = OfficialModels.loadFull(e.getOfficialUnitId());
+        if (sm == null) return null;
         try {
-            // data supplier via texCache non esposto: rileggi da BarInstall default
-            data = Platform.defaultData();
-        } catch (Exception ignored) {}
-        if (data == null) return null;
-        for (String c : cands) {
-            byte[] bytes = BarInstall.readGameBytes(data, c);
-            if (bytes == null) continue;
-            S3OParser.S3OModel sm = S3OParser.parseWithFaceUV(bytes);
-            if (sm != null && sm.model.getFaceCount() > 0) {
-                // texture tex1 subito in cache (siamo gia in bg)
-                try {
-                    if (sm.tex1 != null && !sm.tex1.isBlank()) {
-                        BufferedImage img = texCache.loadGameTexture(sm.tex1);
-                        if (img != null) diffCache.put("tex:" + e.getId(), new SoftRenderer3D.Texture(img));
-                    }
-                } catch (Exception ignored) {}
-                // default icon hook: unita ufficiali = MOBILE con icona
-                e.setIconKind(ObjectEntity.IconKind.MOBILE);
-                e.setShowIcon(true);
-                return sm.model;
+            if (sm.tex1 != null && !sm.tex1.isBlank()) {
+                BufferedImage img = texCache.loadGameTexture(sm.tex1);
+                if (img != null) diffCache.put("tex:" + e.getId(), new SoftRenderer3D.Texture(img));
             }
-        }
-        return null;
+        } catch (Exception ignored) {}
+        // default icon hook: unita ufficiali = MOBILE con icona
+        e.setIconKind(ObjectEntity.IconKind.MOBILE);
+        e.setShowIcon(true);
+        return sm.model;
     }
 
     private void loadCommanderRefAsync() {
@@ -458,6 +582,7 @@ public final class MapScene3DCanvas extends JPanel {
         int rh = lowResWhileDrag ? Math.max(16, H / 2) : H;
         renderer.resize(rw, rh);
         renderer.setBilinear(!lowResWhileDrag);
+        lastRw = renderer.getWidth(); lastRh = renderer.getHeight();
         renderer.clear(0x0B0E14);
         // terreno
         if (terrainHeights != null && map != null) {

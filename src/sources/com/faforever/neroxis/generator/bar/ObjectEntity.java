@@ -220,6 +220,9 @@ public final class ObjectEntity {
     public String getLuaScript() { return luaScript; }
     public void setLuaScript(String luaScript) { this.luaScript = luaScript; }
     public Units.Unit getOfficialUnit() { return officialUnit; }
+    /** Accesso inter-package senza esporre il tipo package-private Units.Unit. */
+    public boolean hasOfficialUnit() { return officialUnit != null; }
+    public String getOfficialUnitId() { return officialUnit != null ? officialUnit.id() : null; }
     public float getScale() { return scale; }
     public void setScale(float scale) {
         this.scale = Math.max(0.01f, Math.min(500.0f, scale));
