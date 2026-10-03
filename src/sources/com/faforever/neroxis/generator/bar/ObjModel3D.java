@@ -129,12 +129,21 @@ public final class ObjModel3D {
         this.faceUVs = (faceUVs != null && faceUVs.length == this.faces.length) ? faceUVs : new float[this.faces.length][];
         this.materialColors = materialColors;
         this.faceMaterials = faceMaterials;
+        // Copia delle UV originali (vt): serve per ripristinarle solo sui materiali CON texture
+        this.baseUVs = new float[this.faces.length][];
+        for (int f = 0; f < this.faces.length; f++) {
+            float[] src = (f < this.faceUVs.length) ? this.faceUVs[f] : null;
+            this.baseUVs[f] = (src != null) ? java.util.Arrays.copyOf(src, src.length) : null;
+        }
 
         // Bake automatico palette se presenti materiali MTL
         if (materialColors != null && !materialColors.isEmpty()) {
             bakeTexturePalette();
         }
     }
+
+    /** UV vt originali del parser (possono essere null per faccia). */
+    private final float[][] baseUVs;
 
     private void bakeTexturePalette() {
         if (materialColors == null || materialColors.isEmpty()) return;
@@ -175,10 +184,12 @@ public final class ObjModel3D {
 
         this.bakedTexture = img;
 
-        // Assegna le coordinate UV alla palette SOLO per facce senza UV reali (fix: non sovrascrivere vt)
+        // Regola UV: colore Kd -> cella palette (vale per TUTTE le facce del materiale,
+        // anche se hanno vt: senza immagine le vt non hanno senso). Le vt originali
+        // restano in baseUVs e vengono ripristinate da setMaterialDiffuse per i
+        // materiali che hanno davvero una texture (map_Kd).
         if (faceMaterials != null) {
             for (int f = 0; f < faces.length; f++) {
-                if (faceUVs[f] != null) continue;
                 if (f < faceMaterials.length && faceMaterials[f] != null) {
                     String mtl = faceMaterials[f];
                     if (uCenters.containsKey(mtl)) {
@@ -243,6 +254,39 @@ public final class ObjModel3D {
             m = new Material(name, kd, img);
             materials.put(name, m);
         } else m.diffuse = img;
+        // Con una texture reale valgono le UV vt originali; senza texture resta la cella palette.
+        if (img != null) restoreBaseUVsFor(name);
+    }
+
+    /** Ripristina le UV vt originali per tutte le facce del materiale (usato quando arriva map_Kd). */
+    private void restoreBaseUVsFor(String materialName) {
+        if (materialName == null || faceMaterials == null || baseUVs == null) return;
+        for (int f = 0; f < faces.length; f++) {
+            if (f >= faceMaterials.length || !materialName.equals(faceMaterials[f])) continue;
+            float[] base = (f < baseUVs.length) ? baseUVs[f] : null;
+            if (base != null && base.length == faces[f].length * 2) {
+                faceUVs[f] = java.util.Arrays.copyOf(base, base.length);
+            }
+        }
+    }
+
+    /** true se almeno un materiale ha una texture diffusa reale. */
+    public boolean hasAnyDiffuse() {
+        for (Material m : materials.values()) if (m.diffuse != null) return true;
+        return false;
+    }
+
+    /**
+     * UV originali del file (vt) per faccia. A differenza di getFaceUVs() non vengono
+     * sostituite dalle celle della palette Kd: servono all'atlante di esportazione,
+     * perche' una faccia con map_Kd deve campionare l'immagine, non il colore Kd.
+     */
+    public float[][] getBaseUVs() { return baseUVs; }
+
+    /** Ritorna la prima texture diffusa disponibile (o null). */
+    public BufferedImage firstDiffuse() {
+        for (Material m : materials.values()) if (m.diffuse != null) return m.diffuse;
+        return null;
     }
 
     public float getMinX() { return minX; }

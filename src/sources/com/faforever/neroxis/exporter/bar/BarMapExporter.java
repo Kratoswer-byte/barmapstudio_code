@@ -1287,9 +1287,11 @@ public final class BarMapExporter {
             rects.put("__palette__", new java.awt.Rectangle(cx, cy, cell, cell));
         }
         g.dispose();
-        // remap UV: uv originali (0..1 nell'immagine materiale) -> cella atlas
+        // remap UV: parto SEMPRE dalle UV originali (vt) del file, non da getFaceUVs()
+        // (che per i materiali con solo Kd punta alla cella palette).
         String[] faceMats = model.getFaceMaterials();
-        float[][] faceUVs = model.getFaceUVs();
+        float[][] faceUVs = model.getBaseUVs();
+        if (faceUVs == null || faceUVs.length != model.getFaces().length) faceUVs = model.getFaceUVs();
         int[][] faces = model.getFaces();
         float[][] newUVs = new float[faceUVs.length][];
         for (int f = 0; f < faces.length; f++) {
@@ -1301,19 +1303,30 @@ public final class BarMapExporter {
                 r = rects.get("__palette__");
                 if (r == null && !rects.isEmpty()) r = rects.values().iterator().next();
             }
-            if (r == null || src == null) { newUVs[f] = src; continue; }
+            if (r == null) { newUVs[f] = src; continue; }
+            if (src == null) {
+                // nessuna vt: centro cella (colore piatto del materiale)
+                int vCount = faces[f].length;
+                float[] dst = new float[vCount * 2];
+                float cu = (r.x + r.width * 0.5f) / aw;
+                float cv = (r.y + r.height * 0.5f) / ah;
+                for (int vi = 0; vi < vCount; vi++) { dst[vi * 2] = cu; dst[vi * 2 + 1] = cv; }
+                newUVs[f] = dst;
+                continue;
+            }
             float[] dst = new float[src.length];
             for (int k = 0; k < src.length / 2; k++) {
                 float u = src[k * 2], v = src[k * 2 + 1];
-                // se src e palette-centro (u uniforme), mantieni centro cella
                 dst[k * 2] = (r.x + Math.min(0.9999f, Math.max(0, u)) * r.width) / aw;
                 dst[k * 2 + 1] = (r.y + Math.min(0.9999f, Math.max(0, v)) * r.height) / ah;
             }
             newUVs[f] = dst;
         }
-        com.faforever.neroxis.generator.bar.ObjModel3D remapped = new com.faforever.neroxis.generator.bar.ObjModel3D(
-            model.getVertices(), faces, model.getFaceNormals(), model.getFaceColors(), newUVs, model.getMaterialColors(), faceMats);
-        return new AtlasResult(atlas, remapped);
+        // IMPORTANTE: materialColors vuoto -> il costruttore non ri-applica le celle palette
+        // e le UV dell'atlante (newUVs) restano intatte.
+        return new AtlasResult(atlas, new com.faforever.neroxis.generator.bar.ObjModel3D(
+            model.getVertices(), faces, model.getFaceNormals(), model.getFaceColors(), newUVs,
+            new java.util.LinkedHashMap<>(), faceMats));
     }
 
     private String buildCustomUnitDefLua(com.faforever.neroxis.generator.bar.ObjectEntity ent) {
