@@ -37,6 +37,7 @@
 | `9e800db` | `feat` | 02/10/2026 16:40 | Integrati comandi HUD Slope Map, opacita' e zoom 1:1 in Texture Studio |
 | `432ad9c` | `feat` | 02/10/2026 17:55 | Nuova suite Objects & Units Studio: viewport 3D, validatore Lua, import Wavefront .obj e placement tray in MAPS |
 | `881935b` | `fix/perf` | 02/10/2026 18:12 | Risolto blocco/freeze EDT all'avvio: lazy loading unita' BAR su richiesta e Flyweight cell renderer a zero allocazioni |
+| `55c68b3` | `fix/feat` | 03/10/2026 08:07 | Risolto export mappa con oggetti obj/unita' BAR e integrata lista oggetti pronti nella sidebar destra |
 
 ---
 
