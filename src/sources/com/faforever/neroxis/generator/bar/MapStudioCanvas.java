@@ -262,6 +262,27 @@ public final class MapStudioCanvas extends JPanel {
         this.changeListener = r;
     }
 
+    private java.util.function.Consumer<PlacedCustomEntity> selectionListener;
+    public void setSelectionListener(java.util.function.Consumer<PlacedCustomEntity> l) { this.selectionListener = l; }
+
+    /** Selezione custom condivisa con la vista 3D (solo PlacedCustomEntity, null = deseleziona). */
+    public PlacedCustomEntity getSelectedCustomEntity() {
+        return (selectedEntity instanceof PlacedCustomEntity p) ? p : null;
+    }
+    public void setSelectedCustomEntity(PlacedCustomEntity p) {
+        if (p != null && !customEntities.contains(p)) return;
+        this.selectedEntity = p;
+        repaint();
+    }
+    /** Altezza in elmi BAR alla cella (per appoggio oggetti in 3D). */
+    public float getHeightElmosAt(float cellX, float cellZ) {
+        if (map == null) return 0;
+        try {
+            float sea = map.getWaterElevation();
+            return (map.getHeightAtWorld(cellX, cellZ) - sea) * 16f * 0.7f;
+        } catch (Exception ex) { return 0; }
+    }
+
     private void notifyChange() {
         if (changeListener != null) {
             changeListener.run();
@@ -576,6 +597,9 @@ public final class MapStudioCanvas extends JPanel {
         if (activeTool == Tool.SELECT) {
             Object hit = findEntityAt(screenPt, 16);
             selectedEntity = hit;
+            if (hit instanceof PlacedCustomEntity p && selectionListener != null) {
+                try { selectionListener.accept(p); } catch (Exception ignored) {}
+            }
             if (hit != null) {
                 draggedEntity = hit;
                 initDragSiblings(hit);

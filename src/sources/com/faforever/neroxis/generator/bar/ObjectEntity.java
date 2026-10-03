@@ -43,6 +43,11 @@ public final class ObjectEntity {
     private final Units.Unit officialUnit;
     private float scale = 1.0f;
 
+    /** Hook icone gameplay (UI completa dopo, in Studio). NONE = statica senza icona. */
+    public enum IconKind { NONE, MOBILE, STRUCTURE }
+    private IconKind iconKind = IconKind.NONE;
+    private boolean showIcon = false;
+
     public ObjectEntity(String id, String name, Category category, String faction,
                         int footprintX, int footprintZ, int health, int metal, int energy,
                         String tooltip, ObjModel3D model3D, String luaScript) {
@@ -218,6 +223,22 @@ public final class ObjectEntity {
     public float getScale() { return scale; }
     public void setScale(float scale) {
         this.scale = Math.max(0.01f, Math.min(500.0f, scale));
+    }
+    public IconKind getIconKind() { return iconKind; }
+    public void setIconKind(IconKind k) { this.iconKind = k != null ? k : IconKind.NONE; }
+    public boolean isShowIcon() { return showIcon; }
+    public void setShowIcon(boolean b) { this.showIcon = b; }
+
+    /** Crea variante con scala propria (nuovo tipo, nuovo id). Per differenziare dimensioni in BAR. */
+    public ObjectEntity createVariant(float newScale) {
+        ObjectEntity v = new ObjectEntity(id + "_v2", name + " (variante)", category, faction,
+            footprintX, footprintZ, health, metal, energy, tooltip, model3D, luaScript, officialUnit);
+        v.setScale(newScale);
+        v.setTier(tier); v.setSpeed(speed);
+        v.setObjFilePath(objFilePath); v.setTexturePath(texturePath);
+        v.setPreviewImage(previewImage);
+        v.setIconKind(iconKind); v.setShowIcon(showIcon);
+        return v;
     }
 
     public float getBaseWidth() {

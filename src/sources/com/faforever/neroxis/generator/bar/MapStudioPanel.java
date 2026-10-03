@@ -119,6 +119,11 @@ public final class MapStudioPanel extends JPanel {
     private final JSpinner waterLevelSpinner = new JSpinner(new SpinnerNumberModel(25.0, -100.0, 800.0, 5.0));
     private final JToggleButton slopeToggleBtn = new JToggleButton("Slope Map [L]", false);
     private final JSlider slopeOpacitySlider = new JSlider(10, 100, 70);
+    private final JToggleButton view3DBtn = new JToggleButton("Vista 3D [V]", false);
+    private MapScene3DCanvas scene3D;
+    private JSplitPane centerSplit;
+    private JPanel centerWrapper;
+    private boolean view3DVisible = false;
     private final JButton btnRegenGround = createPrimaryButton("RIGENERA DA HEIGHTMAP", ACCENT_AMBER);
     private final JButton btnLoadHeightmap = createGhostButton("Carica Heightmap...");
     private final JButton btnLoadTexture = createGhostButton("Carica Texture Terreno...");
@@ -245,11 +250,21 @@ public final class MapStudioPanel extends JPanel {
         styleSpinner(maxMetalSpinner);
         styleSpinner(mexPlacementMetalSpinner);
 
-        // 2. Center Canvas Area
-        JPanel centerWrapper = new JPanel(new BorderLayout());
+        // 2. Center Canvas Area (2D + 3D split)
+        centerWrapper = new JPanel(new BorderLayout());
         centerWrapper.setOpaque(false);
         centerWrapper.setBorder(new EmptyBorder(6, 6, 6, 6));
-        centerWrapper.add(canvas, BorderLayout.CENTER);
+        scene3D = new MapScene3DCanvas(() -> barDataFolder);
+        scene3D.setMinimumSize(new Dimension(200, 100));
+        canvas.setMinimumSize(new Dimension(200, 100));
+        centerSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, canvas, scene3D);
+        centerSplit.setDividerSize(7);
+        centerSplit.setContinuousLayout(true);
+        centerSplit.setBorder(null);
+        centerSplit.setOpaque(false);
+        centerSplit.setResizeWeight(0.6);
+        centerWrapper.add(centerSplit, BorderLayout.CENTER);
+        scene3D.setVisible(false);
         canvas.setHudDock(buildCanvasHudDock());
 
         // Ready Objects Tray nel pannello laterale destro
@@ -327,8 +342,14 @@ public final class MapStudioPanel extends JPanel {
 
         add(mainSplit, BorderLayout.CENTER);
 
-        // Canvas change listener updates counter chips
-        canvas.setChangeListener(this::updateCounters);
+        // Canvas change listener updates counter chips + 3D scene
+        canvas.setChangeListener(() -> { updateCounters(); refreshScene3D(); });
+        // Selezione 2D <-> 3D sincronizzata
+        canvas.setSelectionListener(p -> { if (scene3D != null) scene3D.setSelected(p); });
+        if (scene3D != null) {
+            scene3D.setSelectionListener(p -> { if (p != null) canvas.setSelectedCustomEntity(p); });
+            scene3D.setScaleChangeListener(() -> { updateCounters(); canvas.repaint(); });
+        }
 
         // Synchronize Mex Metal controls
         mexPlacementMetalSpinner.addChangeListener(e -> {
@@ -563,6 +584,34 @@ public final class MapStudioPanel extends JPanel {
         bindKey(java.awt.event.KeyEvent.VK_5, 0, "mex_p5", () -> { if (!isTypingInText()) setPlacementMetalValue(5.0f, true, true); });
         // Slope Map toggle hotkey
         bindKey(java.awt.event.KeyEvent.VK_L, 0, "toggle_slope_map", () -> { if (!isTypingInText()) toggleSlopeMap(); });
+        bindKey(java.awt.event.KeyEvent.VK_V, 0, "toggle_view_3d", () -> { if (!isTypingInText()) toggleView3D(); });
+    }
+
+    public void toggleView3D() { setView3DVisible(!view3DVisible); }
+
+    public void setView3DVisible(boolean v) {
+        view3DVisible = v;
+        view3DBtn.setSelected(v);
+        view3DBtn.setText(v ? "Vista 3D: ON [V]" : "Vista 3D [V]");
+        if (scene3D != null) {
+            scene3D.setVisible(v);
+            if (v) {
+                refreshScene3D();
+                centerSplit.setDividerLocation(0.6);
+            }
+            centerWrapper.revalidate();
+            centerWrapper.repaint();
+        }
+    }
+
+    private void refreshScene3D() {
+        if (scene3D == null || !view3DVisible) return;
+        try {
+            scene3D.setDataSupplier(() -> barDataFolder);
+            scene3D.setMapAndGround(canvas.getMap(), canvas.getGroundPreview(), canvas.getCustomEntities());
+            PlacedCustomEntity sel = canvas.getSelectedCustomEntity();
+            if (sel != null) scene3D.setSelected(sel);
+        } catch (Exception ignored) {}
     }
 
     public void toggleSlopeMap() {
@@ -700,6 +749,13 @@ public final class MapStudioPanel extends JPanel {
             updateSlopeButtonState();
         });
         dock.add(slopeToggleBtn);
+
+        // Vista 3D toggle subito dopo Slope Map
+        styleToggleButton(view3DBtn);
+        view3DBtn.setPreferredSize(new Dimension(120, 24));
+        view3DBtn.setToolTipText("Mostra/nascondi vista 3D proporzionata [Tasto V]");
+        view3DBtn.addActionListener(e -> setView3DVisible(view3DBtn.isSelected()));
+        dock.add(view3DBtn);
 
         // Opacity Label & Slider
         JLabel opacityLbl = new JLabel("Opacita':");
@@ -1263,6 +1319,7 @@ public final class MapStudioPanel extends JPanel {
 
                 SwingUtilities.invokeLater(() -> {
                     canvas.setMapAndGround(res.map(), res.preview(), res.slopeOverlay(), res.symmetrySettings());
+                    refreshScene3D();
                     if (res.symmetrySettings() != null) {
                         selectSymmetryInCombo(res.symmetrySettings().terrainSymmetry());
                         updateAxisToggleLabel(res.symmetrySettings().terrainSymmetry());
@@ -1345,6 +1402,7 @@ public final class MapStudioPanel extends JPanel {
 
                 SwingUtilities.invokeLater(() -> {
                     canvas.setMapAndGround(res.map(), res.preview(), res.slopeOverlay(), res.symmetrySettings());
+                    refreshScene3D();
                     if (res.symmetrySettings() != null) {
                         selectSymmetryInCombo(res.symmetrySettings().terrainSymmetry());
                         updateAxisToggleLabel(res.symmetrySettings().terrainSymmetry());

@@ -971,8 +971,10 @@ public final class BarMapExporter {
         for (com.faforever.neroxis.generator.bar.ObjectEntity ent : uniqueEntities.values()) {
             String entId = ent.getId();
 
-            // Modelli 3D personalizzati (NON unita' ufficiali BAR che risiedono gia' nel gioco base)
-            if (ent.getCategory() != com.faforever.neroxis.generator.bar.ObjectEntity.Category.OFFICIAL_UNIT) {
+            // Modelli 3D personalizzati (unita ufficiali pure saltate; varianti _v2 esportate come nuovi tipi)
+            boolean isPureOfficial = ent.getCategory() == com.faforever.neroxis.generator.bar.ObjectEntity.Category.OFFICIAL_UNIT
+                && !entId.endsWith("_v2");
+            if (!isPureOfficial) {
                 String s3oEntry = "objects3d/" + entId + ".s3o";
                 if (writtenEntries.add(s3oEntry)) {
                     com.faforever.neroxis.generator.bar.ObjModel3D model = ent.getModel3D();
@@ -989,29 +991,53 @@ public final class BarMapExporter {
                     }
 
                     String tex1Name = "default_mat.tga";
-                    if (ent.getTexturePath() != null && Files.isRegularFile(ent.getTexturePath())) {
-                        String ext = ent.getTexturePath().getFileName().toString();
-                        tex1Name = entId + "_" + ext;
-                    } else if (model.getBakedTexture() != null) {
-                        tex1Name = entId + "_palette.tga";
-                        String texEntry = "unittextures/" + tex1Name;
-                        if (writtenEntries.add(texEntry)) {
-                            zip.putNextEntry(new ZipEntry(texEntry));
-                            zip.write(com.faforever.neroxis.generator.bar.ObjModel3D.imageToTgaBytes(model.getBakedTexture()));
-                            zip.closeEntry();
+                    String tex2Name = entId + "_tex2.tga";
+                    // Atlante tex1: materiali map_Kd + palette Kd in un'unica texture (BAR: una tex1 per modello)
+                    com.faforever.neroxis.generator.bar.ObjModel3D exportModel = model;
+                    try {
+                        AtlasResult atlas = buildAtlasForEntity(ent, model);
+                        if (atlas != null && atlas.image != null) {
+                            tex1Name = entId + "_tex1.tga";
+                            String texEntry = "unittextures/" + tex1Name;
+                            if (writtenEntries.add(texEntry)) {
+                                zip.putNextEntry(new ZipEntry(texEntry));
+                                zip.write(com.faforever.neroxis.generator.bar.ObjModel3D.imageToTgaBytes(atlas.image));
+                                zip.closeEntry();
+                            }
+                            if (atlas.remapped != null) exportModel = atlas.remapped;
+                        } else if (ent.getTexturePath() != null && Files.isRegularFile(ent.getTexturePath())) {
+                            String ext = ent.getTexturePath().getFileName().toString();
+                            tex1Name = entId + "_" + ext;
+                        } else if (model.getBakedTexture() != null) {
+                            tex1Name = entId + "_palette.tga";
+                            String texEntry = "unittextures/" + tex1Name;
+                            if (writtenEntries.add(texEntry)) {
+                                zip.putNextEntry(new ZipEntry(texEntry));
+                                zip.write(com.faforever.neroxis.generator.bar.ObjModel3D.imageToTgaBytes(model.getBakedTexture()));
+                                zip.closeEntry();
+                            }
+                        } else if (!defaultMatWritten) {
+                            String defTexEntry = "unittextures/default_mat.tga";
+                            if (writtenEntries.add(defTexEntry)) {
+                                zip.putNextEntry(new ZipEntry(defTexEntry));
+                                zip.write(createDefaultTgaBytes());
+                                zip.closeEntry();
+                                defaultMatWritten = true;
+                            }
                         }
-                    } else if (!defaultMatWritten) {
-                        String defTexEntry = "unittextures/default_mat.tga";
-                        if (writtenEntries.add(defTexEntry)) {
-                            zip.putNextEntry(new ZipEntry(defTexEntry));
-                            zip.write(createDefaultTgaBytes());
-                            zip.closeEntry();
-                            defaultMatWritten = true;
-                        }
+                    } catch (Exception ex) {
+                        System.err.println("Atlante texture fallito per " + entId + ": " + ex.getMessage());
+                    }
+                    // tex2 neutra (R30 G0 B40 A255): senza tex2 lo shader BAR rende il modello piatto
+                    String tex2Entry = "unittextures/" + tex2Name;
+                    if (writtenEntries.add(tex2Entry)) {
+                        zip.putNextEntry(new ZipEntry(tex2Entry));
+                        zip.write(createNeutralTex2Bytes());
+                        zip.closeEntry();
                     }
 
                     zip.putNextEntry(new ZipEntry(s3oEntry));
-                    zip.write(model.toS3OBytes(ent.getName(), tex1Name, "", ent.getScale()));
+                    zip.write(exportModel.toS3OBytes(ent.getName(), tex1Name, tex2Name, ent.getScale()));
                     zip.closeEntry();
                 }
 
@@ -1181,6 +1207,104 @@ public final class BarMapExporter {
             tga[offset++] = (byte) 255; // A
         }
         return tga;
+    }
+
+    private byte[] createNeutralTex2Bytes() {
+        int w = 64, h = 64;
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        int argb = (255 << 24) | (30 << 16) | (0 << 8) | 40;
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) img.setRGB(x, y, argb);
+        return com.faforever.neroxis.generator.bar.ObjModel3D.imageToTgaBytes(img);
+    }
+
+    private static final class AtlasResult {
+        final java.awt.image.BufferedImage image;
+        final com.faforever.neroxis.generator.bar.ObjModel3D remapped;
+        AtlasResult(java.awt.image.BufferedImage image, com.faforever.neroxis.generator.bar.ObjModel3D remapped) {
+            this.image = image; this.remapped = remapped;
+        }
+    }
+
+    /** Costruisce atlante tex1 unico (max 2048) da materiali map_Kd + palette Kd; rimappa UV nella cella. */
+    private AtlasResult buildAtlasForEntity(com.faforever.neroxis.generator.bar.ObjectEntity ent,
+                                           com.faforever.neroxis.generator.bar.ObjModel3D model) throws Exception {
+        java.util.LinkedHashMap<String, java.awt.image.BufferedImage> imgs = new java.util.LinkedHashMap<>();
+        if (model != null && model.getMaterials() != null) {
+            for (java.util.Map.Entry<String, com.faforever.neroxis.generator.bar.ObjModel3D.Material> e : model.getMaterials().entrySet()) {
+                if (e.getValue() != null && e.getValue().diffuse != null) imgs.putIfAbsent(e.getKey(), e.getValue().diffuse);
+            }
+        }
+        java.awt.image.BufferedImage fileImg = null;
+        if (ent.getTexturePath() != null && Files.isRegularFile(ent.getTexturePath())) {
+            try {
+                String ln = ent.getTexturePath().getFileName().toString().toLowerCase();
+                if (ln.endsWith(".tga")) fileImg = com.faforever.neroxis.generator.bar.ModelTextureCache.readTga(Files.readAllBytes(ent.getTexturePath()));
+                else fileImg = javax.imageio.ImageIO.read(ent.getTexturePath().toFile());
+            } catch (Exception ignored) {}
+            if (fileImg != null && imgs.isEmpty()) {
+                // singolo file: usa direttamente, nessuna atlas
+                return new AtlasResult(fileImg, null);
+            }
+            if (fileImg != null) imgs.putIfAbsent("__file__", fileImg);
+        }
+        if (imgs.isEmpty()) return null;
+        if (imgs.size() == 1 && (model.getBakedTexture() == null)) {
+            return new AtlasResult(imgs.values().iterator().next(), null);
+        }
+        // pack a griglia: celle quadrate 512 (downscale), atlas max 2048 (4x4=16 materiali)
+        java.util.List<String> keys = new java.util.ArrayList<>(imgs.keySet());
+        boolean hasPalette = model.getBakedTexture() != null;
+        int cells = keys.size() + (hasPalette ? 1 : 0);
+        int cols = (int) Math.ceil(Math.sqrt(cells));
+        cols = Math.max(1, Math.min(4, cols));
+        int rows = (int) Math.ceil(cells / (double) cols);
+        int cell = 512;
+        int aw = cols * cell, ah = rows * cell;
+        java.awt.image.BufferedImage atlas = new java.awt.image.BufferedImage(aw, ah, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D g = atlas.createGraphics();
+        g.setColor(new java.awt.Color(128, 128, 128, 255));
+        g.fillRect(0, 0, aw, ah);
+        java.util.Map<String, java.awt.Rectangle> rects = new java.util.HashMap<>();
+        for (int i = 0; i < keys.size(); i++) {
+            int cx = (i % cols) * cell, cy = (i / cols) * cell;
+            java.awt.image.BufferedImage src = imgs.get(keys.get(i));
+            g.drawImage(src, cx, cy, cell, cell, null);
+            rects.put(keys.get(i), new java.awt.Rectangle(cx, cy, cell, cell));
+        }
+        if (hasPalette) {
+            int i = keys.size();
+            int cx = (i % cols) * cell, cy = (i / cols) * cell;
+            g.drawImage(model.getBakedTexture(), cx, cy, cell, cell, null);
+            rects.put("__palette__", new java.awt.Rectangle(cx, cy, cell, cell));
+        }
+        g.dispose();
+        // remap UV: uv originali (0..1 nell'immagine materiale) -> cella atlas
+        String[] faceMats = model.getFaceMaterials();
+        float[][] faceUVs = model.getFaceUVs();
+        int[][] faces = model.getFaces();
+        float[][] newUVs = new float[faceUVs.length][];
+        for (int f = 0; f < faces.length; f++) {
+            float[] src = (f < faceUVs.length) ? faceUVs[f] : null;
+            String m = (faceMats != null && f < faceMats.length) ? faceMats[f] : null;
+            java.awt.Rectangle r = (m != null) ? rects.get(m) : null;
+            if (r == null) {
+                // materiale con solo Kd o senza diffuse: usa palette se presente, altrimenti prima cella
+                r = rects.get("__palette__");
+                if (r == null && !rects.isEmpty()) r = rects.values().iterator().next();
+            }
+            if (r == null || src == null) { newUVs[f] = src; continue; }
+            float[] dst = new float[src.length];
+            for (int k = 0; k < src.length / 2; k++) {
+                float u = src[k * 2], v = src[k * 2 + 1];
+                // se src e palette-centro (u uniforme), mantieni centro cella
+                dst[k * 2] = (r.x + Math.min(0.9999f, Math.max(0, u)) * r.width) / aw;
+                dst[k * 2 + 1] = (r.y + Math.min(0.9999f, Math.max(0, v)) * r.height) / ah;
+            }
+            newUVs[f] = dst;
+        }
+        com.faforever.neroxis.generator.bar.ObjModel3D remapped = new com.faforever.neroxis.generator.bar.ObjModel3D(
+            model.getVertices(), faces, model.getFaceNormals(), model.getFaceColors(), newUVs, model.getMaterialColors(), faceMats);
+        return new AtlasResult(atlas, remapped);
     }
 
     private String buildCustomUnitDefLua(com.faforever.neroxis.generator.bar.ObjectEntity ent) {

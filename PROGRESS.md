@@ -1,7 +1,7 @@
 # STATO AVANZAMENTO: BAR MAP STUDIO
 
-**Ultimo Aggiornamento:** 02 Ottobre 2026  
-**Stato Generale:** In Corso (Step 0 completato)
+**Ultimo Aggiornamento:** 03 Ottobre 2026  
+**Stato Generale:** In Corso (Vista 3D MAPS integrata, da collaudare in app)
 
 ---
 
@@ -39,6 +39,7 @@
 | `881935b` | `fix/perf` | 02/10/2026 18:12 | Risolto blocco/freeze EDT all'avvio: lazy loading unita' BAR su richiesta e Flyweight cell renderer a zero allocazioni |
 | `55c68b3` | `fix/feat` | 03/10/2026 08:07 | Risolto export mappa con oggetti obj/unita' BAR e integrata lista oggetti pronti nella sidebar destra |
 | `cc30998` | `fix/feat` | 03/10/2026 08:40 | Generatore binario S3O nativo per mesh .obj, safe spawner con pcall/UnitDefNames e tab dedicato Oggetti nella sidebar destra |
+| `STAGED` | `feat` | 03/10/2026 11:05 | Vista 3D proporzionata in MAPS (SoftRenderer3D Java puro, S3OParser, ModelTextureCache, scala tipo/variante, export atlante tex1/tex2) |
 
 ---
 

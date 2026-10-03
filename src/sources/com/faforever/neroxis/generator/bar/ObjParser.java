@@ -50,6 +50,7 @@ public final class ObjParser {
         List<Integer> faceColors = new ArrayList<>(2048);
 
         Map<String, float[]> materialColors = new LinkedHashMap<>();
+        Map<String, String> materialMaps = new LinkedHashMap<>();
         String currentMaterial = null;
 
         String line;
@@ -61,10 +62,16 @@ public final class ObjParser {
 
             if (line.startsWith("mtllib ")) {
                 String mtlFileName = line.substring(7).trim();
+                // mtllib puo contenere piu file o path con spazi: prova intero + fallback token
                 if (parentDir != null) {
                     File mtlFile = new File(parentDir, mtlFileName);
                     if (mtlFile.exists() && mtlFile.isFile()) {
-                        parseMtl(mtlFile, materialColors);
+                        parseMtl(mtlFile, materialColors, materialMaps);
+                    } else {
+                        for (String tok : mtlFileName.split("\\s+")) {
+                            File f2 = new File(parentDir, tok);
+                            if (f2.exists() && f2.isFile()) parseMtl(f2, materialColors, materialMaps);
+                        }
                     }
                 }
             } else if (line.startsWith("usemtl ")) {
@@ -236,10 +243,46 @@ public final class ObjParser {
         float[][] fUvArr = faceUVs.toArray(new float[0][]);
         String[] fmArr = faceMaterials.toArray(new String[0]);
 
-        return new ObjModel3D(vArr, fArr, fnArr, fcArr, fUvArr, materialColors, fmArr);
+        ObjModel3D model = new ObjModel3D(vArr, fArr, fnArr, fcArr, fUvArr, materialColors, fmArr);
+        // Collega map_Kd alle texture reali (stessa cartella OBJ) senza toccare le UV vt
+        if (parentDir != null && !materialMaps.isEmpty()) {
+            for (Map.Entry<String, String> e : materialMaps.entrySet()) {
+                String tex = e.getValue();
+                if (tex == null || tex.isBlank()) continue;
+                File tf = new File(parentDir, tex);
+                if (!tf.isFile()) tf = new File(parentDir, new File(tex).getName());
+                if (tf.isFile()) {
+                    try {
+                        java.awt.image.BufferedImage img = null;
+                        String ln = tf.getName().toLowerCase();
+                        if (ln.endsWith(".tga")) img = ModelTextureCache.readTga(java.nio.file.Files.readAllBytes(tf.toPath()));
+                        else img = javax.imageio.ImageIO.read(tf);
+                        if (img != null) model.setMaterialDiffuse(e.getKey(), img);
+                    } catch (Exception ignored) {}
+                }
+            }
+        }
+        // Fallback: <nome>.mtl / <nome>.png / texture.png se mtllib assente
+        if ((materialColors.isEmpty() && materialMaps.isEmpty()) && parentDir != null) {
+            try {
+                File[] sibs = parentDir.listFiles();
+                if (sibs != null) for (File s : sibs) {
+                    String ln = s.getName().toLowerCase();
+                    if (ln.endsWith(".png") || ln.endsWith(".jpg") || ln.endsWith(".jpeg") || ln.endsWith(".bmp") || ln.endsWith(".tga")) {
+                        try {
+                            java.awt.image.BufferedImage img = ln.endsWith(".tga")
+                                ? ModelTextureCache.readTga(java.nio.file.Files.readAllBytes(s.toPath()))
+                                : javax.imageio.ImageIO.read(s);
+                            if (img != null) { model.setMaterialDiffuse("__auto__", img); break; }
+                        } catch (Exception ignored) {}
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        return model;
     }
 
-    private static void parseMtl(File mtlFile, Map<String, float[]> materialColors) {
+    private static void parseMtl(File mtlFile, Map<String, float[]> materialColors, Map<String, String> materialMaps) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(mtlFile), StandardCharsets.UTF_8))) {
             String line;
             String curMtl = null;
@@ -258,6 +301,29 @@ public final class ObjParser {
                             materialColors.put(curMtl, new float[]{r, g, b});
                         } catch (NumberFormatException ignored) {}
                     }
+                } else if (line.startsWith("map_Kd") && curMtl != null) {
+                    // map_Kd [-s 1 1 1] [-o 0 0 0] <file> (path con spazi supportato)
+                    String rest = line.substring(6).trim();
+                    String tex = rest;
+                    // rimuovi flag -s/-o/-blendu ecc: prendi ultimo token non-flag come file
+                    String[] toks = rest.split("\\s+");
+                    java.util.List<String> files = new java.util.ArrayList<>();
+                    for (int i = 0; i < toks.length; i++) {
+                        String t = toks[i];
+                        if (t.equals("-s") || t.equals("-o") || t.equals("-t")) { i += 2; continue; }
+                        if (t.startsWith("-")) { continue; }
+                        files.add(t);
+                    }
+                    if (!files.isEmpty()) {
+                        // ricomponi con spazi: unisci dal primo file-token fino alla fine se file con spazi
+                        // prova prima join completo, poi fallback ultimo token
+                        String joined = String.join(" ", files);
+                        File base = mtlFile.getParentFile();
+                        File cand = base != null ? new File(base, joined) : new File(joined);
+                        if (cand.isFile()) tex = joined;
+                        else tex = files.get(files.size() - 1);
+                    }
+                    materialMaps.put(curMtl, tex);
                 }
             }
         } catch (Exception ex) {

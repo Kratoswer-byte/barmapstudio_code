@@ -175,9 +175,10 @@ public final class ObjModel3D {
 
         this.bakedTexture = img;
 
-        // Assegna le coordinate UV alla palette per tutte le facce dotate di materiale
+        // Assegna le coordinate UV alla palette SOLO per facce senza UV reali (fix: non sovrascrivere vt)
         if (faceMaterials != null) {
             for (int f = 0; f < faces.length; f++) {
+                if (faceUVs[f] != null) continue;
                 if (f < faceMaterials.length && faceMaterials[f] != null) {
                     String mtl = faceMaterials[f];
                     if (uCenters.containsKey(mtl)) {
@@ -211,6 +212,38 @@ public final class ObjModel3D {
 
     public BufferedImage getBakedTexture() { return bakedTexture; }
     public void setBakedTexture(BufferedImage tex) { this.bakedTexture = tex; }
+    public float[][] getFaceUVs() { return faceUVs; }
+    public String[] getFaceMaterials() { return faceMaterials; }
+    public Map<String, float[]> getMaterialColors() { return materialColors; }
+    public int[] getFaceColors() { return faceColors; }
+
+    /** Materiale con texture diffusa opzionale (map_Kd) + colore Kd fallback. */
+    public static final class Material {
+        public final String name;
+        public final int kdRgb;
+        public BufferedImage diffuse;
+        public Material(String name, int kdRgb, BufferedImage diffuse) {
+            this.name = name; this.kdRgb = kdRgb; this.diffuse = diffuse;
+        }
+    }
+    private final Map<String, Material> materials = new HashMap<>();
+    public Map<String, Material> getMaterials() { return materials; }
+    public void setMaterialDiffuse(String name, BufferedImage img) {
+        if (name == null) return;
+        Material m = materials.get(name);
+        if (m == null) {
+            float[] rgb = materialColors != null ? materialColors.get(name) : null;
+            int kd = 0x508CBE;
+            if (rgb != null) {
+                int r = Math.max(0, Math.min(255, Math.round(rgb[0] * 255f)));
+                int g = Math.max(0, Math.min(255, Math.round(rgb[1] * 255f)));
+                int b = Math.max(0, Math.min(255, Math.round(rgb[2] * 255f)));
+                kd = (r << 16) | (g << 8) | b;
+            }
+            m = new Material(name, kd, img);
+            materials.put(name, m);
+        } else m.diffuse = img;
+    }
 
     public float getMinX() { return minX; }
     public float getMaxX() { return maxX; }
