@@ -31,7 +31,7 @@ public class Brushes {
             return new FloatMask(image, null, new SymmetrySettings(Symmetry.NONE, Symmetry.NONE, Symmetry.NONE), 1.0f, brushPath);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RuntimeException(String.format("Could not load brush: %s", brushPath));
+            throw new RuntimeException(String.format("Could not load brush: %s (%s: %s)", brushPath, e.getClass().getSimpleName(), e.getMessage()), e);
         }
     }
 }
