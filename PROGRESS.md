@@ -308,7 +308,29 @@
   - **Off-EDT Image Scaling:** Il ridimensionamento bilineare dell'anteprima delle unita' a 256x256 e' stato spostato nel thread in background prima di invocare `SwingUtilities.invokeLater`.
 - [x] **Verifica e Collaudo:** Test di avvio ripetuto con `jstack` che ha confermato `AWT-EventQueue-0` completamente scarico e reattivo (consumo CPU sceso da 22s a 1.1s, thread in stato WAITING pronto a gestire gli input dell'utente).
 
+---
 
-
-
+### 28. Fix Placement Oggetti/Unita', Export Mappa .OBJ/BAR Units e Spostamento Tray nella Sidebar Destra
+- [x] **Risoluzione Crash Esportazione Mappa con Mesh .OBJ (ZipException: duplicate entry):**
+  - Quando gli oggetti vengono posizionati con simmetria (es. POINT2, QUAD, Z, X), piu' istanze di `PlacedCustomEntity` condividono la stessa entita' `ObjectEntity`.
+  - La precedente routine di esportazione tentava di scrivere `objects3d/<id>.obj` per ogni istanza piazzata, causando l'eccezione fatale `ZipException: duplicate entry` e bloccando la generazione della mappa.
+  - Implementato set di deduplicazione `writtenEntries` e `uniqueEntities` in `BarMapExporter.java` che garantisce che modelli 3D `.obj`, texture, script e definizioni vengano compressi esattamente una sola volta nell'archivio `.sdz`.
+  - Aggiunto in `ObjModel3D.java` il metodo di serializzazione vettoriale standard `toObjBytes()` per convertire qualsiasi mesh procedurale in formato Wavefront `.obj` conforme.
+- [x] **Risoluzione Mancata Generazione/Apparizione Unita' Ufficiali di BAR In-Game:**
+  - In precedenza, le unita' ufficiali (`OFFICIAL_UNIT`) senza script Lua custom non venivano inserite nella lista `toSpawn`, lasciando il gadget `map_custom_spawner.lua` vuoto o non generato.
+  - Corretta la logica in `BarMapExporter.java`: tutte le categorie (`OFFICIAL_UNIT`, `ANIMATED_SCENERY`, `BOSS_UNIT`, `CUSTOM_MESH`) vengono ora regolarmente registrate per lo spawn runtime.
+  - Per ciascuna entita' piazzata, il gadget calcola coordinate reali nel mondo Spring (`elmosPerCell`), quota del terreno con `Spring.GetGroundHeight`, e orientamento (`facing` n/s/e/w) derivato dalla rotazione simmetrica.
+  - Implementata risoluzione dinamica delle fazioni: Armada -> Armada Team ID (0), Cortex -> Cortex Team ID (1), Gaia/Neutrale/Scenografia -> Gaia Team ID con `Spring.SetUnitNeutral(unitID, true)`.
+  - Aggiunto fallback a `Spring.CreateFeature` qualora l'ID sia un prop di tipo feature invece di un'unita' attiva.
+- [x] **Spostamento della Lista Oggetti Pronti nella Sidebar Destra di MAPS:**
+  - Rimosso l'overlay flottante esterno che copriva l'angolo basso a destra della viewport del canvas (`MapStudioCanvas.java`).
+  - Il componente `ReadyObjectsTray` e' stato interamente riprogettato come una card nativa integrata nel layout a schede della sidebar destra (`CARD_INNER`, bordo ad alto contrasto `BORDER_COLOR`, larghezza responsive).
+  - Posizionato rigorosamente nella sidebar destra **sotto a "Densita' Reclaim" (`reclaimValueLabel`) e sopra alla card "GENERA MAPPA FINALE"**, esattamente come richiesto.
+  - Aggiunto header con contatore oggetti caricati, pulsante collassa/espandi `[-]`/`[+]`, pulsante rapido `[+ Studio]` per passare all'Objects & Units Studio, indicatore in tempo reale `Piazzati: X oggetti` e pulsante `[Svuota]` con richiesta di conferma per cancellare tutti gli oggetti personalizzati piazzati sul canvas.
+  - Collegato bidirezionalmente a `updateCounters()` in `MapStudioPanel.java`: ad ogni posizionamento, cancellazione o modifica, il contatore nella sidebar si aggiorna istantaneamente.
+- [x] **Collaudo e Verifica Automatizzata End-to-End:**
+  - Eseguito test di esportazione completo (`TestExportWithEntities`) con entita' Wavefront `.obj` piazzate con simmetria e unita' ufficiali BAR (`armcom`).
+  - Convalidata la corretta generazione dell'archivio `.sdz` senza alcuna eccezione.
+  - Verificata la presenza di `objects3d/`, `units/`, `features/` e del gadget runtime `luarules/gadgets/map_custom_spawner.lua` contenente tutte le entita' con coordinate e team corretti.
+  - Tutte le classi aggiornate sono state ricompilate in `patch/` e iniettate in `extracted/{app}/app/launcher.jar`.
 

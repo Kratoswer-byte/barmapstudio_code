@@ -190,6 +190,17 @@ public final class MapStudioPanel extends JPanel {
         this.openTextureStudioCallback = openTextureStudioCallback;
     }
 
+    private Runnable openObjectsStudioCallback;
+
+    public void setOpenObjectsStudioCallback(Runnable openObjectsStudioCallback) {
+        this.openObjectsStudioCallback = openObjectsStudioCallback;
+        if (this.readyTray != null) {
+            this.readyTray.setOnOpenStudio(openObjectsStudioCallback);
+        }
+    }
+
+    private ReadyObjectsTray readyTray;
+
     private Runnable onMapChangedCallback;
 
     public void setOnMapChangedCallback(Runnable callback) {
@@ -237,15 +248,30 @@ public final class MapStudioPanel extends JPanel {
         centerWrapper.add(canvas, BorderLayout.CENTER);
         canvas.setHudDock(buildCanvasHudDock());
 
-        // Ready Objects Tray in basso a destra
-        ReadyObjectsTray readyTray = new ReadyObjectsTray(entity -> {
-            if (entity != null) {
-                selectCustomEntityTool(entity);
-            } else {
-                selectTool(MapStudioCanvas.Tool.SELECT);
+        // Ready Objects Tray nel pannello laterale destro
+        readyTray = new ReadyObjectsTray(
+            entity -> {
+                if (entity != null) {
+                    selectCustomEntityTool(entity);
+                } else {
+                    selectTool(MapStudioCanvas.Tool.SELECT);
+                }
+            },
+            () -> {
+                if (openObjectsStudioCallback != null) openObjectsStudioCallback.run();
+            },
+            () -> {
+                int res = JOptionPane.showConfirmDialog(
+                    this,
+                    "Rimuovere tutti gli oggetti personalizzati piazzati sulla mappa?",
+                    "Svuota Oggetti Piazzati",
+                    JOptionPane.YES_NO_OPTION
+                );
+                if (res == JOptionPane.YES_OPTION) {
+                    canvas.clearCustomEntities();
+                }
             }
-        });
-        canvas.setReadyTray(readyTray);
+        );
 
         // 3. Resizable Panels Architecture with JSplitPane
         JComponent leftSidebar = buildLeftSidebar();
@@ -432,6 +458,9 @@ public final class MapStudioPanel extends JPanel {
         JToggleButton b = toolButtons.get(tool);
         if (b != null && !b.isSelected()) {
             b.setSelected(true);
+        }
+        if (readyTray != null && tool != MapStudioCanvas.Tool.CUSTOM_OBJECT) {
+            readyTray.clearSelection();
         }
     }
 
@@ -1035,7 +1064,11 @@ public final class MapStudioPanel extends JPanel {
         reclaimValueLabel.setAlignmentX(0f);
         side.add(reclaimValueLabel);
 
-        side.add(Box.createVerticalStrut(14));
+        side.add(Box.createVerticalStrut(12));
+        if (readyTray != null) {
+            side.add(readyTray);
+            side.add(Box.createVerticalStrut(12));
+        }
 
         // Export Actions Card
         JPanel exportCard = new JPanel();
@@ -1099,6 +1132,9 @@ public final class MapStudioPanel extends JPanel {
             geoCountLabel.setText("Geos: 0");
             spawnCountLabel.setText("Spawns: 0");
             reclaimCountLabel.setText("Reclaim: 0");
+        }
+        if (readyTray != null && canvas != null) {
+            readyTray.updatePlacedCount(canvas.getCustomEntities() != null ? canvas.getCustomEntities().size() : 0);
         }
     }
 

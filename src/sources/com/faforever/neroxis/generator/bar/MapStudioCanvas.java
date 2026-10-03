@@ -61,7 +61,6 @@ public final class MapStudioCanvas extends JPanel {
 
     private final List<PlacedCustomEntity> customEntities = new ArrayList<>();
     private ObjectEntity activeCustomEntity = null;
-    private JComponent readyTray = null;
 
     private Runnable changeListener = null;
 
@@ -226,37 +225,25 @@ public final class MapStudioCanvas extends JPanel {
         }
     }
 
-    public void setReadyTray(JComponent tray) {
-        if (this.readyTray != null) {
-            remove(this.readyTray);
-        }
-        this.readyTray = tray;
-        if (tray != null) {
-            add(tray);
-            layoutReadyTray();
-        }
-        revalidate();
-        repaint();
-    }
-
-    private void layoutReadyTray() {
-        if (readyTray != null) {
-            Dimension ps = readyTray.getPreferredSize();
-            int w = Math.min(240, ps.width);
-            int h = Math.min(220, ps.height);
-            readyTray.setBounds(Math.max(10, getWidth() - w - 16), Math.max(10, getHeight() - h - 14), w, h);
-        }
-    }
-
     @Override
     public void doLayout() {
         super.doLayout();
         layoutHudDock();
-        layoutReadyTray();
     }
 
     public List<PlacedCustomEntity> getCustomEntities() {
         return Collections.unmodifiableList(customEntities);
+    }
+
+    public void clearCustomEntities() {
+        saveState();
+        customEntities.clear();
+        selectedEntity = null;
+        draggedEntity = null;
+        dragSiblings.clear();
+        dragSiblingSymIndices.clear();
+        repaint();
+        notifyChange();
     }
 
     public void setActiveCustomEntity(ObjectEntity entity) {
@@ -307,6 +294,7 @@ public final class MapStudioCanvas extends JPanel {
         this.undoStack.clear();
         this.redoStack.clear();
         this.mexMetalValues.clear();
+        this.customEntities.clear();
         if (map != null) {
             for (Marker m : map.getMexes()) {
                 mexMetalValues.put(m, getMexMetal(m));

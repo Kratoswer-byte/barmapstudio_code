@@ -28,8 +28,10 @@ import java.nio.file.attribute.FileAttribute;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -949,70 +951,226 @@ public final class BarMapExporter {
     }
 
     private void writeCustomEntities(ZipOutputStream zip) throws IOException {
+        Set<String> writtenEntries = new HashSet<>();
+        Map<String, com.faforever.neroxis.generator.bar.ObjectEntity> uniqueEntities = new LinkedHashMap<>();
         List<com.faforever.neroxis.generator.bar.PlacedCustomEntity> toSpawn = new ArrayList<>();
+
         for (Object obj : this.map.getCustomEntities()) {
             if (obj instanceof com.faforever.neroxis.generator.bar.PlacedCustomEntity ce) {
                 com.faforever.neroxis.generator.bar.ObjectEntity ent = ce.getEntity();
-                // 1. Modello 3D OBJ personalizzato
-                if (ent.getObjFilePath() != null && Files.isRegularFile(ent.getObjFilePath())) {
-                    zip.putNextEntry(new ZipEntry("objects3d/" + ent.getId() + ".obj"));
-                    Files.copy(ent.getObjFilePath(), zip);
-                    zip.closeEntry();
-                }
-                // 2. Texture personalizzata
-                if (ent.getTexturePath() != null && Files.isRegularFile(ent.getTexturePath())) {
-                    String ext = ent.getTexturePath().getFileName().toString();
-                    zip.putNextEntry(new ZipEntry("unittextures/" + ent.getId() + "_" + ext));
-                    Files.copy(ent.getTexturePath(), zip);
-                    zip.closeEntry();
-                }
-                // 3. Entità animate (mulini), boss o unità con script Lua personalizzato
-                if (ent.getCategory() == com.faforever.neroxis.generator.bar.ObjectEntity.Category.ANIMATED_SCENERY
-                    || ent.getCategory() == com.faforever.neroxis.generator.bar.ObjectEntity.Category.BOSS_UNIT
-                    || (ent.getLuaScript() != null && !ent.getLuaScript().isBlank())) {
-                    toSpawn.add(ce);
-                    if (ent.getLuaScript() != null && !ent.getLuaScript().isBlank()) {
-                        zip.putNextEntry(new ZipEntry("scripts/" + ent.getId() + ".lua"));
-                        zip.write(ent.getLuaScript().getBytes(StandardCharsets.UTF_8));
-                        zip.closeEntry();
+                if (ent != null) {
+                    uniqueEntities.putIfAbsent(ent.getId(), ent);
+                    // Solo le feature statiche senza logica inserite direttamente in .smf non necessitano di spawn runtime via gadget
+                    if (ent.getCategory() != com.faforever.neroxis.generator.bar.ObjectEntity.Category.STATIC_PROP) {
+                        toSpawn.add(ce);
                     }
                 }
             }
         }
 
-        // Generazione del Map Gadget per spawnare le entità in-game
+        // 1. Scrittura asset unici (Modelli 3D, Texture, Script Lua, Definizioni) - SENZA DUPLICATI
+        for (com.faforever.neroxis.generator.bar.ObjectEntity ent : uniqueEntities.values()) {
+            String entId = ent.getId();
+
+            // A) Modello 3D .OBJ
+            String objEntry = "objects3d/" + entId + ".obj";
+            if (writtenEntries.add(objEntry)) {
+                if (ent.getObjFilePath() != null && Files.isRegularFile(ent.getObjFilePath())) {
+                    zip.putNextEntry(new ZipEntry(objEntry));
+                    Files.copy(ent.getObjFilePath(), zip);
+                    zip.closeEntry();
+                } else if (ent.getModel3D() != null) {
+                    zip.putNextEntry(new ZipEntry(objEntry));
+                    zip.write(ent.getModel3D().toObjBytes(ent.getName()));
+                    zip.closeEntry();
+                }
+            }
+
+            // B) Texture personalizzata
+            if (ent.getTexturePath() != null && Files.isRegularFile(ent.getTexturePath())) {
+                String ext = ent.getTexturePath().getFileName().toString();
+                String texEntry = "unittextures/" + entId + "_" + ext;
+                if (writtenEntries.add(texEntry)) {
+                    zip.putNextEntry(new ZipEntry(texEntry));
+                    Files.copy(ent.getTexturePath(), zip);
+                    zip.closeEntry();
+                }
+            }
+
+            // C) Script di animazione / logica Lua
+            if (ent.getLuaScript() != null && !ent.getLuaScript().isBlank()) {
+                String scriptEntry = "scripts/" + entId + ".lua";
+                if (writtenEntries.add(scriptEntry)) {
+                    zip.putNextEntry(new ZipEntry(scriptEntry));
+                    zip.write(ent.getLuaScript().getBytes(StandardCharsets.UTF_8));
+                    zip.closeEntry();
+                }
+            }
+
+            // D) Per entita' custom (non unita' ufficiali di BAR gia' note al gioco),
+            // generiamo sia la definizione unita' (units/<id>.lua) sia feature (features/<id>.lua)
+            if (ent.getCategory() != com.faforever.neroxis.generator.bar.ObjectEntity.Category.OFFICIAL_UNIT) {
+                String unitDefEntry = "units/" + entId + ".lua";
+                if (writtenEntries.add(unitDefEntry)) {
+                    zip.putNextEntry(new ZipEntry(unitDefEntry));
+                    zip.write(buildCustomUnitDefLua(ent).getBytes(StandardCharsets.UTF_8));
+                    zip.closeEntry();
+                }
+                String featDefEntry = "features/" + entId + ".lua";
+                if (writtenEntries.add(featDefEntry)) {
+                    zip.putNextEntry(new ZipEntry(featDefEntry));
+                    zip.write(buildCustomFeatureDefLua(ent).getBytes(StandardCharsets.UTF_8));
+                    zip.closeEntry();
+                }
+            }
+        }
+
+        // 2. Generazione del Map Gadget per spawnare le entita' in-game
         if (!toSpawn.isEmpty()) {
             StringBuilder sb = new StringBuilder();
+            sb.append("if not gadgetHandler:IsSyncedCode() then return end\n\n");
             sb.append("function gadget:GetInfo()\n");
             sb.append("    return {\n");
             sb.append("        name = \"Map Custom Entities Spawner\",\n");
-            sb.append("        desc = \"Spawns animated scenery and custom units placed in BAR Map Studio\",\n");
+            sb.append("        desc = \"Spawns units, animated scenery and custom objects placed in BAR Map Studio\",\n");
             sb.append("        author = \"BAR Map Studio\",\n");
             sb.append("        date = \"2026\",\n");
             sb.append("        license = \"GNU GPL, v2 or later\",\n");
-            sb.append("        layer = 0,\n");
+            sb.append("        layer = 1,\n");
             sb.append("        enabled = true\n");
             sb.append("    }\n");
             sb.append("end\n\n");
-            sb.append("if not gadgetHandler:IsSyncedCode() then return end\n\n");
-            sb.append("function gadget:GameStart()\n");
+
+            sb.append("local placedEntities = {\n");
             for (com.faforever.neroxis.generator.bar.PlacedCustomEntity ce : toSpawn) {
                 com.faforever.neroxis.generator.bar.ObjectEntity ent = ce.getEntity();
                 float wx = ce.getPosition().x() * this.elmosPerCell;
                 float wz = ce.getPosition().y() * this.elmosPerCell;
-                float wy = heightAt(wx, wz);
-                int team = 0;
+                float rot = ce.getRotation();
+                String faction = ent.getFaction() != null ? ent.getFaction() : "Neutral";
+                String cat = ent.getCategory().name();
+
                 sb.append(String.format(Locale.ROOT,
-                    "    Spring.CreateUnit(\"%s\", %.1f, %.1f, %.1f, \"s\", %d)\n",
-                    ent.getId(), wx, wy, wz, team
+                    "    { id = \"%s\", x = %.1f, z = %.1f, rot = %.4f, faction = \"%s\", cat = \"%s\" },\n",
+                    ent.getId(), wx, wz, rot, faction, cat
                 ));
             }
+            sb.append("}\n\n");
+
+            sb.append("function gadget:GameStart()\n");
+            sb.append("    local gaiaTeamID = Spring.GetGaiaTeamID()\n");
+            sb.append("    local teamList = Spring.GetTeamList()\n");
+            sb.append("    local armadaTeam = nil\n");
+            sb.append("    local cortexTeam = nil\n");
+            sb.append("    for _, tId in ipairs(teamList) do\n");
+            sb.append("        if tId ~= gaiaTeamID then\n");
+            sb.append("            local _, _, _, _, side = Spring.GetTeamInfo(tId)\n");
+            sb.append("            if side and string.lower(side) == \"armada\" and not armadaTeam then armadaTeam = tId end\n");
+            sb.append("            if side and string.lower(side) == \"cortex\" and not cortexTeam then cortexTeam = tId end\n");
+            sb.append("        end\n");
+            sb.append("    end\n");
+            sb.append("    if not armadaTeam then armadaTeam = 0 end\n");
+            sb.append("    if not cortexTeam then cortexTeam = 1 end\n\n");
+
+            sb.append("    for _, e in ipairs(placedEntities) do\n");
+            sb.append("        local teamID = gaiaTeamID\n");
+            sb.append("        local f = string.lower(e.faction or \"\")\n");
+            sb.append("        if f == \"armada\" then\n");
+            sb.append("            teamID = armadaTeam\n");
+            sb.append("        elseif f == \"cortex\" then\n");
+            sb.append("            teamID = cortexTeam\n");
+            sb.append("        elseif f == \"player0\" then\n");
+            sb.append("            teamID = 0\n");
+            sb.append("        elseif f == \"player1\" then\n");
+            sb.append("            teamID = 1\n");
+            sb.append("        else\n");
+            sb.append("            teamID = gaiaTeamID\n");
+            sb.append("        end\n\n");
+
+            sb.append("        local y = Spring.GetGroundHeight(e.x, e.z)\n");
+            sb.append("        local facing = \"s\"\n");
+            sb.append("        if e.rot then\n");
+            sb.append("            local deg = (math.deg(e.rot) % 360 + 360) % 360\n");
+            sb.append("            if deg >= 45 and deg < 135 then facing = \"e\"\n");
+            sb.append("            elseif deg >= 135 and deg < 225 then facing = \"n\"\n");
+            sb.append("            elseif deg >= 225 and deg < 315 then facing = \"w\"\n");
+            sb.append("            else facing = \"s\" end\n");
+            sb.append("        end\n\n");
+
+            sb.append("        local unitID = Spring.CreateUnit(e.id, e.x, y, e.z, facing, teamID)\n");
+            sb.append("        if not unitID then\n");
+            sb.append("            unitID = Spring.CreateUnit(e.id, e.x, y, e.z, facing, gaiaTeamID)\n");
+            sb.append("        end\n");
+            sb.append("        if not unitID then\n");
+            sb.append("            Spring.CreateFeature(e.id, e.x, y, e.z, 0)\n");
+            sb.append("        end\n");
+            sb.append("        if unitID and teamID == gaiaTeamID then\n");
+            sb.append("            Spring.SetUnitNeutral(unitID, true)\n");
+            sb.append("        end\n");
+            sb.append("    end\n");
             sb.append("end\n");
 
             zip.putNextEntry(new ZipEntry("luarules/gadgets/map_custom_spawner.lua"));
             zip.write(sb.toString().getBytes(StandardCharsets.UTF_8));
             zip.closeEntry();
         }
+    }
+
+    private String buildCustomUnitDefLua(com.faforever.neroxis.generator.bar.ObjectEntity ent) {
+        StringBuilder sb = new StringBuilder();
+        String id = ent.getId();
+        int fx = Math.max(1, ent.getFootprintX());
+        int fz = Math.max(1, ent.getFootprintZ());
+        String yard = String.join(" ", java.util.Collections.nCopies(fz, "o".repeat(fx)));
+        String script = (ent.getLuaScript() != null && !ent.getLuaScript().isBlank()) ? ("\"" + id + ".lua\"") : "nil";
+
+        sb.append("local unitName = \"").append(id).append("\"\n");
+        sb.append("local unitDef = {\n");
+        sb.append("    name = \"").append(ent.getName() != null ? ent.getName().replace("\"", "'") : id).append("\",\n");
+        sb.append("    description = \"").append(ent.getTooltip() != null ? ent.getTooltip().replace("\"", "'") : "").append("\",\n");
+        sb.append("    objectName = \"objects3d/").append(id).append(".obj\",\n");
+        sb.append("    maxDamage = ").append(Math.max(10, ent.getHealth())).append(",\n");
+        sb.append("    footprintX = ").append(fx).append(",\n");
+        sb.append("    footprintZ = ").append(fz).append(",\n");
+        sb.append("    metalCost = ").append(Math.max(0, ent.getMetal())).append(",\n");
+        sb.append("    energyCost = ").append(Math.max(0, ent.getEnergy())).append(",\n");
+        sb.append("    reclaimable = true,\n");
+        sb.append("    sightDistance = 350,\n");
+        sb.append("    category = \"BUILDING NOTAIR\",\n");
+        sb.append("    yardMap = \"").append(yard).append("\",\n");
+        sb.append("    levelGround = false,\n");
+        sb.append("    useBuildingGroundDecal = false,\n");
+        if (!"nil".equals(script)) {
+            sb.append("    script = ").append(script).append(",\n");
+        }
+        sb.append("}\n");
+        sb.append("return lowerkeys({ [unitName] = unitDef })\n");
+        return sb.toString();
+    }
+
+    private String buildCustomFeatureDefLua(com.faforever.neroxis.generator.bar.ObjectEntity ent) {
+        StringBuilder sb = new StringBuilder();
+        String id = ent.getId();
+        int fx = Math.max(1, ent.getFootprintX());
+        int fz = Math.max(1, ent.getFootprintZ());
+
+        sb.append("local featureDef = {\n");
+        sb.append("    name = \"").append(id).append("\",\n");
+        sb.append("    description = \"").append(ent.getName() != null ? ent.getName().replace("\"", "'") : id).append("\",\n");
+        sb.append("    object = \"objects3d/").append(id).append(".obj\",\n");
+        sb.append("    blocking = true,\n");
+        sb.append("    burnable = false,\n");
+        sb.append("    reclaimable = true,\n");
+        sb.append("    energy = ").append(Math.max(0, ent.getEnergy())).append(",\n");
+        sb.append("    metal = ").append(Math.max(0, ent.getMetal())).append(",\n");
+        sb.append("    damage = ").append(Math.max(10, ent.getHealth())).append(",\n");
+        sb.append("    footprintX = ").append(fx).append(",\n");
+        sb.append("    footprintZ = ").append(fz).append(",\n");
+        sb.append("    hitdensity = 1000,\n");
+        sb.append("    mass = 200,\n");
+        sb.append("}\n");
+        sb.append("return { [\"").append(id).append("\"] = featureDef }\n");
+        return sb.toString();
     }
 
     private int symmetricHash(float x, float z) {

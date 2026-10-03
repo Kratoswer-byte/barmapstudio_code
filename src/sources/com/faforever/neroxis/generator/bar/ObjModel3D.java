@@ -1,7 +1,9 @@
 package com.faforever.neroxis.generator.bar;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Rappresentazione geometrica 3D per rendering e ispezione in BAR MAP STUDIO.
@@ -207,5 +209,33 @@ public final class ObjModel3D {
             {4, 5, 1, 0}  // sotto
         };
         return new ObjModel3D(v, f, null);
+    }
+
+    /**
+     * Esporta la geometria del modello 3D in formato standard Wavefront .obj.
+     */
+    public byte[] toObjBytes(String modelName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("# Wavefront OBJ generato da BAR Map Studio\n");
+        sb.append("o ").append(modelName != null && !modelName.isBlank() ? modelName.replaceAll("\\s+", "_") : "Model3D").append("\n");
+        int vertCount = vertices.length / 3;
+        for (int i = 0; i < vertCount; i++) {
+            sb.append(String.format(Locale.ROOT, "v %.4f %.4f %.4f\n", vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2]));
+        }
+        for (float[] fn : faceNormals) {
+            sb.append(String.format(Locale.ROOT, "vn %.4f %.4f %.4f\n", fn[0], fn[1], fn[2]));
+        }
+        for (int f = 0; f < faces.length; f++) {
+            int[] face = faces[f];
+            if (face.length >= 3) {
+                sb.append("f");
+                int normIdx = (f < faceNormals.length) ? (f + 1) : 1;
+                for (int vIdx : face) {
+                    sb.append(" ").append(vIdx + 1).append("//").append(normIdx);
+                }
+                sb.append("\n");
+            }
+        }
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
 }

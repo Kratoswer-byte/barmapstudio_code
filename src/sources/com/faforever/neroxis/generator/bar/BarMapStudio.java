@@ -268,6 +268,7 @@ public class BarMapStudio {
 
             final JToggleButton[] mapsTabHolder = new JToggleButton[1];
             final JToggleButton[] texturesTabHolder = new JToggleButton[1];
+            final JToggleButton[] objectsTabHolder = new JToggleButton[1];
 
             // TextureStudioPanel per generazione texture e splatting multi-materiale
             TextureStudioPanel textureStudioPanel = new TextureStudioPanel(
@@ -295,12 +296,21 @@ public class BarMapStudio {
             }
 
             ObjectsUnitsStudioPanel objectsStudioPanel = new ObjectsUnitsStudioPanel(() -> finalBarData);
+
+            editorPanel.setOpenObjectsStudioCallback(() -> {
+                if (objectsStudioPanel != null) {
+                    objectsStudioPanel.ensureOfficialUnitsLoaded();
+                }
+                masterCards.show(masterViewPanel, "OBJECTS");
+                if (objectsTabHolder[0] != null) objectsTabHolder[0].setSelected(true);
+            });
+
             masterViewPanel.add(mapsMasterPanel, "MAPS");
             masterViewPanel.add(textureStudioPanel, "TEXTURES");
             masterViewPanel.add(objectsStudioPanel, "OBJECTS");
 
             // Build Brand-New Modern Header
-            JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj, mapsTabHolder, texturesTabHolder, textureStudioPanel, editorPanel, objectsStudioPanel);
+            JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj, mapsTabHolder, texturesTabHolder, objectsTabHolder, textureStudioPanel, editorPanel, objectsStudioPanel);
 
             // Build Slim Modern Footer with Status & Help Overlays
             JPanel customFooter = buildCustomFooter(frame, launcher, barStatus, lobby);
@@ -404,6 +414,7 @@ public class BarMapStudio {
         Object unitsObj,
         JToggleButton[] mapsTabHolder,
         JToggleButton[] texturesTabHolder,
+        JToggleButton[] objectsTabHolder,
         TextureStudioPanel textureStudioPanel,
         MapStudioPanel editorPanel,
         ObjectsUnitsStudioPanel objectsStudioPanel
@@ -455,6 +466,7 @@ public class BarMapStudio {
 
         if (mapsTabHolder != null && mapsTabHolder.length > 0) mapsTabHolder[0] = mapsTab;
         if (texturesTabHolder != null && texturesTabHolder.length > 0) texturesTabHolder[0] = texturesTab;
+        if (objectsTabHolder != null && objectsTabHolder.length > 0) objectsTabHolder[0] = objectsTab;
 
         navGroup.add(mapsTab);
         navGroup.add(texturesTab);
