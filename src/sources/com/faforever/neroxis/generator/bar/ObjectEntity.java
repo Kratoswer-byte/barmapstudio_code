@@ -41,6 +41,7 @@ public final class ObjectEntity {
     private BufferedImage previewImage;
     private String luaScript;
     private final Units.Unit officialUnit;
+    private float scale = 1.0f;
 
     public ObjectEntity(String id, String name, Category category, String faction,
                         int footprintX, int footprintZ, int health, int metal, int energy,
@@ -214,6 +215,42 @@ public final class ObjectEntity {
     public String getLuaScript() { return luaScript; }
     public void setLuaScript(String luaScript) { this.luaScript = luaScript; }
     public Units.Unit getOfficialUnit() { return officialUnit; }
+    public float getScale() { return scale; }
+    public void setScale(float scale) {
+        this.scale = Math.max(0.01f, Math.min(500.0f, scale));
+    }
+
+    public float getBaseWidth() {
+        if (model3D != null && model3D.getVertexCount() > 0) {
+            return Math.max(0.1f, model3D.getMaxX() - model3D.getMinX());
+        }
+        return footprintX * 16.0f;
+    }
+
+    public float getBaseHeight() {
+        if (model3D != null && model3D.getVertexCount() > 0) {
+            return Math.max(0.1f, model3D.getMaxY() - model3D.getMinY());
+        }
+        return 20.0f;
+    }
+
+    public float getBaseDepth() {
+        if (model3D != null && model3D.getVertexCount() > 0) {
+            return Math.max(0.1f, model3D.getMaxZ() - model3D.getMinZ());
+        }
+        return footprintZ * 16.0f;
+    }
+
+    public float getScaledWidth() { return getBaseWidth() * scale; }
+    public float getScaledHeight() { return getBaseHeight() * scale; }
+    public float getScaledDepth() { return getBaseDepth() * scale; }
+
+    public void autoScaleToHeight(float targetHeightElmos) {
+        float bh = getBaseHeight();
+        if (bh > 0.0001f) {
+            setScale(targetHeightElmos / bh);
+        }
+    }
 
     @Override
     public String toString() {

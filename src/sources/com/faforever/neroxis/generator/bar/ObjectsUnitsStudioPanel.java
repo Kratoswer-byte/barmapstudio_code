@@ -49,6 +49,8 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
     private final JSpinner healthSpinner = new JSpinner(new SpinnerNumberModel(500, 1, 999999, 50));
     private final JSpinner metalSpinner = new JSpinner(new SpinnerNumberModel(100, 0, 999999, 10));
     private final JSpinner energySpinner = new JSpinner(new SpinnerNumberModel(0, 0, 999999, 50));
+    private final JSpinner scaleSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.01, 500.0, 0.5));
+    private final JLabel dimLabel = new JLabel("Alt: 0.0m | Largh: 0.0m");
 
     // Editor Lua & Validatore
     private final JTextArea luaTextArea = new JTextArea();
@@ -360,7 +362,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         panel.setPreferredSize(new Dimension(380, 100));
 
         // 1. Scheda Dati & Proprieta'
-        JPanel propsCard = new JPanel(new GridLayout(0, 2, 8, 6));
+        JPanel propsCard = new JPanel(new GridLayout(0, 2, 8, 5));
         propsCard.setOpaque(false);
         propsCard.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(BarMapStudio.BORDER_COLOR, 1),
@@ -389,7 +391,58 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         propsCard.add(createPropLabel("Energia:"));
         propsCard.add(energySpinner);
 
-        panel.add(propsCard, BorderLayout.NORTH);
+        // Scheda Scala & Dimensioni In-Game
+        JPanel scaleCard = new JPanel(new BorderLayout(0, 6));
+        scaleCard.setOpaque(false);
+        scaleCard.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(BarMapStudio.BORDER_COLOR, 1),
+            " SCALA & PROPORZIONI IN-GAME ",
+            0, 0,
+            BarMapStudio.fontCond(Font.BOLD, 11),
+            BarMapStudio.ACCENT_CYAN
+        ));
+
+        JPanel scaleRow1 = new JPanel(new BorderLayout(8, 0));
+        scaleRow1.setOpaque(false);
+
+        JPanel spinBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        spinBox.setOpaque(false);
+        spinBox.add(createPropLabel("Scala (x):"));
+        scaleSpinner.setPreferredSize(new Dimension(65, 24));
+        styleSpinner(scaleSpinner);
+        scaleSpinner.addChangeListener(e -> {
+            if (selectedEntity != null) {
+                float sc = ((Number) scaleSpinner.getValue()).floatValue();
+                selectedEntity.setScale(sc);
+                canvas3D.setEntityScale(sc);
+                updateDimensionsUI();
+            }
+        });
+        spinBox.add(scaleSpinner);
+        scaleRow1.add(spinBox, BorderLayout.WEST);
+
+        dimLabel.setFont(BarMapStudio.font(Font.BOLD, 10));
+        dimLabel.setForeground(new Color(255, 205, 50));
+        dimLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        scaleRow1.add(dimLabel, BorderLayout.CENTER);
+
+        // Pulsanti Rapidi Preset Auto-Adatta
+        JPanel presetPanel = new JPanel(new GridLayout(1, 4, 4, 0));
+        presetPanel.setOpaque(false);
+        presetPanel.add(createPresetBtn("Cmd (45m)", 45.0f));
+        presetPanel.add(createPresetBtn("T1 (20m)", 20.0f));
+        presetPanel.add(createPresetBtn("Edif (60m)", 60.0f));
+        presetPanel.add(createPresetBtn("Prop (35m)", 35.0f));
+
+        scaleCard.add(scaleRow1, BorderLayout.NORTH);
+        scaleCard.add(presetPanel, BorderLayout.SOUTH);
+
+        JPanel topWrapper = new JPanel(new BorderLayout(0, 6));
+        topWrapper.setOpaque(false);
+        topWrapper.add(propsCard, BorderLayout.NORTH);
+        topWrapper.add(scaleCard, BorderLayout.SOUTH);
+
+        panel.add(topWrapper, BorderLayout.NORTH);
 
         // 2. Editor Script Lua Spazioso e Pulito
         JPanel luaPanel = new JPanel(new BorderLayout(0, 6));
@@ -521,6 +574,14 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         ));
     }
 
+    private void styleSpinner(JSpinner s) {
+        s.setFont(BarMapStudio.font(Font.PLAIN, 11));
+        JComponent ed = s.getEditor();
+        if (ed instanceof JSpinner.DefaultEditor de) {
+            styleInputField(de.getTextField());
+        }
+    }
+
     private JButton createLuaToolBtn(String label, String tooltip, ActionListener action) {
         JButton btn = new JButton(label);
         btn.setFont(BarMapStudio.font(Font.PLAIN, 10));
@@ -595,6 +656,8 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         healthSpinner.setValue(entity.getHealth());
         metalSpinner.setValue(entity.getMetal());
         energySpinner.setValue(entity.getEnergy());
+        scaleSpinner.setValue((double) entity.getScale());
+        updateDimensionsUI();
 
         // Popola Script Lua
         luaTextArea.setText(entity.getLuaScript() != null ? entity.getLuaScript() : "");
@@ -602,7 +665,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
 
         // Popola Viewport 3D o Anteprima
         if (entity.getModel3D() != null) {
-            canvas3D.setModel(entity.getModel3D());
+            canvas3D.setEntity(entity);
             centerContainer.removeAll();
             centerContainer.add(canvas3D, BorderLayout.CENTER);
         } else if (entity.getOfficialUnit() != null) {
@@ -611,13 +674,47 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         } else {
             // Crea un modello placeholder procedurale
             ObjModel3D cube = ObjModel3D.createProceduralCube(3.0f);
-            canvas3D.setModel(cube);
+            canvas3D.setModel(cube, entity.getScale());
             centerContainer.removeAll();
             centerContainer.add(canvas3D, BorderLayout.CENTER);
         }
 
         centerContainer.revalidate();
         centerContainer.repaint();
+    }
+
+    private void updateDimensionsUI() {
+        if (selectedEntity == null) return;
+        dimLabel.setText(String.format(Locale.ROOT, "Alt: %.1fm | Largh: %.1fm",
+            selectedEntity.getScaledHeight(), selectedEntity.getScaledWidth()));
+        int fx = Math.max(1, Math.round(selectedEntity.getScaledWidth() / 16.0f));
+        int fz = Math.max(1, Math.round(selectedEntity.getScaledDepth() / 16.0f));
+        footprintXSpinner.setValue(fx);
+        footprintZSpinner.setValue(fz);
+        selectedEntity.setFootprintX(fx);
+        selectedEntity.setFootprintZ(fz);
+    }
+
+    private JButton createPresetBtn(String label, float targetHeight) {
+        JButton b = new JButton(label);
+        b.setFont(BarMapStudio.font(Font.BOLD, 9));
+        b.setForeground(BarMapStudio.ACCENT_CYAN);
+        b.setBackground(new Color(18, 30, 44));
+        b.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BarMapStudio.BORDER_COLOR, 1, true),
+            new EmptyBorder(3, 4, 3, 4)
+        ));
+        b.setFocusPainted(false);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.addActionListener(e -> {
+            if (selectedEntity != null) {
+                selectedEntity.autoScaleToHeight(targetHeight);
+                scaleSpinner.setValue((double) selectedEntity.getScale());
+                canvas3D.setEntityScale(selectedEntity.getScale());
+                updateDimensionsUI();
+            }
+        });
+        return b;
     }
 
     private void loadOfficialPreview(Units.Unit unit) {

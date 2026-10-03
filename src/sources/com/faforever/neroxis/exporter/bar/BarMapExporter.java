@@ -992,6 +992,14 @@ public final class BarMapExporter {
                     if (ent.getTexturePath() != null && Files.isRegularFile(ent.getTexturePath())) {
                         String ext = ent.getTexturePath().getFileName().toString();
                         tex1Name = entId + "_" + ext;
+                    } else if (model.getBakedTexture() != null) {
+                        tex1Name = entId + "_palette.tga";
+                        String texEntry = "unittextures/" + tex1Name;
+                        if (writtenEntries.add(texEntry)) {
+                            zip.putNextEntry(new ZipEntry(texEntry));
+                            zip.write(com.faforever.neroxis.generator.bar.ObjModel3D.imageToTgaBytes(model.getBakedTexture()));
+                            zip.closeEntry();
+                        }
                     } else if (!defaultMatWritten) {
                         String defTexEntry = "unittextures/default_mat.tga";
                         if (writtenEntries.add(defTexEntry)) {
@@ -1003,7 +1011,7 @@ public final class BarMapExporter {
                     }
 
                     zip.putNextEntry(new ZipEntry(s3oEntry));
-                    zip.write(model.toS3OBytes(ent.getName(), tex1Name, ""));
+                    zip.write(model.toS3OBytes(ent.getName(), tex1Name, "", ent.getScale()));
                     zip.closeEntry();
                 }
 
@@ -1178,8 +1186,8 @@ public final class BarMapExporter {
     private String buildCustomUnitDefLua(com.faforever.neroxis.generator.bar.ObjectEntity ent) {
         StringBuilder sb = new StringBuilder();
         String id = ent.getId();
-        int fx = Math.max(1, ent.getFootprintX());
-        int fz = Math.max(1, ent.getFootprintZ());
+        int fx = Math.max(1, Math.round(ent.getScaledWidth() / 16.0f));
+        int fz = Math.max(1, Math.round(ent.getScaledDepth() / 16.0f));
         String yard = String.join(" ", java.util.Collections.nCopies(fz, "o".repeat(fx)));
         String script = (ent.getLuaScript() != null && !ent.getLuaScript().isBlank()) ? ("\"" + id + ".lua\"") : "nil";
 
@@ -1210,8 +1218,8 @@ public final class BarMapExporter {
     private String buildCustomFeatureDefLua(com.faforever.neroxis.generator.bar.ObjectEntity ent) {
         StringBuilder sb = new StringBuilder();
         String id = ent.getId();
-        int fx = Math.max(1, ent.getFootprintX());
-        int fz = Math.max(1, ent.getFootprintZ());
+        int fx = Math.max(1, Math.round(ent.getScaledWidth() / 16.0f));
+        int fz = Math.max(1, Math.round(ent.getScaledDepth() / 16.0f));
 
         sb.append("local featureDef = {\n");
         sb.append("    name = \"").append(id).append("\",\n");

@@ -20,6 +20,9 @@ public final class ReadyObjectsTray extends JPanel {
     private final JButton openStudioBtn = new JButton("+ Studio 3D");
     private final JButton importObjBtn = new JButton("+ Importa .OBJ");
     private final JLabel activeStatusLabel = new JLabel("Clicca un oggetto per piazzarlo sulla mappa.");
+    private final JPanel quickScaleBox = new JPanel(new BorderLayout(0, 3));
+    private final JSpinner quickScaleSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.01, 500.0, 0.5));
+    private final JLabel quickDimLabel = new JLabel("Alt: --");
     private final JScrollPane scrollPane;
     private final JLabel placedCountLabel = new JLabel("Piazzati: 0 oggetti");
     private final JButton clearPlacedBtn = new JButton("Svuota Piazzati");
@@ -107,6 +110,57 @@ public final class ReadyObjectsTray extends JPanel {
         activeStatusLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
         activeStatusLabel.setAlignmentX(0f);
         topBox.add(activeStatusLabel);
+
+        // Box di Scala e Dimensioni rapide
+        quickScaleBox.setOpaque(true);
+        quickScaleBox.setBackground(new Color(16, 24, 34));
+        quickScaleBox.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(40, 56, 75), 1, true),
+            new EmptyBorder(3, 5, 3, 5)
+        ));
+        quickScaleBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48));
+        quickScaleBox.setAlignmentX(0f);
+        quickScaleBox.setVisible(false);
+
+        JPanel row1 = new JPanel(new BorderLayout(6, 0));
+        row1.setOpaque(false);
+        JPanel spinWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
+        spinWrap.setOpaque(false);
+        JLabel lblSc = new JLabel("Scala:");
+        lblSc.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        lblSc.setForeground(BarMapStudio.TEXT_MUTED);
+        spinWrap.add(lblSc);
+        quickScaleSpinner.setPreferredSize(new Dimension(52, 20));
+        quickScaleSpinner.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        spinWrap.add(quickScaleSpinner);
+        row1.add(spinWrap, BorderLayout.WEST);
+
+        quickDimLabel.setFont(BarMapStudio.font(Font.BOLD, 10));
+        quickDimLabel.setForeground(new Color(255, 205, 50));
+        quickDimLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        row1.add(quickDimLabel, BorderLayout.CENTER);
+
+        JPanel presetRow = new JPanel(new GridLayout(1, 4, 3, 0));
+        presetRow.setOpaque(false);
+        presetRow.add(createMiniPresetBtn("45m Cmd", 45.0f));
+        presetRow.add(createMiniPresetBtn("20m T1", 20.0f));
+        presetRow.add(createMiniPresetBtn("60m Edif", 60.0f));
+        presetRow.add(createMiniPresetBtn("35m Prop", 35.0f));
+
+        quickScaleBox.add(row1, BorderLayout.NORTH);
+        quickScaleBox.add(presetRow, BorderLayout.SOUTH);
+
+        quickScaleSpinner.addChangeListener(e -> {
+            if (syncingQuickScale) return;
+            if (activeSelectedEntity != null) {
+                float sc = ((Number) quickScaleSpinner.getValue()).floatValue();
+                activeSelectedEntity.setScale(sc);
+                refreshCards(ReadyObjectsManager.getInstance().getReadyObjects());
+            }
+        });
+
+        topBox.add(Box.createVerticalStrut(3));
+        topBox.add(quickScaleBox);
 
         add(topBox, BorderLayout.NORTH);
 
@@ -226,6 +280,51 @@ public final class ReadyObjectsTray extends JPanel {
         clearPlacedBtn.setVisible(count > 0);
     }
 
+    private boolean syncingQuickScale = false;
+
+    private void updateQuickScaleUI() {
+        ObjectEntity e = activeSelectedEntity;
+        boolean show = e != null && e.getCategory() != ObjectEntity.Category.OFFICIAL_UNIT;
+        quickScaleBox.setVisible(show);
+        if (!show) return;
+        syncingQuickScale = true;
+        try {
+            if (Math.abs(((Number) quickScaleSpinner.getValue()).floatValue() - e.getScale()) > 0.0001f) {
+                quickScaleSpinner.setValue((double) e.getScale());
+            }
+        } finally {
+            syncingQuickScale = false;
+        }
+        int fx = Math.max(1, Math.round(e.getScaledWidth() / 16.0f));
+        int fz = Math.max(1, Math.round(e.getScaledDepth() / 16.0f));
+        e.setFootprintX(fx);
+        e.setFootprintZ(fz);
+        quickDimLabel.setText(String.format(Locale.ROOT, "Alt %.1fm | Largh %.1fm", e.getScaledHeight(), e.getScaledWidth()));
+        Color c = e.getScaledHeight() < 8f ? new Color(255, 110, 110) : new Color(255, 205, 50);
+        quickDimLabel.setForeground(c);
+        quickDimLabel.setToolTipText(e.getScaledHeight() < 8f
+            ? "Attenzione: oggetto molto piccolo in gioco (Comandante = 45m)"
+            : "Dimensioni reali in gioco (1 elmo ~ 1m)");
+    }
+
+    private JButton createMiniPresetBtn(String label, float targetHeight) {
+        JButton b = new JButton(label);
+        b.setFont(BarMapStudio.font(Font.BOLD, 9));
+        b.setForeground(BarMapStudio.ACCENT_CYAN);
+        b.setBackground(new Color(18, 30, 44));
+        b.setBorder(BorderFactory.createLineBorder(new Color(40, 56, 75), 1, true));
+        b.setFocusPainted(false);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.setToolTipText("Scala automaticamente l'oggetto a un'altezza di " + (int) targetHeight + "m");
+        b.addActionListener(ev -> {
+            if (activeSelectedEntity != null) {
+                activeSelectedEntity.autoScaleToHeight(targetHeight);
+                refreshCards(ReadyObjectsManager.getInstance().getReadyObjects());
+            }
+        });
+        return b;
+    }
+
     private void refreshCards(List<ObjectEntity> list) {
         cardsPanel.removeAll();
         headerTitle.setText("OGGETTI & UNITA' PRONTI (" + list.size() + ")");
@@ -237,6 +336,7 @@ public final class ReadyObjectsTray extends JPanel {
             activeStatusLabel.setText("Clicca un oggetto per piazzarlo sulla mappa.");
             activeStatusLabel.setForeground(BarMapStudio.TEXT_MUTED);
         }
+        updateQuickScaleUI();
 
         if (list.isEmpty()) {
             JPanel emptyBox = new JPanel();
@@ -307,7 +407,8 @@ public final class ReadyObjectsTray extends JPanel {
         nameLbl.setFont(BarMapStudio.font(Font.BOLD, 11));
         nameLbl.setForeground(isSelected ? Color.WHITE : BarMapStudio.TEXT_MAIN);
 
-        JLabel catLbl = new JLabel(entity.getCategory().getLabel() + " (" + entity.getFootprintX() + "x" + entity.getFootprintZ() + ")");
+        JLabel catLbl = new JLabel(entity.getCategory().getLabel() + " (" + entity.getFootprintX() + "x" + entity.getFootprintZ() + ")"
+            + (entity.getModel3D() != null ? String.format(Locale.ROOT, " | %.0fm x%.1f", entity.getScaledHeight(), entity.getScale()) : ""));
         catLbl.setFont(BarMapStudio.font(Font.PLAIN, 9));
         catLbl.setForeground(isSelected ? new Color(200, 240, 255) : BarMapStudio.TEXT_MUTED);
 
