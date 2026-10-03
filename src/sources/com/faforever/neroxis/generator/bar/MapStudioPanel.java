@@ -18,6 +18,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
@@ -1335,13 +1336,31 @@ public final class MapStudioPanel extends JPanel {
                 });
             } catch (Throwable ex) {
                 ex.printStackTrace();
+                writeGroundErrorLog(ex, width, height, styleName, biomeName, symmetry, finalSeed);
                 SwingUtilities.invokeLater(() -> {
-                    setStatus("Errore generazione terreno: " + ex.getMessage());
+                    setStatus("Errore generazione terreno: " + ex.getMessage() + " (dettagli in barmap-error.log)");
                     progressBar.setVisible(false);
                     genGroundBtn.setEnabled(true);
                 });
             }
         }, "ground-gen").start();
+    }
+
+    /** Scrive stack trace completo + contesto in barmap-error.log accanto al launcher per diagnosi. */
+    private void writeGroundErrorLog(Throwable ex, int width, int height, String style,
+                                     String biome, Symmetry symmetry, long seed) {
+        try {
+            java.nio.file.Path log = homeFolder != null
+                ? homeFolder.resolve("barmap-error.log")
+                : java.nio.file.Path.of("barmap-error.log");
+            StringWriter sw = new StringWriter();
+            ex.printStackTrace(new java.io.PrintWriter(sw));
+            String entry = "[" + new java.util.Date() + "] GENERA TERRENO "
+                + width + "x" + height + " style=" + style + " biome=" + biome
+                + " sym=" + symmetry + " seed=" + seed + "\n" + sw + "\n";
+            java.nio.file.Files.writeString(log, entry,
+                java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception ignored) {}
     }
 
     private void doRegenerateFromHeightmap(BufferedImage customHm) {
