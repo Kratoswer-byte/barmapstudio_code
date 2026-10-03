@@ -38,6 +38,7 @@
 | `432ad9c` | `feat` | 02/10/2026 17:55 | Nuova suite Objects & Units Studio: viewport 3D, validatore Lua, import Wavefront .obj e placement tray in MAPS |
 | `881935b` | `fix/perf` | 02/10/2026 18:12 | Risolto blocco/freeze EDT all'avvio: lazy loading unita' BAR su richiesta e Flyweight cell renderer a zero allocazioni |
 | `55c68b3` | `fix/feat` | 03/10/2026 08:07 | Risolto export mappa con oggetti obj/unita' BAR e integrata lista oggetti pronti nella sidebar destra |
+| `cc30998` | `fix/feat` | 03/10/2026 08:40 | Generatore binario S3O nativo per mesh .obj, safe spawner con pcall/UnitDefNames e tab dedicato Oggetti nella sidebar destra |
 
 ---
 
@@ -334,4 +335,38 @@
   - Convalidata la corretta generazione dell'archivio `.sdz` senza alcuna eccezione.
   - Verificata la presenza di `objects3d/`, `units/`, `features/` e del gadget runtime `luarules/gadgets/map_custom_spawner.lua` contenente tutte le entita' con coordinate e team corretti.
   - Tutte le classi aggiornate sono state ricompilate in `patch/` e iniettate in `extracted/{app}/app/launcher.jar`.
+
+---
+
+### 29. Risoluzione Errori In-Game BAR (bad unitDef name, invalid model .obj), Generatore Binario S3O Nativo e Tab Dedicato Oggetti nella Sidebar Destra
+- [x] **Diagnosi Root Cause dai Log di Crash di Beyond All Reason (`infolog.txt`):**
+  1. *Rifiuto formato `.obj` a runtime da BAR:* Il motore Spring/Recoil e lo script post-processing di BAR (`featuredefs_post.lua`) scartavano tassativamente i file `.obj` con il warning: `Removing feature def, custom_model, for having invalid model that would crash the engine, objects3d/custom_model.obj`. BAR ammette unicamente file binari compilati in formato proprietario `.s3o` (Spring 3D Object) all'interno di `objects3d/`.
+  2. *Prefisso duplicato del path modello:* I file `.lua` generati per le feature e unita' indicavano `object = "objects3d/<id>.obj"`. Poiché il motore Spring prepende automaticamente la cartella `objects3d/`, questo causava una ricerca fallita in `objects3d/objects3d/...`.
+  3. *Crash fatale in `map_custom_spawner.lua` su `CreateUnit` non custodito:* Alla riga 68 del gadget, l'invocazione di `Spring.CreateUnit("custom_model")` su una definizione non caricata sollevava l'eccezione Lua fatale `[CreateUnit()]: bad unitDef name: custom_model`. L'eccezione interrompeva bruscamente il ciclo di `GameStart()`, impedendo lo spawn di qualsiasi oggetto successivo (incluse le unita' ufficiali di BAR piazzate come `armnanotct2`).
+- [x] **Ingegnerizzazione del Generatore Binario S3O Nativo (`ObjModel3D.toS3OBytes`):**
+  - Implementato in Java puro l'algoritmo di serializzazione nel formato standard Spring 3D Object (.s3o) a 32-bit Little-Endian secondo le specifiche ufficiali del motore Recoil:
+    - *Header S3O (52 byte):* Magic bytes `Spring unit\0`, version 0, radius di collisione, altezza, centroide (midpoint x,y,z), offset piece radice, offset texture 1 e 2.
+    - *Texture Strings:* Stringhe ASCII con terminatore null per diffuse map e glow/normal map. Se non viene specificata una texture custom, viene generata e scritta nell'archivio una texture TGA neutra standard a 32-bit (`unittextures/default_mat.tga`).
+    - *Root Piece Header:* Definizione pezzo ("base"), conteggio vertici/indici, tipo primitiva triangolare (0) e offset relativi.
+    - *Tabella Vertici Formato Spring (32 byte per vertice):* Posizione tridimensionale (3 x float32), vettore normale di superficie (3 x float32) e coordinate UV (2 x float32) normalizzate in [0, 1].
+    - *Tabella Indici:* Array di triangolazione a 32-bit.
+  - Convalidato sia con test unitari Java (`TestExportWithEntities`) sia con il parser Python di riferimento di BAR (`s3o.py`), confermando la totale conformità e l'assenza di anomalie geometriche.
+- [x] **Safe Spawner Gadget Lua con `pcall` e Guard su `UnitDefNames`:**
+  - Nel gadget `map_custom_spawner.lua`, prima di tentare la creazione di un'unita', viene verificata la presenza del def name nella tabella globale del motore: `if UnitDefNames and (UnitDefNames[nameLower] or UnitDefNames[e.id]) then`.
+  - Tutte le chiamate a `Spring.CreateUnit` e `Spring.CreateFeature` sono ora rigorosamente protette all'interno di `pcall(...)`.
+  - Calcolato correttamente l'angolo `heading` a 16-bit (0-65535) per `CreateFeature` da rotazione in radianti.
+  - Implementata risoluzione intelligente del team di gioco con fallback al primo team giocatore reale non-Gaia o a 0/1 per Armada/Cortex.
+  - In caso di unita' non riconosciuta o fallita, il sistema esegue un fallback graceful a feature decorativa di scenario, garantendo che nessuna eccezione possa mai interrompere il loop di gioco.
+- [x] **Riorganizzazione dell'Interfaccia: Tab Dedicato "Oggetti" nella Sidebar Destra:**
+  - Risolta la frammentazione e la scomodità visiva segnalata dall'utente (la lista degli oggetti non è più incastrata come un blocco estraneo sotto alla densità di reclaim e sopra ai pulsanti di export).
+  - Creata una barra di navigazione a schede in cima alla sidebar destra:
+    - **Tab `[ Dettagli Mappa ]`:** Contiene nome mappa personalizzato, contatori statistici (Mex, Geos, Spawns, Reclaim), configurazione valore metallo mex con preset cromatici, assistenti di posizionamento rapido (Auto Mex basi, Auto Mex contesi, Auto Reclaim, svuota) e slider densità reclaim.
+    - **Tab `[ Oggetti (N) ]`:** Vista a tutta altezza dedicata alla palette oggetti e unita' pronti. Include intestazione con conteggio live, pulsante rapido `[+ Studio 3D]` per accedere alla suite completa, nuovo pulsante diretto `[+ Importa .OBJ]` per importare e convertire istantaneamente file 3D, banner di stato interattivo (mostra l'elemento correntemente attivo per il piazzamento al click), lista scrollabile delle card con icone e rimozione `[x]`, e footer con contatore piazzati e pulsante `[Svuota Piazzati]`.
+  - **Card di Esportazione Docked in Basso:** I pulsanti principali "GENERA MAPPA FINALE" e "GENERA & GIOCA IN BAR", unitamente alla barra di avanzamento e all'etichetta di stato, sono stati ancorati in modo permanente al fondo della sidebar destra (`BorderLayout.SOUTH`), rimanendo sempre accessibili indipendentemente dalla scheda attiva.
+  - Selezione integrata: quando l'utente seleziona un oggetto pronto per il piazzamento, la sidebar passa automaticamente alla scheda Oggetti, evidenziando la card attiva.
+- [x] **Compilazione Binaria e Deploy in `launcher.jar`:**
+  - Compilate con successo tutte le classi modificate (`ObjModel3D.java`, `BarMapExporter.java`, `ReadyObjectsTray.java`, `ReadyObjectsManager.java`, `MapStudioPanel.java`).
+  - Iniettati i `.class` in `extracted/{app}/app/launcher.jar`.
+  - Collaudo finale completato con successo.
+
 
