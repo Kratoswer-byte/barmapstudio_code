@@ -2789,107 +2789,120 @@ public final class BarMapExporter {
         }
     }
 
+    /**
+     * Porta i colori del bioma a una luminosita' e a una vivacita' adatte al gioco: misura quelle medie del
+     * terreno emerso e corregge tutti gli strati; gli strati di roccia vengono poi ingrigiti e scaldati.
+     */
     private void gradeColors() {
         if (this.barBiome != null) {
-            // i colori vengono da una mappa BAR gia' tarata per il gioco: nessuna correzione
-            return;
+            return; // i colori vengono da una mappa BAR gia' tarata per il gioco
         }
-        double luminanceSum = 0.0d;
+        double lightSum = 0.0d;
         double saturationSum = 0.0d;
         int samples = 0;
         for (int gz = 0; gz < 96; gz++) {
             for (int gx = 0; gx < 96; gx++) {
-                float x = ((gx + 0.5f) / 96) * this.mapX * 8.0f;
-                float z = ((gz + 0.5f) / 96) * this.mapY * 8.0f;
-                if (heightAt(x, z) >= 8.0f) {
-                    float[] color = blendLayers(x, z, SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, slopeAt(x, z));
-                    luminanceSum += (double) ((color[0] * 0.2126f) + (color[1] * 0.7152f) + (color[2] * 0.0722f));
-                    saturationSum += (double) (Math.max(color[0], Math.max(color[1], color[2])) - Math.min(color[0], Math.min(color[1], color[2])));
-                    samples++;
+                float x = (gx + 0.5f) / 96 * this.mapX * 8.0f;
+                float z = (gz + 0.5f) / 96 * this.mapY * 8.0f;
+                if (heightAt(x, z) < 8.0f) {
+                    continue;
                 }
+                float[] color = blendLayers(x, z, 0.0f, 0.0f, slopeAt(x, z));
+                lightSum += luminance(color);
+                saturationSum += Math.max(color[0], Math.max(color[1], color[2])) - Math.min(color[0], Math.min(color[1], color[2]));
+                samples++;
             }
         }
         if (samples == 0) {
             return;
         }
-        float luminance = (float) (luminanceSum / ((double) samples));
-        float saturation = (float) (saturationSum / ((double) samples));
-        float gain = Math.max(0.85f, Math.min(2.2f, TARGET_LUMINANCE / Math.max(luminance, 0.01f)));
-        float gradedSaturation = Math.max(saturation * gain, 0.01f);
-        float saturationBoost = 1.0f;
-        if (gradedSaturation < TARGET_SATURATION) {
-            saturationBoost = Math.min(1.6f, TARGET_SATURATION / gradedSaturation);
-        } else if (gradedSaturation > MAX_SATURATION) {
-            saturationBoost = Math.max(0.6f, MAX_SATURATION / gradedSaturation);
+        float light = (float) (lightSum / samples);
+        float saturation = (float) (saturationSum / samples);
+        float gain = Math.max(0.85f, Math.min(2.2f, TARGET_LUMINANCE / Math.max(light, 0.01f)));
+        float saturationAfterGain = Math.max(saturation * gain, 0.01f);
+        float boost = 1.0f;
+        if (saturationAfterGain < TARGET_SATURATION) {
+            boost = Math.min(1.6f, TARGET_SATURATION / saturationAfterGain);
+        } else if (saturationAfterGain > MAX_SATURATION) {
+            boost = Math.max(0.6f, MAX_SATURATION / saturationAfterGain);
         }
-        for (float[] color2 : this.layerColors) {
-            if (color2 != null) {
-                float grey = (color2[0] * 0.2126f) + (color2[1] * 0.7152f) + (color2[2] * 0.0722f);
-                for (int c = 0; c < 3; c++) {
-                    float value = (grey + ((color2[c] - grey) * saturationBoost)) * gain;
-                    color2[c] = Math.max(0.02f, Math.min(0.93f, value));
-                }
+        for (float[] color : this.layerColors) {
+            if (color == null) {
+                continue;
+            }
+            float grey = luminance(color);
+            for (int c = 0; c < 3; c++) {
+                color[c] = Math.max(0.02f, Math.min(0.93f, (grey + (color[c] - grey) * boost) * gain));
             }
         }
         float[] warmGrey = {1.05f, 1.0f, 0.93f};
         for (int layer = 0; layer < 8; layer++) {
-            float[] color3 = this.layerColors[layer + 1];
-            if (color3 != null && this.layerKinds[layer] == 2) {
-                float grey2 = (color3[0] * 0.2126f) + (color3[1] * 0.7152f) + (color3[2] * 0.0722f);
-                for (int c2 = 0; c2 < 3; c2++) {
-                    color3[c2] = (color3[c2] * MAX_SATURATION) + (grey2 * warmGrey[c2] * 0.7f);
+            float[] color = this.layerColors[layer + 1];
+            if (color != null && this.layerKinds[layer] == 2) {
+                float grey = luminance(color);
+                for (int c = 0; c < 3; c++) {
+                    color[c] = color[c] * MAX_SATURATION + grey * warmGrey[c] * 0.7f;
                 }
             }
         }
-        System.out.printf(Locale.ROOT, "Colour grading: brightness x%.2f, saturation x%.2f%n", Float.valueOf(gain), Float.valueOf(saturationBoost));
+        System.out.printf(Locale.ROOT, "Colour grading: brightness x%.2f, saturation x%.2f%n", gain, boost);
     }
 
+    /**
+     * Il colore del terreno in un punto, mescolando gli strati di texture dell'editor secondo quanto coprono
+     * il punto. Gli strati di pendio e di roccia compaiono solo dove il terreno e' abbastanza ripido;
+     * {@code medium} e {@code fine} spostano i bordi tra gli strati per renderli irregolari.
+     */
     private float[] blendLayers(float x, float z, float medium, float fine, float slope) {
-        float lx = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(this.layerWidth - 1.001f, ((x / this.elmosPerCell) * (this.layerWidth - 1)) / this.faWidth));
-        float lz = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(this.layerHeight - 1.001f, ((z / this.elmosPerCell) * (this.layerHeight - 1)) / this.faHeight));
-        int x0 = (int) lx;
-        int z0 = (int) lz;
-        float tx = lx - x0;
-        float tz = lz - z0;
-        int i00 = (z0 * this.layerWidth) + x0;
-        int i01 = i00 + 1;
-        int i10 = i00 + this.layerWidth;
-        int i11 = i10 + 1;
-        float w00 = (1.0f - tx) * (1.0f - tz);
-        float w01 = tx * (1.0f - tz);
-        float w10 = (1.0f - tx) * tz;
-        float w11 = tx * tz;
+        float maskX = Math.max(0.0f, Math.min(this.layerWidth - 1.001f, x / this.elmosPerCell * (this.layerWidth - 1) / this.faWidth));
+        float maskZ = Math.max(0.0f, Math.min(this.layerHeight - 1.001f, z / this.elmosPerCell * (this.layerHeight - 1) / this.faHeight));
+        int x0 = (int) maskX;
+        int z0 = (int) maskZ;
+        float fractionX = maskX - x0;
+        float fractionZ = maskZ - z0;
+        int nearLeft = z0 * this.layerWidth + x0;
+        int nearRight = nearLeft + 1;
+        int farLeft = nearLeft + this.layerWidth;
+        int farRight = farLeft + 1;
+        float shareNearLeft = (1.0f - fractionX) * (1.0f - fractionZ);
+        float shareNearRight = fractionX * (1.0f - fractionZ);
+        float shareFarLeft = (1.0f - fractionX) * fractionZ;
+        float shareFarRight = fractionX * fractionZ;
+
+        float red = 0.4f;
+        float green = 0.38f;
+        float blue = 0.3f;
         float[] base = this.layerColors[0];
-        float r = 0.4f;
-        float g = 0.38f;
-        float b = 0.3f;
         if (base != null) {
-            r = base[0];
-            g = base[1];
-            b = base[2];
+            red = base[0];
+            green = base[1];
+            blue = base[2];
         }
         for (int layer = 0; layer < 8; layer++) {
             float[] color = this.layerColors[layer + 1];
-            if (color != null) {
-                float[] weights = this.layerWeights[layer];
-                float weight = (weights[i00] * w00) + (weights[i01] * w01) + (weights[i10] * w10) + (weights[i11] * w11);
-                if (weight > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-                    int kind = this.layerKinds[layer];
-                    if (kind == 1) {
-                        weight *= smoothStep(0.07f, 0.26f, slope);
-                    } else if (kind == 2) {
-                        weight *= smoothStep(0.22f, 0.5f, slope);
-                    }
-                    if (weight > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-                        float weight2 = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(1.0f, weight + (((medium * 0.6f) + (fine * 0.25f)) * weight * (1.0f - weight) * 2.0f)));
-                        r += (color[0] - r) * weight2;
-                        g += (color[1] - g) * weight2;
-                        b += (color[2] - b) * weight2;
-                    }
-                }
+            if (color == null) {
+                continue;
             }
+            float[] mask = this.layerWeights[layer];
+            float cover = mask[nearLeft] * shareNearLeft + mask[nearRight] * shareNearRight + mask[farLeft] * shareFarLeft + mask[farRight] * shareFarRight;
+            if (cover <= 0.0f) {
+                continue;
+            }
+            int kind = this.layerKinds[layer];
+            if (kind == 1) {
+                cover *= smoothStep(0.07f, 0.26f, slope);
+            } else if (kind == 2) {
+                cover *= smoothStep(0.22f, 0.5f, slope);
+            }
+            if (cover <= 0.0f) {
+                continue;
+            }
+            float amount = Math.max(0.0f, Math.min(1.0f, cover + (medium * 0.6f + fine * 0.25f) * cover * (1.0f - cover) * 2.0f));
+            red += (color[0] - red) * amount;
+            green += (color[1] - green) * amount;
+            blue += (color[2] - blue) * amount;
         }
-        return new float[]{r, g, b};
+        return new float[]{red, green, blue};
     }
 
     private int shade(float x, float z, List<float[]> nearMexes, List<float[]> nearGeos) {
