@@ -115,12 +115,7 @@ final class MapLibraryPanel extends JPanel {
     private final Preview preview = new Preview();
     private final JLabel title = new JLabel(" ");
     private final JLabel badge = new JLabel(" ");
-    private final JPanel chips = new JPanel(new WrapFlow()) {
-        @Override
-        public Dimension getMaximumSize() {
-            return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
-        }
-    };
+    private final JPanel specs = new JPanel(new java.awt.GridBagLayout());
     private final JTextArea description = new JTextArea();
     private final JCheckBox showResources = new JCheckBox(I18n.t("lib.resources"), true);
     private final JButton playBtn = MapStudioPanel.createPrimaryButton(I18n.t("lib.play"), ACCENT_AMBER);
@@ -254,8 +249,8 @@ final class MapLibraryPanel extends JPanel {
         card.setPreferredSize(new Dimension(380, 100));
 
         preview.setAlignmentX(0f);
-        preview.setPreferredSize(new Dimension(356, 356));
-        preview.setMaximumSize(new Dimension(Integer.MAX_VALUE, 356));
+        preview.setPreferredSize(new Dimension(356, 300));
+        preview.setMaximumSize(new Dimension(Integer.MAX_VALUE, 300));
         card.add(preview);
         card.add(Box.createVerticalStrut(6));
         showResources.setOpaque(false);
@@ -273,13 +268,20 @@ final class MapLibraryPanel extends JPanel {
         title.setForeground(TEXT_MAIN);
         title.setAlignmentX(0f);
         card.add(title);
-        card.add(Box.createVerticalStrut(6));
+        card.add(Box.createVerticalStrut(8));
 
-        chips.setOpaque(false);
-        chips.setAlignmentX(0f);
-        card.add(chips);
-        card.add(Box.createVerticalStrut(6));
-
+        // specifiche e descrizione scorrono insieme: su schermi bassi i pulsanti restano sempre visibili
+        JPanel sheet = new MapStudioPanel.ScrollableTrackWidthPanel();
+        sheet.setLayout(new BoxLayout(sheet, BoxLayout.Y_AXIS));
+        sheet.setOpaque(false);
+        JLabel specsTitle = sectionTitle(I18n.t("lib.spec.title"));
+        specsTitle.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
+        sheet.add(specsTitle);
+        sheet.add(Box.createVerticalStrut(4));
+        specs.setOpaque(false);
+        specs.setAlignmentX(0f);
+        sheet.add(specs);
+        sheet.add(Box.createVerticalStrut(8));
         description.setEditable(false);
         description.setLineWrap(true);
         description.setWrapStyleWord(true);
@@ -287,10 +289,13 @@ final class MapLibraryPanel extends JPanel {
         description.setForeground(TEXT_MUTED);
         description.setFont(BarMapStudio.font(Font.PLAIN, 12));
         description.setBorder(null);
-        JScrollPane text = new JScrollPane(description, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        description.setAlignmentX(0f);
+        sheet.add(description);
+        JScrollPane text = new JScrollPane(sheet, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         text.setBorder(null);
         text.setOpaque(false);
         text.getViewport().setOpaque(false);
+        text.getVerticalScrollBar().setUnitIncrement(16);
         text.setAlignmentX(0f);
         card.add(text);
         card.add(Box.createVerticalStrut(8));
@@ -578,7 +583,6 @@ final class MapLibraryPanel extends JPanel {
     private void showSelected() {
         Entry entry = grid.getSelectedValue();
         long ticket = ++loadTicket;
-        chips.removeAll();
         status.setText(" ");
         boolean any = entry != null;
         playBtn.setEnabled(any);
@@ -591,67 +595,134 @@ final class MapLibraryPanel extends JPanel {
             badge.setText(" ");
             description.setText("");
             preview.show(null, null);
-            chips.revalidate();
-            chips.repaint();
+            fillSpecs(null, null, null);
             return;
         }
         title.setText(entry.name());
         title.setToolTipText(entry.archive().getFileName().toString());
         badge.setText(entry.mine() ? I18n.t("lib.badge.mine") : I18n.t("lib.badge.bar"));
         badge.setForeground(entry.mine() ? ACCENT_GREEN : ACCENT_AMBER);
-        description.setText(entry.description().replaceAll("\s*Regenerate with.*$", "") + (entry.author().isBlank() ? "" : (entry.description().isBlank() ? "" : "\n") + I18n.t("lib.author", entry.author())));
+        description.setText(entry.description().replaceAll("\\s*Regenerate with.*$", ""));
         description.setCaretPosition(0);
-        chips.add(chip(String.format(Locale.ROOT, "%.0f MB", Math.max(1, entry.size() / 1048576.0))));
-        chips.add(chip(DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date(entry.modified()))));
-        if (entry.players() > 0) {
-            chips.add(chip(I18n.t("lib.players", String.valueOf(entry.players()))));
-        }
-        chips.revalidate();
-        chips.repaint();
+        fillSpecs(entry, null, null);
         preview.show(thumbs.get(entry.archive()), null);
         loader.submit(() -> {
             BufferedImage full = null;
             BarInstall.Marks marks = null;
+            MapSpecs read = null;
             try {
                 full = BarInstall.readMinimap(AppPaths.barData(), minimapCache(), entry.installed());
                 marks = BarInstall.readMarks(AppPaths.barData(), minimapCache(), entry.installed());
+                read = MapSpecs.read(AppPaths.barData(), minimapCache(), entry.archive(), entry.mapFile());
             } catch (Throwable ignored) {
             }
             BufferedImage image = full;
             BarInstall.Marks found = marks;
+            MapSpecs mapSpecs = read;
             SwingUtilities.invokeLater(() -> {
                 if (ticket != loadTicket) {
                     return; // nel frattempo e' stata scelta un'altra mappa
                 }
-                if (image != null) {
-                    chips.add(chip(image.getWidth() >= image.getHeight()
-                        ? I18n.t("lib.shape.wide", ratio(image.getWidth(), image.getHeight()))
-                        : I18n.t("lib.shape.tall", ratio(image.getHeight(), image.getWidth()))), 0);
-                }
-                if (found != null) {
-                    chips.add(chip(I18n.t("lib.metal", String.valueOf(found.metal().size()))));
-                    chips.add(chip(I18n.t("lib.geos", String.valueOf(found.geos().size()))));
-                }
-                chips.revalidate();
-                chips.repaint();
-                preview.show(image != null ? image : thumbs.get(entry.archive()), found);
+                fillSpecs(entry, mapSpecs, found);
+                double aspect = mapSpecs != null && mapSpecs.has("mapx") && mapSpecs.has("mapy") && mapSpecs.number("mapy") > 0
+                    ? mapSpecs.number("mapx") / mapSpecs.number("mapy") : 0;
+                preview.show(image != null ? image : thumbs.get(entry.archive()), found, aspect);
             });
         });
     }
 
-    private static String ratio(int longer, int shorter) {
-        double value = longer / (double) Math.max(1, shorter);
-        return Math.abs(value - Math.round(value)) < 0.05 ? String.valueOf(Math.round(value)) : String.format(Locale.ROOT, "%.1f", value);
+    /** Riempie la tabella delle specifiche. Finche' l'archivio non e' stato letto mostra solo i dati del file. */
+    private void fillSpecs(Entry entry, MapSpecs map, BarInstall.Marks marks) {
+        specs.removeAll();
+        if (entry != null) {
+            int row = 0;
+            if (map != null) {
+                if (map.has("mapx") && map.has("mapy")) {
+                    row = specRow(row, "lib.spec.size", number(map.number("mapx")) + " x " + number(map.number("mapy"))
+                        + "  (" + number(map.number("mapx") * 512) + " x " + number(map.number("mapy") * 512) + " elmo)");
+                }
+                if (map.has("minheight") && map.has("maxheight")) {
+                    row = specRow(row, "lib.spec.height", I18n.t("lib.spec.range", number(map.number("minheight")), number(map.number("maxheight"))));
+                }
+            }
+            int players = map != null && map.has("starts") ? Math.round(map.number("starts")) : entry.players();
+            if (players > 0) {
+                row = specRow(row, "lib.spec.players", String.valueOf(players));
+            }
+            if (marks != null) {
+                row = specRow(row, "lib.spec.metal", String.valueOf(marks.metal().size()));
+                row = specRow(row, "lib.spec.geos", String.valueOf(marks.geos().size()));
+            }
+            if (map != null) {
+                if (map.has("maxmetal")) {
+                    row = specRow(row, "lib.spec.maxmetal", number(map.number("maxmetal")));
+                }
+                if (map.has("extractor")) {
+                    row = specRow(row, "lib.spec.extractor", number(map.number("extractor")));
+                }
+                if (map.has("minwind") && map.has("maxwind")) {
+                    row = specRow(row, "lib.spec.wind", I18n.t("lib.spec.range", number(map.number("minwind")), number(map.number("maxwind"))));
+                }
+                if (map.has("tidal")) {
+                    row = specRow(row, "lib.spec.tidal", number(map.number("tidal")));
+                }
+                if (map.has("gravity")) {
+                    row = specRow(row, "lib.spec.gravity", number(map.number("gravity")));
+                }
+                if (map.has("hardness")) {
+                    row = specRow(row, "lib.spec.hardness", number(map.number("hardness")));
+                }
+                String water = map.flag("voidwater") ? I18n.t("lib.spec.water.void")
+                    : map.has("waterdamage") && map.number("waterdamage") > 0 ? I18n.t("lib.spec.water.damage", number(map.number("waterdamage")))
+                    : map.has("minheight") && map.number("minheight") >= 0 ? I18n.t("lib.spec.water.none")
+                    : I18n.t("lib.spec.water.normal");
+                row = specRow(row, "lib.spec.water", water);
+                if (map.has("notdeformable")) {
+                    row = specRow(row, "lib.spec.deform", map.flag("notdeformable") ? I18n.t("lib.spec.no") : I18n.t("lib.spec.yes"));
+                }
+            } else {
+                row = specRow(row, "lib.spec.reading", "");
+            }
+            String author = map != null && map.has("author") ? map.text("author") : entry.author();
+            if (!author.isBlank()) {
+                row = specRow(row, "lib.spec.author", author);
+            }
+            if (map != null && map.has("version")) {
+                row = specRow(row, "lib.spec.version", map.text("version"));
+            }
+            row = specRow(row, "lib.spec.file", entry.archive().getFileName().toString());
+            row = specRow(row, "lib.spec.filesize", String.format(Locale.ROOT, "%.0f MB", Math.max(1, entry.size() / 1048576.0)));
+            specRow(row, "lib.spec.date", DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date(entry.modified())));
+        }
+        specs.revalidate();
+        specs.repaint();
     }
 
-    private static JLabel chip(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(BarMapStudio.font(Font.BOLD, 11));
-        label.setForeground(TEXT_MAIN);
-        label.setOpaque(true);
-        label.setBackground(CARD_INNER);
-        label.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(BORDER_COLOR), new EmptyBorder(2, 7, 2, 7)));
-        return label;
+    private int specRow(int row, String labelKey, String value) {
+        java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+        c.gridy = row;
+        c.anchor = java.awt.GridBagConstraints.NORTHWEST;
+        c.insets = new java.awt.Insets(1, 0, 1, 10);
+        JLabel label = new JLabel(I18n.t(labelKey));
+        label.setFont(BarMapStudio.font(Font.PLAIN, 11));
+        label.setForeground(TEXT_MUTED);
+        specs.add(label, c);
+        c.gridx = 1;
+        c.weightx = 1;
+        c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(1, 0, 1, 0);
+        JLabel text = new JLabel(value);
+        text.setFont(BarMapStudio.font(Font.BOLD, 11));
+        text.setForeground(TEXT_MAIN);
+        text.setToolTipText(value);
+        text.setMinimumSize(new Dimension(40, 14));
+        text.setPreferredSize(new Dimension(180, text.getPreferredSize().height));
+        specs.add(text, c);
+        return row + 1;
+    }
+
+    private static String number(float value) {
+        return Math.abs(value - Math.round(value)) < 0.005f ? String.valueOf(Math.round(value)) : String.format(Locale.ROOT, "%.1f", value);
     }
 
     // ------------------------------------------------------------------ azioni
@@ -824,10 +895,17 @@ final class MapLibraryPanel extends JPanel {
     private final class Preview extends JComponent {
         private BufferedImage image;
         private BarInstall.Marks marks;
+        private double aspect;
 
         void show(BufferedImage image, BarInstall.Marks marks) {
+            show(image, marks, 0);
+        }
+
+        /** @param aspect larghezza / altezza vera della mappa (le miniature di BAR sono sempre quadrate), 0 se non nota */
+        void show(BufferedImage image, BarInstall.Marks marks, double aspect) {
             this.image = image;
             this.marks = marks;
+            this.aspect = aspect;
             repaint();
         }
 
@@ -839,8 +917,8 @@ final class MapLibraryPanel extends JPanel {
             g2.setColor(BG_DARK);
             g2.fillRect(0, 0, getWidth(), getHeight());
             if (image != null) {
-                double scale = Math.min(getWidth() / (double) image.getWidth(), getHeight() / (double) image.getHeight());
-                int w = (int) Math.round(image.getWidth() * scale), h = (int) Math.round(image.getHeight() * scale);
+                double shape = aspect > 0 ? aspect : image.getWidth() / (double) image.getHeight();
+                int w = (int) Math.round(Math.min(getWidth(), getHeight() * shape)), h = (int) Math.round(w / shape);
                 int x = (getWidth() - w) / 2, y = (getHeight() - h) / 2;
                 g2.drawImage(image, x, y, w, h, null);
                 if (marks != null && showResources.isSelected()) {
@@ -867,31 +945,4 @@ final class MapLibraryPanel extends JPanel {
         }
     }
 
-    /** Etichette in fila che vanno a capo quando la riga e' piena. */
-    private static final class WrapFlow extends java.awt.FlowLayout {
-        WrapFlow() {
-            super(LEFT, 5, 4);
-        }
-
-        @Override
-        public Dimension preferredLayoutSize(java.awt.Container target) {
-            int width = target.getWidth() > 0 ? target.getWidth() : 350;
-            int x = 0, rows = 1, rowHeight = 0;
-            for (Component child : target.getComponents()) {
-                Dimension size = child.getPreferredSize();
-                if (x > 0 && x + size.width + getHgap() > width) {
-                    rows++;
-                    x = 0;
-                }
-                x += size.width + getHgap();
-                rowHeight = Math.max(rowHeight, size.height);
-            }
-            return new Dimension(width, target.getComponentCount() == 0 ? 0 : rows * (rowHeight + getVgap()) + getVgap());
-        }
-
-        @Override
-        public Dimension minimumLayoutSize(java.awt.Container target) {
-            return preferredLayoutSize(target);
-        }
-    }
 }
