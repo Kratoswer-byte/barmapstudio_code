@@ -43,16 +43,14 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.imageio.ImageIO;
 
-/* JADX INFO: loaded from: app_classes.zip:com/faforever/neroxis/exporter/bar/BarMapExporter.class */
+/**
+ * Trasforma una mappa dell'editor in una mappa giocabile di Beyond All Reason: un archivio .sdz con il file
+ * di descrizione, il terreno, le texture, gli oggetti e gli script.
+ */
 public final class BarMapExporter {
-    private static final int ELMOS_PER_SQUARE = 8;
-    private static final int METAL_CELL_ELMOS = 16;
-    private static final int METAL_CELLS_PER_SPOT = 12;
     private static final float EXTRACTS_METAL = 0.001f;
-    private static final int NOISE_SIZE = 512;
     private static final float DRY_MAP_MIN_HEIGHT = 48.0f;
     private static final float MIN_METAL_SPOT_SPACING = 112.0f;
-    private static final int SPLAT_TEXELS_PER_SQUARE = 2;
     private static final float BEACH_WIDTH = 90.0f;
     private static final float WORN_GROUND_RADIUS = 120.0f;
     private static final float NOISE_DEVIATION = 0.23f;
@@ -115,41 +113,49 @@ public final class BarMapExporter {
     private float[] dirtColor = {0.4f, 0.33f, 0.24f};
     private float highGround = 1.0f;
 
-    /* JADX INFO: loaded from: app_classes.zip:com/faforever/neroxis/exporter/bar/BarMapExporter$ReclaimFeature.class */
+    /** Un oggetto da recuperare (roccia o relitto): quanto metallo da' e in che ordine tenerlo se sono troppi. */
     private static record ReclaimFeature(String name, float x, float z, float rotation, int metal, float order) {}
 
     private BarMapExporter(SCMap map, BarExportOptions options) {
         this.map = map;
+        this.options = options;
         this.customTexture = map.getCustomTexture();
         this.zoneMaterials = ZoneMaterials.get(map);
         this.barBiome = BarBiomes.get(map);
-        this.options = options;
+
+        // dimensioni: l'editor lavora in celle, BAR in "quadrati" da 8 elmi con 8 pixel di texture ciascuno
         this.faSize = map.getSize();
-        int fW = map.getWidth();
-        int fH = map.getHeight();
-        this.faWidth = fW > 0 ? fW : this.faSize;
-        this.faHeight = fH > 0 ? fH : this.faSize;
+        this.faWidth = map.getWidth() > 0 ? map.getWidth() : this.faSize;
+        this.faHeight = map.getHeight() > 0 ? map.getHeight() : this.faSize;
         this.mapX = this.faWidth * options.squaresPerCell();
         this.mapY = this.faHeight * options.squaresPerCell();
         if (this.mapX % 128 != 0 || this.mapY % 128 != 0) {
-            throw new IllegalArgumentException("The map size %dx%d can not be converted to a BAR map, size * %d must be a multiple of 128".formatted(Integer.valueOf(this.faWidth), Integer.valueOf(this.faHeight), Integer.valueOf(options.squaresPerCell())));
+            throw new IllegalArgumentException("The map size %dx%d can not be converted to a BAR map, size * %d must be a multiple of 128"
+                .formatted(this.faWidth, this.faHeight, options.squaresPerCell()));
         }
         this.textureWidth = this.mapX * 8;
         this.textureHeight = this.mapY * 8;
         this.elmosPerCell = 8 * options.squaresPerCell();
+        this.heights = new float[(this.mapX + 1) * (this.mapY + 1)];
+
+        // cio' che viene dall'editor: livello dell'acqua, quote e strati di texture
         this.waterElevation = map.getBiome().waterSettings().waterPresent() ? map.getBiome().waterSettings().elevation() : Float.NaN;
         this.faHeights = readHeights(map.getHeightmap(), map.getHeightMapScale());
         this.layerWidth = map.getTextureMasksLow().getWidth();
         this.layerHeight = map.getTextureMasksLow().getHeight();
         this.layerWeights = readLayerWeights(map.getTextureMasksLow(), map.getTextureMasksHigh());
         this.layerColors = readLayerColors();
-        boolean pbr = String.valueOf(map.getBiome().name()).equalsIgnoreCase("sunset");
-        this.layerKinds = pbr ? new int[]{0, 2, 0, 0, 1, 1, 0, 0} : new int[]{0, 0, 1, 1, 0, 0, 2, 2};
+        // tipo di ogni strato: 0 suolo, 1 pendio, 2 roccia (il bioma "sunset" li ordina diversamente)
+        boolean sunsetOrder = String.valueOf(map.getBiome().name()).equalsIgnoreCase("sunset");
+        this.layerKinds = sunsetOrder ? new int[]{0, 2, 0, 0, 1, 1, 0, 0} : new int[]{0, 0, 1, 1, 0, 0, 2, 2};
         this.noise = createNoise();
-        this.heights = new float[(this.mapX + 1) * (this.mapY + 1)];
+
+        // direzione del sole: quella del bioma, ma mai troppo radente ne' a picco, e sempre da "dietro"
         Vector3 sun = map.getBiome().lightingSettings().sunDirection();
-        float sunLength = (float) StrictMath.sqrt((sun.x() * sun.x()) + (sun.y() * sun.y()) + (sun.z() * sun.z()));
-        this.sunDirection = sunLength > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT ? new float[]{sun.x() / sunLength, sun.y() / sunLength, sun.z() / sunLength} : new float[]{0.5f, 0.7f, -0.5f};
+        float sunLength = (float) StrictMath.sqrt(sun.x() * sun.x() + sun.y() * sun.y() + sun.z() * sun.z());
+        this.sunDirection = sunLength > 0.0f
+            ? new float[]{sun.x() / sunLength, sun.y() / sunLength, sun.z() / sunLength}
+            : new float[]{0.5f, 0.7f, -0.5f};
         this.sunDirection[2] = -Math.max(0.45f, Math.abs(this.sunDirection[2]));
         this.sunDirection[1] = Math.max(0.55f, Math.min(0.8f, this.sunDirection[1]));
         normalize(this.sunDirection);
@@ -206,23 +212,35 @@ public final class BarMapExporter {
         }
     }
 
+    /** Esporta la mappa nella cartella indicata e torna il file creato. */
     public static Path exportMap(Path folderPath, SCMap map, BarExportOptions options) throws IOException {
         return new BarMapExporter(map, options).export(folderPath);
     }
 
+    /** Come sopra, scrivendo anche lo script per provare la mappa contro l'IA. */
     public static Path exportMap(Path folderPath, SCMap map, BarExportOptions options, Path skirmishScriptPath) throws IOException {
         return exportMap(folderPath, map, options, skirmishScriptPath, null, List.of(), false, null);
     }
 
-    public static Path exportMap(Path folderPath, SCMap map, BarExportOptions options, Path skirmishScriptPath, Path hostScriptPath, List<String> players, boolean coop, String password) throws IOException {
+    /**
+     * Esporta la mappa e scrive gli script di partita richiesti.
+     *
+     * @param skirmishScriptPath dove scrivere lo script contro l'IA, o null
+     * @param hostScriptPath dove scrivere lo script per ospitare una partita, o null
+     * @param players nomi dei giocatori della partita ospitata, il primo e' chi ospita
+     * @param coop vero per mettere tutti i giocatori nella stessa squadra
+     * @param password password chiesta a chi entra, o null
+     */
+    public static Path exportMap(Path folderPath, SCMap map, BarExportOptions options, Path skirmishScriptPath, Path hostScriptPath,
+                                 List<String> players, boolean coop, String password) throws IOException {
         BarMapExporter exporter = new BarMapExporter(map, options);
-        Path archivePath = exporter.export(folderPath);
+        Path archive = exporter.export(folderPath);
         if (skirmishScriptPath != null) {
             writeScript(skirmishScriptPath, exporter.buildGameScript(List.of("Player"), true, false, null));
         }
         if (hostScriptPath != null) {
             if (players.isEmpty() || players.size() > map.getSpawnCount()) {
-                throw new IllegalArgumentException("A hosted game needs between 1 and %d player names".formatted(Integer.valueOf(map.getSpawnCount())));
+                throw new IllegalArgumentException("A hosted game needs between 1 and %d player names".formatted(map.getSpawnCount()));
             }
             for (String player : players) {
                 if (!player.matches("[A-Za-z0-9_\\[\\]]{2,24}")) {
@@ -231,105 +249,125 @@ public final class BarMapExporter {
             }
             writeScript(hostScriptPath, exporter.buildGameScript(players, coop, true, password));
         }
-        return archivePath;
+        return archive;
     }
 
     private static void writeScript(Path path, String script) throws IOException {
-        if (path.toAbsolutePath().getParent() != null) {
-            Files.createDirectories(path.toAbsolutePath().getParent(), new FileAttribute[0]);
+        Path folder = path.toAbsolutePath().getParent();
+        if (folder != null) {
+            Files.createDirectories(folder);
         }
-        Files.writeString(path, script, new OpenOption[0]);
+        Files.writeString(path, script);
     }
 
+    /**
+     * Lo script con cui il motore avvia una partita su questa mappa.
+     *
+     * <p>Ogni punto di partenza diventa una squadra del motore; i giocatori le occupano (a turno tra le
+     * alleanze, oppure tutti insieme se {@code coop}) e quelle rimaste libere vanno all'IA.</p>
+     *
+     * @param hosted vero per una partita a cui altri si collegano, falso per una partita locale
+     */
     private String buildGameScript(List<String> players, boolean coop, boolean hosted, String password) {
         List<Spawn> spawns = new ArrayList<>(this.map.getSpawns());
         Map<Spawn, Integer> spawnTeams = resolveTeams(spawns);
-        spawns.sort(Comparator.comparingInt(spawn -> {
-            return ((Integer) spawnTeams.getOrDefault(spawn, 0)).intValue();
-        }));
-        List<Integer> teamIds = spawns.stream().map(spawn2 -> {
-            return (Integer) spawnTeams.getOrDefault(spawn2, 0);
-        }).distinct().toList();
-        int[] allyTeams = new int[spawns.size()];
-        for (int i = 0; i < spawns.size(); i++) {
-            allyTeams[i] = teamIds.indexOf(spawnTeams.getOrDefault(spawns.get(i), 0));
+        spawns.sort(Comparator.comparingInt(spawn -> spawnTeams.getOrDefault(spawn, 0)));
+        List<Integer> alliances = spawns.stream().map(spawn -> spawnTeams.getOrDefault(spawn, 0)).distinct().toList();
+        int slots = spawns.size();
+        int[] allianceOf = new int[slots];
+        for (int slot = 0; slot < slots; slot++) {
+            allianceOf[slot] = alliances.indexOf(spawnTeams.getOrDefault(spawns.get(slot), 0));
         }
-        int[] playerOfSlot = new int[spawns.size()];
-        Arrays.fill(playerOfSlot, -1);
+
+        // a ogni giocatore il primo posto libero della sua alleanza, altrimenti il primo libero
+        int[] playerAt = new int[slots];
+        Arrays.fill(playerAt, -1);
         for (int player = 0; player < players.size(); player++) {
-            int wantedTeam = coop ? -1 : player % teamIds.size();
-            int slot = -1;
-            for (int i2 = 0; i2 < spawns.size() && slot < 0; i2++) {
-                if (playerOfSlot[i2] < 0 && (wantedTeam < 0 || allyTeams[i2] == wantedTeam)) {
-                    slot = i2;
+            int wanted = coop ? -1 : player % alliances.size();
+            int chosen = -1;
+            for (int slot = 0; slot < slots && chosen < 0; slot++) {
+                if (playerAt[slot] < 0 && (wanted < 0 || allianceOf[slot] == wanted)) {
+                    chosen = slot;
                 }
             }
-            for (int i3 = 0; i3 < spawns.size() && slot < 0; i3++) {
-                if (playerOfSlot[i3] < 0) {
-                    slot = i3;
+            for (int slot = 0; slot < slots && chosen < 0; slot++) {
+                if (playerAt[slot] < 0) {
+                    chosen = slot;
                 }
             }
-            playerOfSlot[slot] = player;
+            playerAt[chosen] = player;
         }
+
         StringBuilder script = new StringBuilder();
-        Object[] objArr = new Object[5];
-        objArr[0] = getDisplayName();
-        objArr[1] = hosted ? "" : "127.0.0.1";
-        objArr[2] = Integer.valueOf(hosted ? HOST_PORT : 0);
-        objArr[3] = players.getFirst();
-        objArr[4] = Integer.valueOf(players.size());
-        script.append("[game]\n{\n\tgametype=rapid://byar:test;\n\tmapname=%s;\n\tishost=1;\n\thostip=%s;\n\thostport=%d;\n\tmyplayername=%s;\n\tstartpostype=@SPT@;\n\tnumplayers=%d;\n\t[modoptions]\n\t{\n\t\tdraft_mode=disabled;\n@STARTPOS@\t}\n".formatted(objArr).replace("@STARTPOS@", startPosModoption() + extraUnitsModoptions())
-            // Opzione della mappa "Start positions": posizioni statiche (3 = decise prima della partita, scritte
-            // qui sotto squadra per squadra: ognuno parte sulla sua base dell'editor) oppure zona di partenza
-            // (2 = ogni giocatore sceglie il punto dentro la zona della sua squadra).
-            .replace("@SPT@", MapExtraOptions.get().startZones ? "2" : "3"));
-        int player2 = 0;
-        while (player2 < players.size()) {
-            int slot2 = 0;
-            for (int i4 = 0; i4 < spawns.size(); i4++) {
-                if (playerOfSlot[i4] == player2) {
-                    slot2 = i4;
+        script.append("[game]\n{\n")
+            .append("\tgametype=rapid://byar:test;\n")
+            .append("\tmapname=").append(getDisplayName()).append(";\n")
+            .append("\tishost=1;\n")
+            .append("\thostip=").append(hosted ? "" : "127.0.0.1").append(";\n")
+            .append("\thostport=").append(hosted ? HOST_PORT : 0).append(";\n")
+            .append("\tmyplayername=").append(players.get(0)).append(";\n")
+            // posizioni statiche (3: ognuno sulla sua base) oppure zona di partenza (2: si sceglie in gioco)
+            .append("\tstartpostype=").append(MapExtraOptions.get().startZones ? "2" : "3").append(";\n")
+            .append("\tnumplayers=").append(players.size()).append(";\n")
+            .append("\t[modoptions]\n\t{\n\t\tdraft_mode=disabled;\n")
+            .append(startPosModoption()).append(extraUnitsModoptions())
+            .append("\t}\n");
+        for (int player = 0; player < players.size(); player++) {
+            int slot = 0;
+            for (int i = 0; i < slots; i++) {
+                if (playerAt[i] == player) {
+                    slot = i;
                 }
             }
-            Object[] objArr2 = new Object[4];
-            objArr2[0] = Integer.valueOf(player2);
-            objArr2[1] = players.get(player2);
-            objArr2[2] = Integer.valueOf(slot2);
-            objArr2[3] = (!hosted || password == null || player2 <= 0) ? "" : "\t\tpassword=" + password + ";\n";
-            script.append("\t[player%d]\n\t{\n\t\tname=%s;\n\t\tteam=%d;\n\t\tspectator=0;\n%s\t}\n".formatted(objArr2));
-            player2++;
-        }
-        int aiCount = 0;
-        for (int i5 = 0; i5 < spawns.size(); i5++) {
-            if (playerOfSlot[i5] < 0) {
-                script.append("\t[ai%d]\n\t{\n\t\tname=BARbarian %d;\n\t\tshortname=BARb;\n\t\tversion=stable;\n\t\tteam=%d;\n\t\thost=0;\n\t}\n".formatted(Integer.valueOf(aiCount), Integer.valueOf(aiCount + 1), Integer.valueOf(i5)));
-                aiCount++;
+            script.append("\t[player").append(player).append("]\n\t{\n")
+                .append("\t\tname=").append(players.get(player)).append(";\n")
+                .append("\t\tteam=").append(slot).append(";\n")
+                .append("\t\tspectator=0;\n");
+            if (hosted && password != null && player > 0) {
+                script.append("\t\tpassword=").append(password).append(";\n");
             }
-            Object[] objArr3 = new Object[4];
-            objArr3[0] = Integer.valueOf(i5);
-            objArr3[1] = Integer.valueOf(Math.max(0, playerOfSlot[i5]));
-            objArr3[2] = Integer.valueOf(allyTeams[i5]);
-            objArr3[3] = i5 % 2 == 0 ? "Armada" : "Cortex";
-            script.append("\t[team%d]\n\t{\n\t\tteamleader=%d;\n\t\tallyteam=%d;\n\t\tside=%s;\n\t\thandicap=0;\n@STARTXZ@\t}\n".formatted(objArr3).replace("@STARTXZ@", String.format(Locale.ROOT,
-                "\t\tstartposx=%.0f;\n\t\tstartposz=%.0f;\n", spawns.get(i5).getPosition().x() * this.elmosPerCell, spawns.get(i5).getPosition().z() * this.elmosPerCell)));
+            script.append("\t}\n");
         }
-        for (int allyTeam = 0; allyTeam < teamIds.size(); allyTeam++) {
+        int computers = 0;
+        for (int slot = 0; slot < slots; slot++) {
+            if (playerAt[slot] < 0) {
+                script.append("\t[ai").append(computers).append("]\n\t{\n")
+                    .append("\t\tname=BARbarian ").append(computers + 1).append(";\n")
+                    .append("\t\tshortname=BARb;\n\t\tversion=stable;\n")
+                    .append("\t\tteam=").append(slot).append(";\n")
+                    .append("\t\thost=0;\n\t}\n");
+                computers++;
+            }
+            Spawn spawn = spawns.get(slot);
+            script.append("\t[team").append(slot).append("]\n\t{\n")
+                .append("\t\tteamleader=").append(Math.max(0, playerAt[slot])).append(";\n")
+                .append("\t\tallyteam=").append(allianceOf[slot]).append(";\n")
+                .append("\t\tside=").append(slot % 2 == 0 ? "Armada" : "Cortex").append(";\n")
+                .append("\t\thandicap=0;\n")
+                .append(String.format(Locale.ROOT, "\t\tstartposx=%.0f;\n\t\tstartposz=%.0f;\n",
+                    spawn.getPosition().x() * this.elmosPerCell, spawn.getPosition().z() * this.elmosPerCell))
+                .append("\t}\n");
+        }
+        // la zona di partenza di ogni alleanza: il rettangolo che contiene le sue basi, allargato del margine scelto
+        float margin = Math.max(0, Math.min(40, MapExtraOptions.get().startZoneMargin)) / 100.0f;
+        for (int alliance = 0; alliance < alliances.size(); alliance++) {
             float left = 1.0f;
             float top = 1.0f;
             float right = 0.0f;
             float bottom = 0.0f;
-            float zoneMargin = Math.max(0, Math.min(40, MapExtraOptions.get().startZoneMargin)) / 100.0f;
-            for (int i6 = 0; i6 < spawns.size(); i6++) {
-                if (allyTeams[i6] == allyTeam) {
-                    float x = spawns.get(i6).getPosition().x() / this.faWidth;
-                    float z = spawns.get(i6).getPosition().z() / this.faHeight;
+            for (int slot = 0; slot < slots; slot++) {
+                if (allianceOf[slot] == alliance) {
+                    float x = spawns.get(slot).getPosition().x() / this.faWidth;
+                    float z = spawns.get(slot).getPosition().z() / this.faHeight;
                     left = Math.min(left, x);
                     right = Math.max(right, x);
                     top = Math.min(top, z);
                     bottom = Math.max(bottom, z);
                 }
             }
-            script.append(String.format(Locale.ROOT, "\t[allyteam%d]\n\t{\n\t\tnumallies=0;\n\t\tstartrectleft=%.3f;\n\t\tstartrecttop=%.3f;\n\t\tstartrectright=%.3f;\n\t\tstartrectbottom=%.3f;\n\t}\n", Integer.valueOf(allyTeam), Float.valueOf(Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, left - zoneMargin)), Float.valueOf(Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, top - zoneMargin)), Float.valueOf(Math.min(1.0f, right + zoneMargin)), Float.valueOf(Math.min(1.0f, bottom + zoneMargin))));
+            script.append(String.format(Locale.ROOT,
+                "\t[allyteam%d]\n\t{\n\t\tnumallies=0;\n\t\tstartrectleft=%.3f;\n\t\tstartrecttop=%.3f;\n\t\tstartrectright=%.3f;\n\t\tstartrectbottom=%.3f;\n\t}\n",
+                alliance, Math.max(0.0f, left - margin), Math.max(0.0f, top - margin), Math.min(1.0f, right + margin), Math.min(1.0f, bottom + margin)));
         }
         script.append("}\n");
         return script.toString();
@@ -401,52 +439,54 @@ public final class BarMapExporter {
         }
     }
 
+    private static void addEntry(ZipOutputStream zip, String name, byte[] content) throws IOException {
+        zip.putNextEntry(new ZipEntry(name));
+        zip.write(content);
+        zip.closeEntry();
+    }
+
+    /**
+     * Costruisce la mappa e la scrive come archivio .sdz nella cartella indicata.
+     * Prima si calcola tutto cio' che serve in memoria (quote, metallo, oggetti, anteprima), poi si
+     * scrivono i file nell'archivio.
+     */
     private Path export(Path folderPath) throws IOException {
-        Files.createDirectories(folderPath, new FileAttribute[0]);
+        Files.createDirectories(folderPath);
         String archiveName = toFileName(getDisplayName());
         Path archivePath = folderPath.resolve(archiveName + ".sdz");
+
         buildHeights();
-        this.map.getMexes().forEach(mex -> {
+        for (Marker mex : this.map.getMexes()) {
             this.mexPositions.add(toElmos(mex));
-        });
+        }
         mergeCloseMetalSpots();
         assignMetalValues();
-        float maxFound = this.options.maxMetal();
+        // se un punto vale piu' del massimo previsto, il massimo si alza: nella mappa del metallo il valore
+        // piu' alto deve corrispondere al punto piu' ricco
+        float richest = this.options.maxMetal();
         for (float[] mex : this.mexPositions) {
-            maxFound = Math.max(maxFound, mex[2]);
+            richest = Math.max(richest, mex[2]);
         }
-        if (maxFound > this.options.maxMetal()) {
-            this.options = new BarExportOptions(
-                this.options.squaresPerCell(),
-                this.options.heightScale(),
-                this.options.baseMetal(),
-                this.options.minMetal(),
-                maxFound,
-                this.options.uniformMetal(),
-                this.options.numTeams(),
-                this.options.mapName(),
-                this.options.mapVersion(),
-                this.options.author(),
-                this.options.reclaim(),
-                this.options.featuresRepository(),
-                this.options.minWind(),
-                this.options.maxWind(),
-                this.options.tidal()
-            );
+        if (richest > this.options.maxMetal()) {
+            BarExportOptions o = this.options;
+            this.options = new BarExportOptions(o.squaresPerCell(), o.heightScale(), o.baseMetal(), o.minMetal(), richest, o.uniformMetal(),
+                o.numTeams(), o.mapName(), o.mapVersion(), o.author(), o.reclaim(), o.featuresRepository(), o.minWind(), o.maxWind(), o.tidal());
         }
-        this.map.getHydros().forEach(hydro -> {
+        for (Marker hydro : this.map.getHydros()) {
             this.geoPositions.add(toElmos(hydro));
-        });
+        }
         List<String> featureTypes = new ArrayList<>();
         List<SpringMapFile.Feature> features = buildFeatures(featureTypes);
         byte[] metalMap = buildMetalMap();
-        short[] smfHeights = new short[this.heights.length];
-        float heightRange = Math.max(this.maxHeight - this.minHeight, 1.0f);
+        // nel file le quote sono numeri da 0 a 65535 tra la minima e la massima
+        short[] storedHeights = new short[this.heights.length];
+        float range = Math.max(this.maxHeight - this.minHeight, 1.0f);
         for (int i = 0; i < this.heights.length; i++) {
-            smfHeights[i] = (short) Math.round(((this.heights[i] - this.minHeight) / heightRange) * 65535.0f);
+            storedHeights[i] = (short) Math.round((this.heights[i] - this.minHeight) / range * 65535.0f);
         }
         BufferedImage minimapImage = renderMinimap();
-        byte[] minimap = compressWithMips(minimapImage, 9);
+        byte[] minimap = compressWithMips(minimapImage, SpringMapFile.MINIMAP_MIP_LEVELS);
+
         // Riesportando una mappa con lo stesso nome il file esistente viene riscritto, non cancellato: nella
         // cartella mappe di BAR un utente normale puo' scrivere ma spesso non cancellare (per esempio un file
         // creato da un avvio come amministratore), e la cancellazione faceva fallire l'export.
@@ -454,103 +494,76 @@ public final class BarMapExporter {
             Files.deleteIfExists(archivePath);
         } catch (IOException | SecurityException ignored) {
         }
-        ZipOutputStream zip = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(archivePath, new OpenOption[0])));
-        try {
+        BufferedImage previewImage;
+        byte[] previewPng;
+        String mapId = "maps/" + archiveName;
+        try (ZipOutputStream zip = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(archivePath)))) {
             zip.setLevel(6);
-            zip.putNextEntry(new ZipEntry("mapinfo.lua"));
-            zip.write(buildMapInfo().getBytes(StandardCharsets.UTF_8));
+            addEntry(zip, "mapinfo.lua", buildMapInfo().getBytes(StandardCharsets.UTF_8));
+
+            zip.putNextEntry(new ZipEntry(mapId + ".smf"));
+            SpringMapFile.write(zip, this.map.getName().hashCode() & Integer.MAX_VALUE, this.mapX, this.mapY, this.minHeight, this.maxHeight,
+                storedHeights, metalMap, buildGrassMap(), minimap, archiveName + ".smt", featureTypes, features);
             zip.closeEntry();
-            zip.putNextEntry(new ZipEntry("maps/" + archiveName + ".smf"));
-            SpringMapFile.write(zip, this.map.getName().hashCode() & Integer.MAX_VALUE, this.mapX, this.mapY, this.minHeight, this.maxHeight, smfHeights, metalMap, buildGrassMap(), minimap, archiveName + ".smt", featureTypes, features);
-            zip.closeEntry();
-            zip.putNextEntry(new ZipEntry("maps/" + archiveName + ".smt"));
+
+            zip.putNextEntry(new ZipEntry(mapId + ".smt"));
             writeTiles(zip);
             zip.closeEntry();
+
             GroundDetail.Material[] materials = getSplatMaterials();
-            for (int i2 = 0; i2 < materials.length; i2++) {
-                zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_dnts" + (i2 + 1) + ".tga"));
-                if (this.zoneMaterials != null) {
-                    zip.write(this.zoneMaterials.layers[i2].createDetailTexture());
-                } else {
-                    zip.write(GroundDetail.createTexture(materials[i2], this.map.getName().hashCode() + (i2 * 7919)));
-                }
-                zip.closeEntry();
+            for (int i = 0; i < materials.length; i++) {
+                byte[] detail = this.zoneMaterials != null
+                    ? this.zoneMaterials.layers[i].createDetailTexture()
+                    : GroundDetail.createTexture(materials[i], this.map.getName().hashCode() + i * 7919);
+                addEntry(zip, mapId + "_dnts" + (i + 1) + ".tga", detail);
             }
-            zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_splats.dds"));
-            zip.write(buildSplatDistribution());
-            zip.closeEntry();
-            Path featuresRepository = this.options.featuresRepository();
-            if (featuresRepository != null && this.plantSets.stream().anyMatch((v0) -> {
-                return v0.fromRepository();
-            })) {
-                for (Map.Entry<String, Path> file : MapFlora.collectFiles(this.plantSets, featuresRepository).entrySet()) {
+            addEntry(zip, mapId + "_splats.dds", buildSplatDistribution());
+
+            // alberi e piante della raccolta di BAR, se disponibile
+            Path repository = this.options.featuresRepository();
+            if (repository != null && this.plantSets.stream().anyMatch(MapFlora.PlantSet::fromRepository)) {
+                for (Map.Entry<String, Path> file : MapFlora.collectFiles(this.plantSets, repository).entrySet()) {
                     zip.putNextEntry(new ZipEntry(file.getKey()));
                     Files.copy(file.getValue(), zip);
                     zip.closeEntry();
                 }
             }
-            // Scrittura oggetti ed entità custom, script di animazione e gadget spawner
+
+            // oggetti e unita' dello Studio, con i loro script
             writeCustomEntities(zip);
             SpawnRoles.Guide startGuide = buildStartGuide();
             if (startGuide != null) {
-                zip.putNextEntry(new ZipEntry("mapconfig/maps-metadata_startPos.yaml"));
-                zip.write(startGuide.toYaml().getBytes(StandardCharsets.UTF_8));
-                zip.closeEntry();
+                addEntry(zip, "mapconfig/maps-metadata_startPos.yaml", startGuide.toYaml().getBytes(StandardCharsets.UTF_8));
             }
             MapExtraOptions extra = MapExtraOptions.get();
             if (extra.lavaMode > 0) {
-                zip.putNextEntry(new ZipEntry("mapconfig/lava.lua"));
-                zip.write(extra.buildLavaConfig().getBytes(StandardCharsets.UTF_8));
-                zip.closeEntry();
+                addEntry(zip, "mapconfig/lava.lua", extra.buildLavaConfig().getBytes(StandardCharsets.UTF_8));
             }
             if (extra.needsGadget()) {
-                zip.putNextEntry(new ZipEntry("luarules/gadgets/map_options.lua"));
-                zip.write(extra.buildGadget().getBytes(StandardCharsets.UTF_8));
-                zip.closeEntry();
+                addEntry(zip, "luarules/gadgets/map_options.lua", extra.buildGadget().getBytes(StandardCharsets.UTF_8));
             }
 
-            zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_normals.tga"));
-            zip.write(buildNormalsTexture());
-            zip.closeEntry();
-            zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_specular.dds"));
-            zip.write(buildSpecularTexture());
-            zip.closeEntry();
-            zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_edge.dds"));
-            zip.write(buildEdgeTexture(minimapImage));
-            zip.closeEntry();
-            BufferedImage previewImage = renderPreview(minimapImage);
-            ByteArrayOutputStream previewBytes = new ByteArrayOutputStream();
-            ImageIO.write(previewImage, "png", previewBytes);
-            byte[] previewPngBytes = previewBytes.toByteArray();
+            addEntry(zip, mapId + "_normals.tga", buildNormalsTexture());
+            addEntry(zip, mapId + "_specular.dds", buildSpecularTexture());
+            addEntry(zip, mapId + "_edge.dds", buildEdgeTexture(minimapImage));
 
-            zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_preview.png"));
-            zip.write(previewPngBytes);
-            zip.closeEntry();
-
-            zip.putNextEntry(new ZipEntry("preview.png"));
-            zip.write(previewPngBytes);
-            zip.closeEntry();
-
-            zip.putNextEntry(new ZipEntry("minimap.png"));
-            zip.write(previewPngBytes);
-            zip.closeEntry();
-
-            zip.close();
-            saveLobbyMinimaps(folderPath, archiveName, getDisplayName(), previewImage, previewPngBytes);
-            System.out.printf(Locale.ROOT, "BAR map: %dx%d, heights %.0f to %.0f, %d metal spots, %d geo vents, %d features%n", Integer.valueOf(this.mapX / 64), Integer.valueOf(this.mapY / 64), Float.valueOf(this.minHeight), Float.valueOf(this.maxHeight), Integer.valueOf(this.mexPositions.size()), Integer.valueOf(this.geoPositions.size()), Integer.valueOf(features.size()));
-            System.out.println("Metal spot incomes: " + describeMetal());
-            if (this.zoneMaterials != null) {
-                System.out.println("Zone materials: " + this.zoneMaterials.describe());
-            }
-            return archivePath;
-        } catch (Throwable th) {
-            try {
-                zip.close();
-            } catch (Throwable th2) {
-                th.addSuppressed(th2);
-            }
-            throw th;
+            // la stessa anteprima con tre nomi: quello della mappa e i due che cercano i programmi esterni
+            previewImage = renderPreview(minimapImage);
+            ByteArrayOutputStream png = new ByteArrayOutputStream();
+            ImageIO.write(previewImage, "png", png);
+            previewPng = png.toByteArray();
+            addEntry(zip, mapId + "_preview.png", previewPng);
+            addEntry(zip, "preview.png", previewPng);
+            addEntry(zip, "minimap.png", previewPng);
         }
+        saveLobbyMinimaps(folderPath, archiveName, getDisplayName(), previewImage, previewPng);
+        System.out.printf(Locale.ROOT, "BAR map: %dx%d, heights %.0f to %.0f, %d metal spots, %d geo vents, %d features%n",
+            this.mapX / 64, this.mapY / 64, this.minHeight, this.maxHeight, this.mexPositions.size(), this.geoPositions.size(), features.size());
+        System.out.println("Metal spot incomes: " + describeMetal());
+        if (this.zoneMaterials != null) {
+            System.out.println("Zone materials: " + this.zoneMaterials.describe());
+        }
+        return archivePath;
     }
 
     /** Le quote dell'editor, una per punto della griglia, gia' moltiplicate per la scala della mappa. */
