@@ -135,10 +135,10 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
                     data = BarFolder.find(null);
                 }
                 if (data != null && BarFolder.isData(data)) {
-                    List<Units.Unit> units = Units.read(data);
+                    List<BarUnits.Unit> units = BarUnits.read(data);
                     if (units != null && !units.isEmpty()) {
                         List<ObjectEntity> loaded = new ArrayList<>(units.size());
-                        for (Units.Unit u : units) {
+                        for (BarUnits.Unit u : units) {
                             loaded.add(ObjectEntity.fromOfficialUnit(u));
                         }
                         SwingUtilities.invokeLater(() -> {
@@ -252,7 +252,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         ButtonGroup factionGroup = new ButtonGroup();
         for (String faction : factions) {
             Color accent = "ALL".equals(faction) ? BarMapStudio.ACCENT_CYAN
-                : "Other".equals(faction) ? new Color(180, 190, 205) : Units.factionColour(faction);
+                : "Other".equals(faction) ? new Color(180, 190, 205) : BarUnits.factionColour(faction);
             JToggleButton btn = createFilterToggle(I18n.t("objfac." + faction), "ALL".equals(faction), accent);
             factionGroup.add(btn);
             btn.addActionListener(e -> {
@@ -1193,7 +1193,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         ObjectEntity target = selectedEntity;
         if (target == null || !editingDef || (target.getOfficialUnit() != null && !target.isClone())) return;
         ensureOfficialUnitsLoaded();
-        List<Units.Unit> units = new ArrayList<>();
+        List<BarUnits.Unit> units = new ArrayList<>();
         for (ObjectEntity e : allEntities) {
             if (e.getOfficialUnit() != null && !e.isClone()) {
                 units.add(e.getOfficialUnit());
@@ -1285,12 +1285,12 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
             return new Color(entity.getTintRgb());
         }
         return switch (entity.getOwner()) {
-            case ARMADA -> Units.factionColour("Armada");
-            case CORTEX -> Units.factionColour("Cortex");
-            case LEGION -> Units.factionColour("Legion");
+            case ARMADA -> BarUnits.factionColour("Armada");
+            case CORTEX -> BarUnits.factionColour("Cortex");
+            case LEGION -> BarUnits.factionColour("Legion");
             case HOSTILE, RAPTORS, SCAVENGERS -> new Color(200, 60, 60);
             case NEUTRAL -> new Color(150, 150, 150);
-            default -> Units.factionColour(entity.getFaction());
+            default -> BarUnits.factionColour(entity.getFaction());
         };
     }
 
@@ -1456,7 +1456,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
             view.model.getMaxY() * entity.getScale(), (view.model.getMaxX() - view.model.getMinX()) * entity.getScale()));
     }
 
-    private void loadOfficialPreview(Units.Unit unit) {
+    private void loadOfficialPreview(BarUnits.Unit unit) {
         Path data = barDataSupplier != null ? barDataSupplier.get() : null;
         if (data == null) data = BarFolder.find(null);
         final Path finalData = data;
@@ -1469,7 +1469,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         centerContainer.add(preview2dLabel, BorderLayout.CENTER);
 
         Thread loader = new Thread(() -> {
-            BufferedImage img = Units.readPicture(finalData, unit);
+            BufferedImage img = BarUnits.readPicture(finalData, unit);
             ImageIcon icon = (img != null) ? new ImageIcon(img.getScaledInstance(256, 256, Image.SCALE_SMOOTH)) : null;
             SwingUtilities.invokeLater(() -> {
                 if (icon != null) {

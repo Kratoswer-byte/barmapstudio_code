@@ -40,7 +40,7 @@ public final class ObjectEntity {
     private Path texturePath;
     private BufferedImage previewImage;
     private String luaScript;
-    private final Units.Unit officialUnit;
+    private final BarUnits.Unit officialUnit;
     private float scale = 1.0f;
 
     /** Hook icone gameplay (UI completa dopo, in Studio). NONE = statica senza icona. */
@@ -56,7 +56,7 @@ public final class ObjectEntity {
 
     public ObjectEntity(String id, String name, Category category, String faction,
                         int footprintX, int footprintZ, int health, int metal, int energy,
-                        String tooltip, ObjModel3D model3D, String luaScript, Units.Unit officialUnit) {
+                        String tooltip, ObjModel3D model3D, String luaScript, BarUnits.Unit officialUnit) {
         this.id = id;
         this.name = name;
         this.category = category;
@@ -77,7 +77,7 @@ public final class ObjectEntity {
     /**
      * Costruisce un ObjectEntity a partire da una Unit ufficiale di BAR.
      */
-    public static ObjectEntity fromOfficialUnit(Units.Unit unit) {
+    public static ObjectEntity fromOfficialUnit(BarUnits.Unit unit) {
         ObjectEntity entity = new ObjectEntity(
             unit.id(),
             unit.name(),
@@ -169,8 +169,8 @@ public final class ObjectEntity {
     public void setPreviewImage(BufferedImage previewImage) { this.previewImage = previewImage; }
     public String getLuaScript() { return luaScript; }
     public void setLuaScript(String luaScript) { this.luaScript = luaScript; }
-    public Units.Unit getOfficialUnit() { return officialUnit; }
-    /** Accesso inter-package senza esporre il tipo package-private Units.Unit. */
+    public BarUnits.Unit getOfficialUnit() { return officialUnit; }
+    /** Accesso inter-package senza esporre il tipo package-private BarUnits.Unit. */
     public boolean hasOfficialUnit() { return officialUnit != null; }
 
     /** Id dell'unita' di BAR di cui questo oggetto e' una copia personalizzata, null se non e' una copia. */
@@ -199,7 +199,7 @@ public final class ObjectEntity {
      * e lo stesso comportamento dell'originale, ma con nome e valori propri. L'originale non viene toccata.
      */
     public static ObjectEntity cloneOfficial(ObjectEntity original, String newId, String newName) {
-        Units.Unit unit = original.officialUnit;
+        BarUnits.Unit unit = original.officialUnit;
         ObjectEntity copy = new ObjectEntity(newId, newName, Category.OFFICIAL_UNIT, original.faction,
             original.footprintX, original.footprintZ, original.health, original.metal, original.energy,
             original.tooltip, null, "", unit);

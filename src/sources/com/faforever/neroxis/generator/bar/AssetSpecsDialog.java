@@ -28,7 +28,7 @@ public class AssetSpecsDialog extends JDialog {
     private static final Color TEXT_MUTED = new Color(148, 163, 184);
 
     private static AssetSpecsDialog instance;
-    private static LobbyUi lobbyRef;
+    private static StudioShell lobbyRef;
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel contentCards = new JPanel(cardLayout);
@@ -36,7 +36,7 @@ public class AssetSpecsDialog extends JDialog {
     private final JCheckBox doNotShowCheck = new JCheckBox(I18n.t("spec.1"));
     private Point dragStart;
 
-    public static synchronized void toggle(JFrame parent, LobbyUi lobby) {
+    public static synchronized void toggle(JFrame parent, StudioShell lobby) {
         lobbyRef = lobby;
         if (instance != null && instance.isDisplayable()) {
             if (instance.isVisible()) {
@@ -57,7 +57,7 @@ public class AssetSpecsDialog extends JDialog {
         toggle(parent, lobbyRef);
     }
 
-    public static void showOnStartup(JFrame parent, LobbyUi lobby) {
+    public static void showOnStartup(JFrame parent, StudioShell lobby) {
         lobbyRef = lobby;
         if (lobby != null) {
             String hide = lobby.setting("hide_specs_on_start", "false");
@@ -68,7 +68,7 @@ public class AssetSpecsDialog extends JDialog {
         toggle(parent, lobby);
     }
 
-    public AssetSpecsDialog(JFrame parent, LobbyUi lobby) {
+    public AssetSpecsDialog(JFrame parent, StudioShell lobby) {
         super(parent, I18n.t("spec.2"), false);
         lobbyRef = lobby;
         setUndecorated(true);

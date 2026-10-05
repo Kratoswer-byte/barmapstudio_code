@@ -84,6 +84,12 @@ if ($python) {
         $report | Select-Object -First 20 | ForEach-Object { Write-Host $_ }
         throw "launcher.jar contiene riferimenti al vecchio launcher: esegui clean_legacy_refs.py prima di creare il pacchetto."
     }
+    # le classi ereditate che il programma non usa piu' non devono rientrare nel pacchetto
+    $unused = & python (Join-Path $PSScriptRoot "prune_unused.py") $sourceJar
+    if (($unused | Where-Object { $_ -match "^classi da togliere: 0 " }).Count -eq 0) {
+        $unused | ForEach-Object { Write-Host $_ }
+        throw "launcher.jar contiene classi inutilizzate: esegui  python build\prune_unused.py <jar> --apply"
+    }
 }
 
 if ($NoObfuscate) {

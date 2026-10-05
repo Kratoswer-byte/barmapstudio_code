@@ -10,8 +10,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.event.WindowEvent;
 import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Locale;
@@ -105,27 +103,17 @@ public class BarMapStudio {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                BarLauncher launcher = new BarLauncher();
-                Method mShow = BarLauncher.class.getDeclaredMethod("show");
-                mShow.setAccessible(true);
-                mShow.invoke(launcher);
-                initCustomApp(launcher);
+                initCustomApp(new StudioShell());
             } catch (Throwable t) {
                 t.printStackTrace();
             }
         });
     }
 
-    private static void initCustomApp(BarLauncher launcher) {
+    private static void initCustomApp(StudioShell shell) {
         try {
-            Field fFrame = BarLauncher.class.getDeclaredField("frame");
-            fFrame.setAccessible(true);
-            JFrame frame = (JFrame) fFrame.get(launcher);
+            JFrame frame = shell.frame;
             frame.setTitle(I18n.t("map.209"));
-
-            Field fLobby = BarLauncher.class.getDeclaredField("lobby");
-            fLobby.setAccessible(true);
-            LobbyUi lobby = (LobbyUi) fLobby.get(launcher);
 
             Rectangle maxBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
 
@@ -140,10 +128,10 @@ public class BarMapStudio {
             }
 
             // Determine startup display mode and generous default windowed geometry
-            String savedMode = lobby != null ? lobby.setting("display", "maximized") : "maximized";
+            String savedMode = shell != null ? shell.setting("display", "maximized") : "maximized";
             boolean startMaximized = !"window".equalsIgnoreCase(savedMode);
 
-            Rectangle savedWin = lobby != null ? lobby.savedWindow() : null;
+            Rectangle savedWin = shell != null ? shell.savedWindow() : null;
             int defW = Math.min(1640, Math.max(1280, maxBounds.width - 60));
             int defH = Math.min(940, Math.max(740, maxBounds.height - 50));
             int defX = maxBounds.x + (maxBounds.width - defW) / 2;
@@ -173,79 +161,10 @@ public class BarMapStudio {
                 }
             } catch (Exception ignored) {}
 
-            // Extract fields from BarLauncher
-            Field fHome = BarLauncher.class.getDeclaredField("home");
-            fHome.setAccessible(true);
-            Path home = (Path) fHome.get(launcher);
-
-            Field fBarFolder = BarLauncher.class.getDeclaredField("barFolder");
-            fBarFolder.setAccessible(true);
-            JTextField barFolderField = (JTextField) fBarFolder.get(launcher);
-
-            Field fBarStatus = BarLauncher.class.getDeclaredField("barStatus");
-            fBarStatus.setAccessible(true);
-            JLabel barStatus = (JLabel) fBarStatus.get(launcher);
-
-            Method mRefresh = BarLauncher.class.getDeclaredMethod("refreshLibrary", Path.class);
-            mRefresh.setAccessible(true);
-
-            Method mStartEngine = BarLauncher.class.getDeclaredMethod("startEngine", Path.class, String.class);
-            mStartEngine.setAccessible(true);
-
-            Method mBuildMapsView = BarLauncher.class.getDeclaredMethod("buildMapsView");
-            mBuildMapsView.setAccessible(true);
-            JComponent libraryView = (JComponent) mBuildMapsView.invoke(launcher);
-            if (libraryView != null && libraryView.getLayout() instanceof BorderLayout bl) {
-                Component center = bl.getLayoutComponent(BorderLayout.CENTER);
-                Component east = bl.getLayoutComponent(BorderLayout.EAST);
-                if (center != null && east != null) {
-                    libraryView.removeAll();
-                    JSplitPane libSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, center, east);
-                    libSplit.setDividerSize(7);
-                    libSplit.setContinuousLayout(true);
-                    libSplit.setBorder(null);
-                    libSplit.setOpaque(false);
-                    libSplit.setResizeWeight(1.0);
-                    libSplit.addComponentListener(new java.awt.event.ComponentAdapter() {
-                        private boolean initialSet = false;
-                        @Override
-                        public void componentResized(java.awt.event.ComponentEvent e) {
-                            if (!initialSet && libSplit.getWidth() > 0) {
-                                initialSet = true;
-                                libSplit.setDividerLocation(Math.max(400, libSplit.getWidth() - 360));
-                            }
-                        }
-                    });
-                    libraryView.add(libSplit, BorderLayout.CENTER);
-                }
-            }
-
-            Field fUnits = BarLauncher.class.getDeclaredField("units");
-            fUnits.setAccessible(true);
-            Object unitsObj = fUnits.get(launcher);
-            Method mUnitsView = unitsObj.getClass().getDeclaredMethod("view");
-            mUnitsView.setAccessible(true);
-            JComponent unitsView = (JComponent) mUnitsView.invoke(unitsObj);
-            Method mEnsureLoaded = unitsObj.getClass().getDeclaredMethod("ensureLoaded");
-            mEnsureLoaded.setAccessible(true);
-
-            // Determine data folder
-            Path barData = null;
-            if (barFolderField != null && barFolderField.getText() != null && !barFolderField.getText().isBlank()) {
-                Path p = Path.of(barFolderField.getText().trim());
-                if (BarFolder.isData(p)) {
-                    barData = p;
-                }
-            }
-            if (barData == null) {
-                barData = BarFolder.find(null);
-            }
-            if (barData == null) {
-                barData = BarFolder.usual();
-            }
-            final Path finalBarData = barData;
-            // da qui in poi tutto il programma usa questa cartella di BAR, ovunque sia installato
-            AppPaths.setBarData(finalBarData);
+            Path home = shell.home;
+            JLabel barStatus = shell.barStatus;
+            // la cartella di BAR la trova la base del programma; da qui in poi la usano tutte le schede
+            final Path finalBarData = shell.barData();
 
             // Instantiate Map Editor Panel
             final MapLibraryPanel[] libraryHolder = new MapLibraryPanel[1];
@@ -253,32 +172,15 @@ public class BarMapStudio {
                 home,
                 finalBarData,
                 archive -> {
-                    try {
-                        mRefresh.invoke(launcher, archive);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
                     if (libraryHolder[0] != null) {
                         libraryHolder[0].refresh(archive);
                     }
                 },
-                archive -> {
-                    try {
-                        mStartEngine.invoke(launcher, finalBarData.resolve("_neroxis_skirmish.txt"), null);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                }
+                archive -> shell.startEngine(finalBarData.resolve("_neroxis_skirmish.txt"), null)
             );
 
             // partita ospitata: lo Studio indica lo script e la versione del motore da usare
-            editorPanel.setScriptLauncher((script, engineVersion) -> {
-                try {
-                    mStartEngine.invoke(launcher, script, engineVersion);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            });
+            editorPanel.setScriptLauncher(shell::startEngine);
 
             // Build Unified MAPS Master Panel (Editor sub-tab + Library sub-tab)
             // la libreria mappe e' una scheda di primo livello (dopo OBJECTS & UNITS), non piu' una sotto-scheda di MAPS
@@ -336,7 +238,7 @@ public class BarMapStudio {
             masterViewPanel.add(editorPanel, "MAPS");
             masterViewPanel.add(textureStudioPanel, "TEXTURES");
             masterViewPanel.add(objectsStudioPanel, "OBJECTS");
-            if (libraryView != null) {
+            {
                 // la libreria e' un pannello dello Studio: "apri nell'editor" porta la mappa nella scheda MAPS
                 MapLibraryPanel library = new MapLibraryPanel(file -> {
                     if (mapsTabHolder[0] != null) {
@@ -344,13 +246,7 @@ public class BarMapStudio {
                     }
                     editorPanel.importBarMap(file);
                 });
-                library.setScriptLauncher((script, engineVersion) -> {
-                    try {
-                        mStartEngine.invoke(launcher, script, engineVersion);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                });
+                library.setScriptLauncher(shell::startEngine);
                 library.addComponentListener(new java.awt.event.ComponentAdapter() {
                     @Override
                     public void componentShown(java.awt.event.ComponentEvent e) {
@@ -362,10 +258,10 @@ public class BarMapStudio {
             }
 
             // Build Brand-New Modern Header
-            JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj, mapsTabHolder, texturesTabHolder, objectsTabHolder, textureStudioPanel, editorPanel, objectsStudioPanel, libraryView != null);
+            JPanel customHeader = buildCustomHeader(frame, shell, masterCards, masterViewPanel, mapsTabHolder, texturesTabHolder, objectsTabHolder, textureStudioPanel, editorPanel, objectsStudioPanel, true);
 
             // Build Slim Modern Footer with Status & Help Overlays
-            JPanel customFooter = buildCustomFooter(frame, launcher, barStatus, lobby);
+            JPanel customFooter = buildCustomFooter(frame, barStatus, shell);
 
             // Construct Root Panel (100% full width, ZERO ONLINE DOCK!)
             JPanel customRoot = new JPanel(new BorderLayout());
@@ -376,7 +272,7 @@ public class BarMapStudio {
             customRoot.add(customFooter, BorderLayout.SOUTH);
 
             // Add edge window resizer for undecorated window
-            new WindowResizer(frame, lobby);
+            new WindowResizer(frame, shell);
 
             frame.setContentPane(customRoot);
             frame.revalidate();
@@ -392,33 +288,33 @@ public class BarMapStudio {
             frame.setVisible(true);
 
             // Mostra automaticamente la finestra delle specifiche all'avvio se non silenziata
-            SwingUtilities.invokeLater(() -> AssetSpecsDialog.showOnStartup(frame, lobby));
+            SwingUtilities.invokeLater(() -> AssetSpecsDialog.showOnStartup(frame, shell));
 
         } catch (Throwable t) {
             t.printStackTrace();
         }
     }
 
-    public static void toggleMaximize(JFrame frame, LobbyUi lobby) {
+    public static void toggleMaximize(JFrame frame, StudioShell shell) {
         Rectangle maxBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
         frame.setMaximizedBounds(maxBounds);
         if ((frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
             frame.setExtendedState(Frame.NORMAL);
-            if (lobby != null) {
-                lobby.remember("display", "window");
-                lobby.saveWindow(frame.getBounds());
+            if (shell != null) {
+                shell.remember("display", "window");
+                shell.saveWindow(frame.getBounds());
             }
         } else {
             frame.setExtendedState(Frame.MAXIMIZED_BOTH);
             frame.setBounds(maxBounds);
-            if (lobby != null) {
-                lobby.remember("display", "maximized");
+            if (shell != null) {
+                shell.remember("display", "maximized");
             }
         }
         frame.repaint();
     }
 
-    private static void makeDraggable(JComponent comp, JFrame frame, Point[] dragPoint, LobbyUi lobby) {
+    private static void makeDraggable(JComponent comp, JFrame frame, Point[] dragPoint, StudioShell shell) {
         comp.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -428,14 +324,14 @@ public class BarMapStudio {
                     dragPoint[0] = e.getPoint();
                 }
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
-                    toggleMaximize(frame, lobby);
+                    toggleMaximize(frame, shell);
                 }
             }
             @Override
             public void mouseReleased(MouseEvent e) {
                 dragPoint[0] = null;
-                if (lobby != null && (frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == 0) {
-                    lobby.saveWindow(frame.getBounds());
+                if (shell != null && (frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == 0) {
+                    shell.saveWindow(frame.getBounds());
                 }
             }
         });
@@ -445,8 +341,8 @@ public class BarMapStudio {
                 if (dragPoint[0] != null) {
                     if ((frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
                         frame.setExtendedState(Frame.NORMAL);
-                        if (lobby != null) {
-                            lobby.remember("display", "window");
+                        if (shell != null) {
+                            shell.remember("display", "window");
                         }
                     }
                     Point current = e.getLocationOnScreen();
@@ -458,12 +354,9 @@ public class BarMapStudio {
 
     private static JPanel buildCustomHeader(
         JFrame frame,
-        BarLauncher launcher,
-        LobbyUi lobby,
+        StudioShell shell,
         CardLayout masterCards,
         JPanel masterViewPanel,
-        Method mEnsureLoaded,
-        Object unitsObj,
         JToggleButton[] mapsTabHolder,
         JToggleButton[] texturesTabHolder,
         JToggleButton[] objectsTabHolder,
@@ -479,12 +372,12 @@ public class BarMapStudio {
 
         // Make whole custom header draggable
         final Point[] dragPoint = new Point[1];
-        makeDraggable(header, frame, dragPoint, lobby);
+        makeDraggable(header, frame, dragPoint, shell);
 
         // Left: Logo and Badge
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 7));
         left.setOpaque(false);
-        makeDraggable(left, frame, dragPoint, lobby);
+        makeDraggable(left, frame, dragPoint, shell);
 
         URL logoUrl = BarMapStudio.class.getResource("bms_logo.png");
         if (logoUrl != null) {
@@ -570,7 +463,7 @@ public class BarMapStudio {
         minBtn.addActionListener(e -> frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED));
 
         JButton maxBtn = new WindowControlButton(WindowControlType.MAX, I18n.t("map.213"));
-        maxBtn.addActionListener(e -> toggleMaximize(frame, lobby));
+        maxBtn.addActionListener(e -> toggleMaximize(frame, shell));
 
         JButton closeBtn = new WindowControlButton(WindowControlType.CLOSE, I18n.t("win.close"));
         closeBtn.addActionListener(e -> frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING)));
@@ -584,7 +477,7 @@ public class BarMapStudio {
         return header;
     }
 
-    private static JPanel buildCustomFooter(JFrame frame, BarLauncher launcher, JLabel barStatus, LobbyUi lobby) {
+    private static JPanel buildCustomFooter(JFrame frame, JLabel barStatus, StudioShell shell) {
         JPanel footer = new JPanel(new BorderLayout());
         footer.setBackground(BG_HEADER);
         footer.setPreferredSize(new Dimension(100, 24));
@@ -603,8 +496,8 @@ public class BarMapStudio {
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 2));
         right.setOpaque(false);
 
-        JButton barBtn = createBarStatusOverlayButton(launcher, barStatus);
-        JButton specsBtn = createSpecsOverlayButton(frame, lobby);
+        JButton barBtn = createBarStatusOverlayButton(shell, barStatus);
+        JButton specsBtn = createSpecsOverlayButton(frame, shell);
         JButton helpBtn = createHelpOverlayButton();
 
         right.add(createUpdateOverlayButton(frame));
@@ -690,7 +583,7 @@ public class BarMapStudio {
         return btn;
     }
 
-    private static JButton createBarStatusOverlayButton(BarLauncher launcher, JLabel barStatus) {
+    private static JButton createBarStatusOverlayButton(StudioShell shell, JLabel barStatus) {
         JButton btn = new JButton() {
             @Override
             protected void paintComponent(Graphics graphics) {
@@ -731,11 +624,11 @@ public class BarMapStudio {
         btn.setContentAreaFilled(false);
         btn.setOpaque(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addActionListener(e -> showBarStatusOverlay(btn, launcher, barStatus));
+        btn.addActionListener(e -> showBarStatusOverlay(btn, shell, barStatus));
         return btn;
     }
 
-    private static void showBarStatusOverlay(Component anchor, BarLauncher launcher, JLabel barStatus) {
+    private static void showBarStatusOverlay(Component anchor, StudioShell shell, JLabel barStatus) {
         JPopupMenu popup = new JPopupMenu();
         popup.setBackground(new Color(14, 19, 31));
         popup.setBorder(BorderFactory.createCompoundBorder(
@@ -778,40 +671,47 @@ public class BarMapStudio {
             content.add(Box.createVerticalStrut(8));
         }
 
-        try {
-            Field fBarFolder = BarLauncher.class.getDeclaredField("barFolder");
-            fBarFolder.setAccessible(true);
-            JTextField barFolder = (JTextField) fBarFolder.get(launcher);
-            String path = barFolder.getText().trim();
-            if (!path.isEmpty()) {
-                JButton openFolderBtn = new JButton(I18n.t("map.218"));
-                openFolderBtn.setFont(fontCond(Font.BOLD, 11));
-                openFolderBtn.setBackground(new Color(18, 24, 38));
-                openFolderBtn.setForeground(ACCENT_CYAN);
-                openFolderBtn.setFocusPainted(false);
-                openFolderBtn.setAlignmentX(0f);
-                openFolderBtn.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(0, 229, 255, 80), 1, true),
-                    BorderFactory.createEmptyBorder(5, 10, 5, 10)
-                ));
-                openFolderBtn.addActionListener(ev -> {
-                    popup.setVisible(false);
-                    try {
-                        Desktop.getDesktop().open(new java.io.File(path));
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                });
-                content.add(openFolderBtn);
-            }
-        } catch (Throwable ignored) {}
+        java.util.function.Function<String, JButton> overlayButton = label -> {
+            JButton button = new JButton(label);
+            button.setFont(fontCond(Font.BOLD, 11));
+            button.setBackground(new Color(18, 24, 38));
+            button.setForeground(ACCENT_CYAN);
+            button.setFocusPainted(false);
+            button.setAlignmentX(0f);
+            button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0, 229, 255, 80), 1, true),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+            ));
+            return button;
+        };
+        if (shell.barFound()) {
+            JButton openFolderBtn = overlayButton.apply(I18n.t("map.218"));
+            openFolderBtn.addActionListener(ev -> {
+                popup.setVisible(false);
+                try {
+                    Desktop.getDesktop().open(shell.barData().toFile());
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            });
+            content.add(openFolderBtn);
+            content.add(Box.createVerticalStrut(6));
+        }
+        // se BAR e' installato in una cartella insolita, o ce n'e' piu' di uno, si sceglie qui
+        JButton chooseBtn = overlayButton.apply(I18n.t("shell.bar.choose"));
+        chooseBtn.addActionListener(ev -> {
+            popup.setVisible(false);
+            shell.chooseBarFolder(SwingUtilities.getWindowAncestor(anchor));
+            anchor.repaint();
+        });
+        content.add(chooseBtn);
 
         popup.add(content);
         Dimension ps = popup.getPreferredSize();
         popup.show(anchor, anchor.getWidth() - ps.width, -ps.height - 4);
     }
 
-    private static JButton createSpecsOverlayButton(JFrame frame, LobbyUi lobby) {
+    private static JButton createSpecsOverlayButton(JFrame frame, StudioShell shell) {
         JButton btn = new JButton() {
             @Override
             protected void paintComponent(Graphics graphics) {
@@ -852,7 +752,7 @@ public class BarMapStudio {
         btn.setContentAreaFilled(false);
         btn.setOpaque(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addActionListener(e -> AssetSpecsDialog.toggle(frame, lobby));
+        btn.addActionListener(e -> AssetSpecsDialog.toggle(frame, shell));
         return btn;
     }
 
@@ -1259,7 +1159,7 @@ public class BarMapStudio {
     public static class WindowResizer implements AWTEventListener {
         private static final int BORDER_DRAG_THICKNESS = 7;
         private final JFrame frame;
-        private final LobbyUi lobby;
+        private final StudioShell shell;
         private Point clickPoint;
         private Rectangle initialBounds;
         private int cursorDirection = 0;
@@ -1269,9 +1169,9 @@ public class BarMapStudio {
         private static final int WEST = 4;
         private static final int EAST = 8;
 
-        public WindowResizer(JFrame frame, LobbyUi lobby) {
+        public WindowResizer(JFrame frame, StudioShell shell) {
             this.frame = frame;
-            this.lobby = lobby;
+            this.shell = shell;
             Toolkit.getDefaultToolkit().addAWTEventListener(this,
                 AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
         }
@@ -1399,8 +1299,8 @@ public class BarMapStudio {
                         } else {
                             frame.setCursor(Cursor.getDefaultCursor());
                         }
-                        if (lobby != null && (frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == 0) {
-                            lobby.saveWindow(frame.getBounds());
+                        if (shell != null && (frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == 0) {
+                            shell.saveWindow(frame.getBounds());
                         }
                         e.consume();
                     }

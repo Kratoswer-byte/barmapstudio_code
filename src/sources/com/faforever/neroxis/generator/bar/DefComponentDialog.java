@@ -52,10 +52,10 @@ public final class DefComponentDialog extends JDialog {
         "metalmake", "energystorage", "metalstorage", "cloakcost", "mincloakdistance", "stealth", "canfly", "cruisealtitude",
         "turnrate", "maxacc", "maxdec", "maxslope", "maxwaterdepth", "seismicsignature", "radardistancejam", "explodeas", "selfdestructas"};
 
-    private final List<Units.Unit> units;
+    private final List<BarUnits.Unit> units;
     private final Consumer<String> insert;
-    private final DefaultListModel<Units.Unit> unitModel = new DefaultListModel<>();
-    private final JList<Units.Unit> unitList = new JList<>(unitModel);
+    private final DefaultListModel<BarUnits.Unit> unitModel = new DefaultListModel<>();
+    private final JList<BarUnits.Unit> unitList = new JList<>(unitModel);
     private final DefaultListModel<Component3> componentModel = new DefaultListModel<>();
     private final JList<Component3> componentList = new JList<>(componentModel);
     private final JTextField search = new JTextField();
@@ -71,7 +71,7 @@ public final class DefComponentDialog extends JDialog {
     private JCheckBox damageUse;
     private JTextField valueField;
 
-    public DefComponentDialog(Window owner, List<Units.Unit> units, Consumer<String> insert) {
+    public DefComponentDialog(Window owner, List<BarUnits.Unit> units, Consumer<String> insert) {
         super(owner, I18n.t("defdlg.title"), ModalityType.APPLICATION_MODAL);
         this.units = units;
         this.insert = insert;
@@ -119,7 +119,7 @@ public final class DefComponentDialog extends JDialog {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean selected, boolean focus) {
                 JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, selected, focus);
-                if (value instanceof Units.Unit u) {
+                if (value instanceof BarUnits.Unit u) {
                     label.setText("<html><b>" + escape(u.name()) + "</b> <span style='color:#8c94a3'>" + escape(u.id()) + " · " + escape(u.faction()) + " · T" + u.tier() + "</span></html>");
                 }
                 label.setBorder(new EmptyBorder(3, 6, 3, 6));
@@ -260,7 +260,7 @@ public final class DefComponentDialog extends JDialog {
     private void refillUnits() {
         String filter = search.getText().trim().toLowerCase(Locale.ROOT);
         unitModel.clear();
-        for (Units.Unit u : units) {
+        for (BarUnits.Unit u : units) {
             if (!"ALL".equals(faction) && !u.faction().equalsIgnoreCase(faction)) continue;
             if (!filter.isEmpty() && !(u.id() + " " + u.name()).toLowerCase(Locale.ROOT).contains(filter)) continue;
             unitModel.addElement(u);
@@ -268,7 +268,7 @@ public final class DefComponentDialog extends JDialog {
     }
 
     /** Legge la definizione dell'unita' dal gioco, in background, e ne elenca i componenti. */
-    private void loadComponents(Units.Unit unit) {
+    private void loadComponents(BarUnits.Unit unit) {
         componentModel.clear();
         buildSettings(null);
         if (unit == null) return;
@@ -448,7 +448,7 @@ public final class DefComponentDialog extends JDialog {
 
     /** Scrive nell'anteprima il codice che verra' aggiunto alla definizione. */
     private void updatePreview() {
-        Units.Unit unit = unitList.getSelectedValue();
+        BarUnits.Unit unit = unitList.getSelectedValue();
         Component3 c = componentList.getSelectedValue();
         if (unit == null || c == null || "INFO".equals(c.kind)) {
             preview.setText("");
