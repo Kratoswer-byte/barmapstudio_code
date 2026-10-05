@@ -132,9 +132,9 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
             try {
                 Path data = barDataSupplier != null ? barDataSupplier.get() : null;
                 if (data == null) {
-                    data = BarFolder.find(null);
+                    data = BarLocator.find(null);
                 }
-                if (data != null && BarFolder.isData(data)) {
+                if (data != null && BarLocator.isData(data)) {
                     List<BarUnits.Unit> units = BarUnits.read(data);
                     if (units != null && !units.isEmpty()) {
                         List<ObjectEntity> loaded = new ArrayList<>(units.size());
@@ -1405,7 +1405,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
                             if (officialTextures == null) {
                                 officialTextures = new ModelTextureCache(() -> {
                                     Path data = barDataSupplier != null ? barDataSupplier.get() : null;
-                                    return data != null ? data : BarFolder.find(null);
+                                    return data != null ? data : BarLocator.find(null);
                                 });
                             }
                         }
@@ -1458,7 +1458,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
 
     private void loadOfficialPreview(BarUnits.Unit unit) {
         Path data = barDataSupplier != null ? barDataSupplier.get() : null;
-        if (data == null) data = BarFolder.find(null);
+        if (data == null) data = BarLocator.find(null);
         final Path finalData = data;
 
         centerContainer.removeAll();

@@ -47,16 +47,16 @@ final class StudioShell {
         if (!remembered.isEmpty()) {
             try {
                 Path path = Path.of(remembered);
-                if (BarFolder.isData(path)) {
+                if (BarLocator.isData(path)) {
                     saved = path;
                 }
             } catch (RuntimeException ignored) {
             }
         }
         if (saved == null) {
-            saved = BarFolder.find(remembered.isEmpty() ? null : remembered);
+            saved = BarLocator.find(remembered.isEmpty() ? null : remembered);
         }
-        barData = saved != null ? saved : BarFolder.usual();
+        barData = saved != null ? saved : BarLocator.defaultData();
         AppPaths.setBarData(barData);
         updateBarStatus();
         writeSplashPicture();
@@ -144,7 +144,7 @@ final class StudioShell {
     }
 
     boolean barFound() {
-        return BarFolder.isData(barData);
+        return BarLocator.isData(barData);
     }
 
     private void updateBarStatus() {
@@ -153,7 +153,7 @@ final class StudioShell {
         Path engine = null;
         if (found) {
             try {
-                game = BarInstall.installedVersion(barData, "byar");
+                game = BarGameFiles.installedVersion(barData);
             } catch (RuntimeException ignored) {
             }
             engine = AppPaths.newestEngine();
@@ -184,7 +184,7 @@ final class StudioShell {
         if (chooser.showOpenDialog(parent) != JFileChooser.APPROVE_OPTION) {
             return false;
         }
-        Path picked = BarFolder.fromChoice(chooser.getSelectedFile().toPath());
+        Path picked = BarLocator.fromChoice(chooser.getSelectedFile().toPath());
         if (picked == null) {
             JOptionPane.showMessageDialog(parent, I18n.t("shell.bar.choose.wrong"), I18n.t("shell.bar.choose.title"), JOptionPane.WARNING_MESSAGE);
             return false;
@@ -208,16 +208,13 @@ final class StudioShell {
     boolean startEngine(Path script, String engineVersion) {
         Path data = barData;
         Path wanted = engineVersion != null ? data.resolve("engine").resolve("recoil_" + engineVersion) : null;
-        Path engine = wanted != null && Platform.hasEngine(wanted) ? wanted : AppPaths.newestEngine();
+        Path engine = wanted != null && BarLocator.hasEngine(wanted) ? wanted : AppPaths.newestEngine();
         if (engine == null) {
             JOptionPane.showMessageDialog(frame, I18n.t("host.noengine"), I18n.t("map.167"), JOptionPane.ERROR_MESSAGE);
             return false;
         }
         try {
-            if (MacOs.isMac()) {
-                MacOs.prepare(data);
-            }
-            List<String> command = new ArrayList<>(List.of(engine.resolve(Platform.program("spring")).toString(),
+            List<String> command = new ArrayList<>(List.of(engine.resolve(BarLocator.program("spring")).toString(),
                 "--write-dir", data.toString(), "--isolation", script.toString()));
             new ProcessBuilder(command).directory(engine.toFile())
                 .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();

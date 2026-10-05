@@ -52,7 +52,7 @@ final class UpdateChecker {
     /** Una release piu' recente della versione in uso. */
     record Release(String version, String notes, String pageUrl, String assetName, String assetUrl, String sha256, long size) {
         boolean installable() {
-            return Platform.isWindows() && assetUrl != null && sha256 != null;
+            return BarLocator.isWindows() && assetUrl != null && sha256 != null;
         }
     }
 

@@ -37,7 +37,7 @@ public final class OfficialModels {
         Map<String, String> files = new HashMap<>();
         Map<String, String> defs = new HashMap<>();
         try {
-            Map<String, byte[]> units = BarInstall.readGameFiles(data, file -> {
+            Map<String, byte[]> units = BarGameFiles.readAll(data, file -> {
                 String lower = file.toLowerCase(Locale.ROOT);
                 if (lower.endsWith(".s3o") || lower.startsWith("scripts/")) {
                     files.put(lower, file);
@@ -90,7 +90,7 @@ public final class OfficialModels {
             files = modelFiles;
         }
         String real = files != null ? files.get(file.toLowerCase(Locale.ROOT)) : null;
-        return BarInstall.readGameBytes(data, real != null ? real : file);
+        return BarGameFiles.read(data, real != null ? real : file);
     }
 
     /** Byte del modello S3O di un'unita', cercato prima con il nome dichiarato nel suo file. */
@@ -140,7 +140,7 @@ public final class OfficialModels {
         if (data == null || name == null || name.isBlank()) return null;
         for (String candidate : new String[]{"unittextures/" + name, name}) {
             try {
-                byte[] bytes = BarInstall.readGameBytes(data, candidate);
+                byte[] bytes = BarGameFiles.read(data, candidate);
                 if (bytes != null && bytes.length > 128) {
                     java.awt.image.BufferedImage img = ModelTextureCache.decodeGameBytes(bytes, mipLevel);
                     if (img != null) return img;
@@ -171,7 +171,7 @@ public final class OfficialModels {
         }
         if (path == null) return null;
         try {
-            byte[] bytes = BarInstall.readGameBytes(data, path);
+            byte[] bytes = BarGameFiles.read(data, path);
             return bytes == null ? null : new String(bytes, StandardCharsets.UTF_8);
         } catch (Exception ex) {
             return null;

@@ -31,7 +31,7 @@ final class ProtectedCopy {
         if (files.isEmpty()) {
             return true;
         }
-        if (!Platform.isWindows()) {
+        if (!BarLocator.isWindows()) {
             return false;
         }
         StringBuilder cmd = new StringBuilder("@echo off\r\nchcp 65001>nul\r\n");

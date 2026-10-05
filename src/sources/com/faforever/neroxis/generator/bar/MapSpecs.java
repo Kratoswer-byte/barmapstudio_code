@@ -81,7 +81,7 @@ final class MapSpecs {
                     }
                 }
             } else {
-                Path sevenZip = Platform.sevenZip(data);
+                Path sevenZip = BarLocator.sevenZip(data);
                 if (sevenZip != null && Files.isRegularFile(sevenZip)) {
                     byte[] lua = extract(sevenZip, archive, "mapinfo.lua", 4 << 20);
                     info = lua == null ? null : new String(lua, StandardCharsets.ISO_8859_1);

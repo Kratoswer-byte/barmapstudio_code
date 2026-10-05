@@ -48,7 +48,7 @@ public final class ModelTextureCache {
         if (data == null) return null;
         String[] cands = {name, "unittextures/" + name, "unittextures/" + base(name) + ".dds"};
         for (String cand : cands) {
-            byte[] bytes = BarInstall.readGameBytes(data, cand);
+            byte[] bytes = BarGameFiles.read(data, cand);
             if (bytes == null || bytes.length < 128) continue;
             BufferedImage img = decodeGameBytes(bytes, mipLevel);
             if (img != null) { put(key, img); return img; }

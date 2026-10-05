@@ -69,18 +69,18 @@ public final class AppPaths {
      */
     public static Path barData() {
         Path chosen = barData;
-        if (chosen != null && BarFolder.isData(chosen)) {
+        if (chosen != null && BarLocator.isData(chosen)) {
             return chosen;
         }
         try {
-            Path found = BarFolder.find(chosen != null ? chosen.toString() : null);
+            Path found = BarLocator.find(chosen != null ? chosen.toString() : null);
             if (found != null) {
                 barData = found;
                 return found;
             }
         } catch (RuntimeException ignored) {
         }
-        return chosen != null ? chosen : Platform.defaultData();
+        return chosen != null ? chosen : BarLocator.defaultData();
     }
 
     /**
@@ -89,7 +89,7 @@ public final class AppPaths {
      */
     public static Path newestEngine() {
         try (java.util.stream.Stream<Path> engines = Files.list(barData().resolve("engine"))) {
-            return engines.filter(Platform::hasEngine)
+            return engines.filter(BarLocator::hasEngine)
                 .max(java.util.Comparator.comparingLong(path -> path.toFile().lastModified()))
                 .orElse(null);
         } catch (Exception e) {

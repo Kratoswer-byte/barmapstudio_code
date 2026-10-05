@@ -52,7 +52,7 @@ final class BarUnits {
     static List<Unit> read(Path data) {
         List<Unit> units = new ArrayList<>();
         try {
-            Map<String, byte[]> files = BarInstall.readGameFiles(data,
+            Map<String, byte[]> files = BarGameFiles.readAll(data,
                 file -> (file.startsWith("units/") && file.endsWith(".lua")) || file.equals("language/en/units.json"));
             Map<String, String> names = new HashMap<>();
             Map<String, String> tooltips = new HashMap<>();
@@ -115,7 +115,7 @@ final class BarUnits {
             if (candidate.isEmpty()) {
                 continue;
             }
-            byte[] bytes = BarInstall.readGameBytes(data, "unitpics/" + candidate);
+            byte[] bytes = BarGameFiles.read(data, "unitpics/" + candidate);
             if (bytes == null) {
                 continue;
             }

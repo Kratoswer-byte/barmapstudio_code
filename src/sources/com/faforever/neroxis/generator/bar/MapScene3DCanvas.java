@@ -585,8 +585,8 @@ public final class MapScene3DCanvas extends JPanel {
             try {
                 Path data = AppPaths.barData();
                 if (data == null) return;
-                byte[] b = BarInstall.readGameBytes(data, "objects3d/units/armcom.s3o");
-                if (b == null) b = BarInstall.readGameBytes(data, "objects3d/armcom.s3o");
+                byte[] b = BarGameFiles.read(data, "objects3d/units/armcom.s3o");
+                if (b == null) b = BarGameFiles.read(data, "objects3d/armcom.s3o");
                 if (b != null) {
                     commanderRef = S3OParser.parseWithFaceUV(b);
                     SwingUtilities.invokeLater(this::repaint);

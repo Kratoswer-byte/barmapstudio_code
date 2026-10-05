@@ -86,8 +86,8 @@ final class MapLibraryPanel extends JPanel {
     /** Una mappa installata. */
     record Entry(Path archive, String name, String description, String author, String mapFile, boolean mine,
                  long size, long modified, int players, String skirmish) {
-        BarInstall.InstalledMap installed() {
-            return new BarInstall.InstalledMap(archive, name, "", "", mapFile);
+        BarMaps.InstalledMap installed() {
+            return new BarMaps.InstalledMap(archive, name, "", "", mapFile);
         }
     }
 
@@ -414,9 +414,9 @@ final class MapLibraryPanel extends JPanel {
         if (maps == null || !Files.isDirectory(maps)) {
             return result;
         }
-        Map<Path, BarInstall.InstalledMap> known = new HashMap<>();
+        Map<Path, BarMaps.InstalledMap> known = new HashMap<>();
         try {
-            for (BarInstall.InstalledMap map : BarInstall.listMaps(data)) {
+            for (BarMaps.InstalledMap map : BarMaps.list(data)) {
                 known.put(map.archive(), map);
             }
         } catch (RuntimeException ignored) {
@@ -428,7 +428,7 @@ final class MapLibraryPanel extends JPanel {
                 if (!mine && !lower.endsWith(".sd7")) {
                     continue;
                 }
-                BarInstall.InstalledMap map = known.get(file);
+                BarMaps.InstalledMap map = known.get(file);
                 String name = map != null ? map.name() : stripExtension(file.getFileName().toString());
                 String text = map != null ? map.description() : "";
                 String author = map != null ? map.author() : "";
@@ -545,7 +545,7 @@ final class MapLibraryPanel extends JPanel {
                         thumb = javax.imageio.ImageIO.read(small);
                     }
                     if (thumb == null) {
-                        BufferedImage full = BarInstall.readMinimap(AppPaths.barData(), minimapCache(), entry.installed());
+                        BufferedImage full = BarMaps.minimap(AppPaths.barData(), minimapCache(), entry.installed());
                         if (full != null) {
                             thumb = fit(full, THUMB * 2);
                             javax.imageio.ImageIO.write(thumb, "png", small);
@@ -608,16 +608,16 @@ final class MapLibraryPanel extends JPanel {
         preview.show(thumbs.get(entry.archive()), null);
         loader.submit(() -> {
             BufferedImage full = null;
-            BarInstall.Marks marks = null;
+            BarMaps.Marks marks = null;
             MapSpecs read = null;
             try {
-                full = BarInstall.readMinimap(AppPaths.barData(), minimapCache(), entry.installed());
-                marks = BarInstall.readMarks(AppPaths.barData(), minimapCache(), entry.installed());
+                full = BarMaps.minimap(AppPaths.barData(), minimapCache(), entry.installed());
+                marks = BarMaps.marks(AppPaths.barData(), minimapCache(), entry.installed());
                 read = MapSpecs.read(AppPaths.barData(), minimapCache(), entry.archive(), entry.mapFile());
             } catch (Throwable ignored) {
             }
             BufferedImage image = full;
-            BarInstall.Marks found = marks;
+            BarMaps.Marks found = marks;
             MapSpecs mapSpecs = read;
             SwingUtilities.invokeLater(() -> {
                 if (ticket != loadTicket) {
@@ -632,7 +632,7 @@ final class MapLibraryPanel extends JPanel {
     }
 
     /** Riempie la tabella delle specifiche. Finche' l'archivio non e' stato letto mostra solo i dati del file. */
-    private void fillSpecs(Entry entry, MapSpecs map, BarInstall.Marks marks) {
+    private void fillSpecs(Entry entry, MapSpecs map, BarMaps.Marks marks) {
         specs.removeAll();
         if (entry != null) {
             int row = 0;
@@ -776,7 +776,7 @@ final class MapLibraryPanel extends JPanel {
         if (entry == null) {
             return;
         }
-        if (Platform.isWindows()) {
+        if (BarLocator.isWindows()) {
             try {
                 new ProcessBuilder("explorer.exe", "/select,", entry.archive().toString()).start();
                 return;
@@ -894,15 +894,15 @@ final class MapLibraryPanel extends JPanel {
     /** Anteprima grande con i punti del metallo e i geyser. */
     private final class Preview extends JComponent {
         private BufferedImage image;
-        private BarInstall.Marks marks;
+        private BarMaps.Marks marks;
         private double aspect;
 
-        void show(BufferedImage image, BarInstall.Marks marks) {
+        void show(BufferedImage image, BarMaps.Marks marks) {
             show(image, marks, 0);
         }
 
         /** @param aspect larghezza / altezza vera della mappa (le miniature di BAR sono sempre quadrate), 0 se non nota */
-        void show(BufferedImage image, BarInstall.Marks marks, double aspect) {
+        void show(BufferedImage image, BarMaps.Marks marks, double aspect) {
             this.image = image;
             this.marks = marks;
             this.aspect = aspect;
