@@ -856,19 +856,21 @@ public final class BarMapExporter {
         return new float[]{marker.getPosition().x() * this.elmosPerCell, marker.getPosition().z() * this.elmosPerCell, metal, 1.0f};
     }
 
-    private void mergeCloseMetalSpots() {
-        int spotCount = this.mexPositions.size();
-        int[] group = new int[spotCount];
-        for (int i = 0; i < spotCount; i++) {
+    /**
+     * Riunisce i gruppi di elementi collegati: {@code linked} dice se due elementi vanno insieme, e il
+     * risultato assegna a ognuno il numero del suo gruppo (quello dell'elemento piu' basso che lo ha avviato).
+     */
+    private static int[] groupLinked(int count, java.util.function.IntBinaryOperator linked) {
+        int[] group = new int[count];
+        for (int i = 0; i < count; i++) {
             group[i] = i;
         }
-        for (int i2 = 0; i2 < spotCount; i2++) {
-            for (int j = i2 + 1; j < spotCount; j++) {
-                float[] other = this.mexPositions.get(j);
-                if (distance(this.mexPositions.get(i2), other[0], other[1]) < MIN_METAL_SPOT_SPACING) {
+        for (int i = 0; i < count; i++) {
+            for (int j = i + 1; j < count; j++) {
+                if (linked.applyAsInt(i, j) != 0) {
                     int from = group[j];
-                    int to = group[i2];
-                    for (int k = 0; k < spotCount; k++) {
+                    int to = group[i];
+                    for (int k = 0; k < count; k++) {
                         if (group[k] == from) {
                             group[k] = to;
                         }
@@ -876,102 +878,120 @@ public final class BarMapExporter {
                 }
             }
         }
+        return group;
+    }
+
+    /**
+     * Due punti metallo troppo vicini non si possono sfruttare entrambi: vengono fusi in uno solo, messo al
+     * centro (allineato alla griglia di 16 elmi), con il metallo medio e il conto di quanti ne riunisce.
+     */
+    private void mergeCloseMetalSpots() {
+        int count = this.mexPositions.size();
+        int[] group = groupLinked(count, (i, j) -> {
+            float[] other = this.mexPositions.get(j);
+            return distance(this.mexPositions.get(i), other[0], other[1]) < MIN_METAL_SPOT_SPACING ? 1 : 0;
+        });
         List<float[]> merged = new ArrayList<>();
-        for (int i3 = 0; i3 < spotCount; i3++) {
-            float x = 0.0f;
-            float z = 0.0f;
-            float metalSum = 0.0f;
-            int count = 0;
-            for (int j2 = 0; j2 < spotCount; j2++) {
-                if (group[j2] == i3) {
-                    x += this.mexPositions.get(j2)[0];
-                    z += this.mexPositions.get(j2)[1];
-                    metalSum += this.mexPositions.get(j2)[2];
-                    count++;
+        for (int g = 0; g < count; g++) {
+            float sumX = 0.0f;
+            float sumZ = 0.0f;
+            float sumMetal = 0.0f;
+            int members = 0;
+            for (int i = 0; i < count; i++) {
+                if (group[i] == g) {
+                    float[] spot = this.mexPositions.get(i);
+                    sumX += spot[0];
+                    sumZ += spot[1];
+                    sumMetal += spot[2];
+                    members++;
                 }
             }
-            if (count > 0) {
-                float avgMetal = metalSum / count;
-                merged.add(new float[]{Math.round((x / count) / 16.0f) * 16.0f, Math.round((z / count) / 16.0f) * 16.0f, avgMetal, count});
+            if (members > 0) {
+                merged.add(new float[]{Math.round(sumX / members / 16.0f) * 16.0f, Math.round(sumZ / members / 16.0f) * 16.0f, sumMetal / members, members});
             }
         }
         this.mexPositions.clear();
         this.mexPositions.addAll(merged);
     }
 
+    /**
+     * Decide quanto metallo da' ogni punto, quando non l'ha scelto l'utente. I punti vicini alle basi hanno il
+     * valore normale; gli altri valgono di piu' quanto piu' sono lontani ed esposti, e di meno dove ce ne sono
+     * tanti insieme. I punti in posizioni equivalenti (specchiate) ricevono lo stesso valore.
+     */
     private void assignMetalValues() {
-        boolean hasCustomMexes = false;
-        for (Marker m : this.map.getMexes()) {
-            if (m.getId() != null && m.getId().contains("_val_")) {
-                hasCustomMexes = true;
-                break;
+        for (Marker marker : this.map.getMexes()) {
+            if (marker.getId() != null && marker.getId().contains("_val_")) {
+                return; // valori scelti a mano nell'editor: restano quelli
             }
         }
-        if (hasCustomMexes) {
-            // Respect custom metal values chosen by user in Map Studio
-            return;
-        }
+        float baseMetal = this.options.baseMetal();
+        float minMetal = this.options.minMetal();
+        float maxMetal = this.options.maxMetal();
         if (this.options.uniformMetal() || this.mexPositions.isEmpty()) {
-            for (float[] mex : this.mexPositions) {
-                mex[2] = Math.min(this.options.maxMetal(), this.options.baseMetal() * (1.0f + (0.5f * (mex[3] - 1.0f))));
+            for (float[] spot : this.mexPositions) {
+                spot[2] = Math.min(maxMetal, baseMetal * (1.0f + 0.5f * (spot[3] - 1.0f)));
             }
             return;
         }
-        List<float[]> spawns = this.map.getSpawns().stream().map((v1) -> {
-            return toElmos(v1);
-        }).toList();
-        float centerX = (this.mapX * 8) / 2.0f;
-        float centerZ = (this.mapY * 8) / 2.0f;
-        float baseRadius = MAX_WADING_DEPTH * this.elmosPerCell;
+        List<float[]> spawns = this.map.getSpawns().stream().map(this::toElmos).toList();
+        float centreX = this.mapX * 8 / 2.0f;
+        float centreZ = this.mapY * 8 / 2.0f;
+        float baseRadius = 22.0f * this.elmosPerCell;
         float crowdRadius = 30.0f * this.elmosPerCell;
-        int spotCount = this.mexPositions.size();
-        float[] spawnDistances = new float[spotCount];
-        float[] centerDistances = new float[spotCount];
+        int count = this.mexPositions.size();
+        float[] fromSpawn = new float[count];
+        float[] fromCentre = new float[count];
         float furthest = baseRadius + 1.0f;
-        for (int i = 0; i < spotCount; i++) {
-            float[] mex2 = this.mexPositions.get(i);
+        for (int i = 0; i < count; i++) {
+            float[] spot = this.mexPositions.get(i);
             float nearest = Float.MAX_VALUE;
             for (float[] spawn : spawns) {
-                nearest = Math.min(nearest, distance(mex2, spawn[0], spawn[1]));
+                nearest = Math.min(nearest, distance(spot, spawn[0], spawn[1]));
             }
-            spawnDistances[i] = spawns.isEmpty() ? baseRadius * 2.0f : nearest;
-            centerDistances[i] = distance(mex2, centerX, centerZ);
-            furthest = Math.max(furthest, spawnDistances[i]);
+            fromSpawn[i] = spawns.isEmpty() ? baseRadius * 2.0f : nearest;
+            fromCentre[i] = distance(spot, centreX, centreZ);
+            furthest = Math.max(furthest, fromSpawn[i]);
         }
+        // una variazione che dipende dal nome della mappa: la stessa mappa da' sempre gli stessi valori
         int seed = this.map.getName().hashCode();
-        float phaseA = ((seed & 65535) / 65535.0f) * 6.283f;
-        float phaseB = (((seed >>> 16) & 65535) / 65535.0f) * 6.283f;
-        float[] values = new float[spotCount];
-        for (int i2 = 0; i2 < spotCount; i2++) {
-            float[] mex3 = this.mexPositions.get(i2);
-            float mergeBonus = 1.0f + (0.35f * (mex3[3] - 1.0f));
-            if (spawnDistances[i2] <= baseRadius) {
-                values[i2] = this.options.baseMetal() * mergeBonus;
-            } else {
-                float density = 0.0f;
-                for (int j = 0; j < spotCount; j++) {
-                    if (j != i2) {
-                        float[] other = this.mexPositions.get(j);
-                        density += Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, 1.0f - (distance(mex3, other[0], other[1]) / crowdRadius));
-                    }
-                }
-                float exposure = (spawnDistances[i2] - baseRadius) / (furthest - baseRadius);
-                float random = 0.5f + (0.5f * ((float) (StrictMath.sin((centerDistances[i2] * 0.0131f) + phaseA) * StrictMath.cos((spawnDistances[i2] * 0.0173f) + phaseB))));
-                float score = ((float) StrictMath.pow(exposure, 1.2000000476837158d)) * (0.55f + (0.6f * random));
-                values[i2] = (this.options.minMetal() + ((this.options.maxMetal() - this.options.minMetal()) * Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(1.0f, (score * (1.5f / (1.0f + (0.5f * density)))) + (0.35f * smoothStep(0.7f, 0.95f, exposure) * smoothStep(0.8f, 0.25f, density) * random))))) * mergeBonus;
+        float phaseA = (seed & 65535) / 65535.0f * 6.283f;
+        float phaseB = ((seed >>> 16) & 65535) / 65535.0f * 6.283f;
+        float[] values = new float[count];
+        for (int i = 0; i < count; i++) {
+            float[] spot = this.mexPositions.get(i);
+            float mergeBonus = 1.0f + 0.35f * (spot[3] - 1.0f);
+            if (fromSpawn[i] <= baseRadius) {
+                values[i] = baseMetal * mergeBonus;
+                continue;
             }
+            float crowd = 0.0f;
+            for (int j = 0; j < count; j++) {
+                if (j != i) {
+                    float[] other = this.mexPositions.get(j);
+                    crowd += Math.max(0.0f, 1.0f - distance(spot, other[0], other[1]) / crowdRadius);
+                }
+            }
+            float exposure = (fromSpawn[i] - baseRadius) / (furthest - baseRadius);
+            float variation = 0.5f + 0.5f * (float) (StrictMath.sin(fromCentre[i] * 0.0131f + phaseA) * StrictMath.cos(fromSpawn[i] * 0.0173f + phaseB));
+            float score = (float) StrictMath.pow(exposure, 1.2000000476837158d) * (0.55f + 0.6f * variation);
+            float richness = score * (1.5f / (1.0f + 0.5f * crowd))
+                + 0.35f * smoothStep(0.7f, 0.95f, exposure) * smoothStep(0.8f, 0.25f, crowd) * variation;
+            values[i] = (minMetal + (maxMetal - minMetal) * Math.max(0.0f, Math.min(1.0f, richness))) * mergeBonus;
         }
         float tolerance = this.elmosPerCell * 1.5f;
-        int[] group = new int[spotCount];
-        for (int i3 = 0; i3 < spotCount; i3++) {
-            group[i3] = i3;
+        int[] group = new int[count];
+        for (int i = 0; i < count; i++) {
+            group[i] = i;
         }
-        for (int i4 = 0; i4 < spotCount; i4++) {
-            for (int j2 = i4 + 1; j2 < spotCount; j2++) {
-                if (group[i4] != group[j2] && this.mexPositions.get(i4)[3] == this.mexPositions.get(j2)[3] && Math.abs(spawnDistances[j2] - spawnDistances[i4]) < tolerance && Math.abs(centerDistances[j2] - centerDistances[i4]) < tolerance) {
-                    int from = group[j2];
-                    int to = group[i4];
-                    for (int k = 0; k < spotCount; k++) {
+        for (int i = 0; i < count; i++) {
+            for (int j = i + 1; j < count; j++) {
+                boolean equivalent = group[i] != group[j] && this.mexPositions.get(i)[3] == this.mexPositions.get(j)[3]
+                    && Math.abs(fromSpawn[j] - fromSpawn[i]) < tolerance && Math.abs(fromCentre[j] - fromCentre[i]) < tolerance;
+                if (equivalent) {
+                    int from = group[j];
+                    int to = group[i];
+                    for (int k = 0; k < count; k++) {
                         if (group[k] == from) {
                             group[k] = to;
                         }
@@ -979,74 +999,81 @@ public final class BarMapExporter {
                 }
             }
         }
-        for (int g = 0; g < spotCount; g++) {
+        for (int g = 0; g < count; g++) {
             float sum = 0.0f;
-            int count = 0;
-            for (int i5 = 0; i5 < spotCount; i5++) {
-                if (group[i5] == g) {
-                    sum += values[i5];
-                    count++;
+            int members = 0;
+            for (int i = 0; i < count; i++) {
+                if (group[i] == g) {
+                    sum += values[i];
+                    members++;
                 }
             }
-            if (count != 0) {
-                float value = Math.round(Math.max(this.options.minMetal(), Math.min(this.options.maxMetal(), sum / count)) * 10.0f) / 10.0f;
-                for (int i6 = 0; i6 < spotCount; i6++) {
-                    if (group[i6] == g) {
-                        this.mexPositions.get(i6)[2] = value;
-                    }
+            if (members == 0) {
+                continue;
+            }
+            // arrotondato a un decimale, dentro i limiti scelti
+            float shared = Math.round(Math.max(minMetal, Math.min(maxMetal, sum / members)) * 10.0f) / 10.0f;
+            for (int i = 0; i < count; i++) {
+                if (group[i] == g) {
+                    this.mexPositions.get(i)[2] = shared;
                 }
             }
         }
     }
 
     private static float distance(float[] position, float x, float z) {
-        return (float) StrictMath.sqrt(((position[0] - x) * (position[0] - x)) + ((position[1] - z) * (position[1] - z)));
+        float dx = position[0] - x;
+        float dz = position[1] - z;
+        return (float) StrictMath.sqrt(dx * dx + dz * dz);
     }
 
-    private static float smoothStep(float edge0, float edge1, float value) {
-        float t = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(1.0f, (value - edge0) / (edge1 - edge0)));
-        return t * t * (3.0f - (2.0f * t));
+    /** Passaggio morbido da 0 a 1 mentre {@code value} va da {@code from} a {@code to}. */
+    private static float smoothStep(float from, float to, float value) {
+        float t = Math.max(0.0f, Math.min(1.0f, (value - from) / (to - from)));
+        return t * t * (3.0f - 2.0f * t);
     }
 
+    /**
+     * La mappa del metallo letta dal motore, a meta' risoluzione: ogni punto e' una macchia 4x4 senza gli
+     * angoli, con un valore proporzionale al suo metallo.
+     */
     private byte[] buildMetalMap() {
         int width = this.mapX / 2;
         int height = this.mapY / 2;
         byte[] metalMap = new byte[width * height];
-        for (float[] mex : this.mexPositions) {
-            int cx = Math.round(mex[0] / 16.0f);
-            int cz = Math.round(mex[1] / 16.0f);
-            int dz = -2;
-            while (dz < 2) {
-                int dx = -2;
-                while (dx < 2) {
+        for (float[] spot : this.mexPositions) {
+            int centreX = Math.round(spot[0] / 16.0f);
+            int centreZ = Math.round(spot[1] / 16.0f);
+            byte amount = (byte) Math.max(1, Math.round(255.0f * spot[2] / this.options.maxMetal()));
+            for (int dz = -2; dz < 2; dz++) {
+                for (int dx = -2; dx < 2; dx++) {
                     boolean corner = (dx == -2 || dx == 1) && (dz == -2 || dz == 1);
-                    int x = cx + dx;
-                    int z = cz + dz;
+                    int x = centreX + dx;
+                    int z = centreZ + dz;
                     if (!corner && x >= 0 && z >= 0 && x < width && z < height) {
-                        metalMap[(z * width) + x] = (byte) Math.max(1, Math.round((255.0f * mex[2]) / this.options.maxMetal()));
+                        metalMap[z * width + x] = amount;
                     }
-                    dx++;
                 }
-                dz++;
             }
         }
         return metalMap;
     }
 
+    /** Riassunto dei punti metallo per il registro: quanti per ogni valore. */
     private String describeMetal() {
-        TreeMap<Float, Integer> counts = new TreeMap<>();
-        this.mexPositions.forEach(mex -> {
-            counts.merge(Float.valueOf(mex[2]), 1, (v0, v1) -> {
-                return Integer.sum(v0, v1);
-            });
-        });
-        StringBuilder result = new StringBuilder();
-        counts.forEach((value, count) -> {
-            result.append(String.format(Locale.ROOT, "%dx %.1f, ", count, value));
-        });
-        return result.isEmpty() ? "none" : result.substring(0, result.length() - 2);
+        TreeMap<Float, Integer> perValue = new TreeMap<>();
+        for (float[] spot : this.mexPositions) {
+            perValue.merge(spot[2], 1, Integer::sum);
+        }
+        if (perValue.isEmpty()) {
+            return "none";
+        }
+        List<String> parts = new ArrayList<>();
+        perValue.forEach((value, howMany) -> parts.add(String.format(Locale.ROOT, "%dx %.1f", howMany, value)));
+        return String.join(", ", parts);
     }
 
+    /** Il valore di "maxMetal" da scrivere nella mappa perche' un estrattore renda il metallo voluto. */
     private float getMaxMetal() {
         return this.options.maxMetal() / 3.0600002f;
     }
