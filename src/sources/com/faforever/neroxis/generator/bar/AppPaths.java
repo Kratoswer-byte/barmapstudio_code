@@ -21,6 +21,12 @@ public final class AppPaths {
     /** Versione mostrata nel programma e nelle segnalazioni. Il pacchetto usa lo stesso nome (build.ps1). */
     public static final String VERSION = "beta 0.1";
 
+    /**
+     * La partita con amici (mappa nel cloud e file di ingresso) e' pronta nel codice ma non ancora attiva:
+     * finche' e' false il pulsante compare come "in arrivo". Mettere true per riaccenderla.
+     */
+    public static final boolean FRIENDS_MATCH_ENABLED = false;
+
     private static volatile Path barData;
 
     /** Cartella in cui il programma puo' scrivere (impostazioni, cache, registri). */

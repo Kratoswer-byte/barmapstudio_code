@@ -18,6 +18,8 @@ A ogni versione nuova
      e se vuoi lo zip e il tar.gz.
    - NON allegare mapping-*.txt: annulla l'offuscamento.
    - Lascia "Set as the latest release" attivo e pubblica.
+4. Aggiorna il pulsante di download nel README del progetto pubblico (release-repo\README.md): nella riga
+   del pulsante cambia il numero di versione sia nell'etichetta sia nel nome del file .exe, poi invia.
 
 Cosa succede sul PC dell'utente
 - Vede versione e novita'; se sceglie "Download and install" il programma scarica l'installer, controlla che

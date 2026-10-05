@@ -251,7 +251,8 @@ public final class MapStudioPanel extends JPanel {
     // Final Action
     private final JButton genFinalMapBtn = createPrimaryButton(I18n.t("map.45"), ACCENT_GREEN);
     private final JButton genAndPlayBtn = createPrimaryButton(I18n.t("map.46"), ACCENT_AMBER);
-    private final JButton hostMatchBtn = createPrimaryButton(I18n.t("host.button"), ACCENT_CYAN);
+    private final JButton hostMatchBtn = createPrimaryButton(
+        AppPaths.FRIENDS_MATCH_ENABLED ? I18n.t("host.button") : I18n.t("host.button.soon"), AppPaths.FRIENDS_MATCH_ENABLED ? ACCENT_CYAN : TEXT_MUTED);
     /** Avvia BAR con uno script di partita e, se indicata, una versione precisa del motore. */
     private java.util.function.BiConsumer<Path, String> scriptLauncher;
     private final JProgressBar progressBar = new JProgressBar();
@@ -446,8 +447,14 @@ public final class MapStudioPanel extends JPanel {
         genGroundBtn.addActionListener(e -> doGenerateGround());
         genFinalMapBtn.addActionListener(e -> doGenerateFinalMap(false));
         genAndPlayBtn.addActionListener(e -> doGenerateFinalMap(true));
-        hostMatchBtn.addActionListener(e -> doHostMatch());
-        hostMatchBtn.setToolTipText(I18n.t("host.button.tip"));
+        if (AppPaths.FRIENDS_MATCH_ENABLED) {
+            hostMatchBtn.addActionListener(e -> doHostMatch());
+            hostMatchBtn.setToolTipText(I18n.t("host.button.tip"));
+        } else {
+            // funzione in arrivo: il pulsante resta visibile e spiega cosa fara'
+            hostMatchBtn.addActionListener(e -> JOptionPane.showMessageDialog(this, I18n.t("host.soon.text"), I18n.t("host.soon.title"), JOptionPane.INFORMATION_MESSAGE));
+            hostMatchBtn.setToolTipText(I18n.t("host.soon.tip"));
+        }
 
         btnRegenGround.addActionListener(e -> doRegenerateFromHeightmap(null));
         btnLoadHeightmap.addActionListener(e -> doLoadHeightmapFile());
