@@ -2373,10 +2373,7 @@ public final class MapStudioPanel extends JPanel {
         genAndPlayBtn.setEnabled(true);
         hostMatchBtn.setEnabled(true);
         if (ready[0] != null) {
-            try {
-                java.awt.Desktop.getDesktop().open(ready[1].toFile());
-            } catch (Exception ignored) {
-            }
+            BarLocator.openFolder(ready[1]);
             if (scriptLauncher != null) {
                 scriptLauncher.accept(ready[0], engineName.startsWith("recoil_") ? engineName.substring("recoil_".length()) : null);
             }

@@ -18,8 +18,9 @@ Start
     sh bar-map-studio.sh
 
 If Beyond All Reason is not found by itself, press the BAR button at the bottom and pick its data folder
-(Linux: ~/.local/state/Beyond-All-Reason, Flatpak: ~/.var/app/info.beyondallreason.bar/.local/state/Beyond-All-Reason,
-macOS: ~/Library/Application Support/Beyond-All-Reason-mac).
+(Linux: "~/.local/state/Beyond All Reason", Flatpak: ~/.var/app/info.beyondallreason.bar/data,
+macOS: ~/Library/Application Support/Beyond-All-Reason-mac). The window that picks the folder shows hidden
+folders too, and starts from the place where the game usually keeps its data.
 
 Settings, cache and logs are kept next to the program when that folder can be written, otherwise in
 ~/.config/BARMapStudio (Linux) or ~/Library/Application Support/BARMapStudio (macOS).

@@ -690,11 +690,7 @@ public class BarMapStudio {
             JButton openFolderBtn = overlayButton.apply(I18n.t("map.218"));
             openFolderBtn.addActionListener(ev -> {
                 popup.setVisible(false);
-                try {
-                    Desktop.getDesktop().open(shell.barData().toFile());
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
+                BarLocator.openFolder(shell.barData());
             });
             content.add(openFolderBtn);
             content.add(Box.createVerticalStrut(6));

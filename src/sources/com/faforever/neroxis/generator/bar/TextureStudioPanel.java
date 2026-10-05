@@ -1757,11 +1757,7 @@ public class TextureStudioPanel extends JPanel {
     private void openCustomFolder() {
         File dir = AppPaths.userFolder("custom_assets/textures").toFile();
         if (!dir.exists()) dir.mkdirs();
-        try {
-            Desktop.getDesktop().open(dir);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+        BarLocator.openFolder(dir.toPath());
     }
 
     private static float smoothstep(float edge0, float edge1, float x) {

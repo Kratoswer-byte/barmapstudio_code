@@ -787,10 +787,14 @@ final class MapLibraryPanel extends JPanel {
     }
 
     private void open(Path folder) {
-        try {
-            java.awt.Desktop.getDesktop().open(folder.toFile());
-        } catch (Exception e) {
-            status.setText(I18n.t("lib.folder.failed"));
+        if (folder != null && !Files.isDirectory(folder)) {
+            try {
+                Files.createDirectories(folder);
+            } catch (IOException ignored) {
+            }
+        }
+        if (!BarLocator.openFolder(folder)) {
+            status.setText(I18n.t("lib.folder.failed") + (folder != null ? " " + folder : ""));
         }
     }
 

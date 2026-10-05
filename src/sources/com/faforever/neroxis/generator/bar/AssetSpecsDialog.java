@@ -639,7 +639,9 @@ public class AssetSpecsDialog extends JDialog {
         try {
             File dir = AppPaths.userFolder("custom_assets").toFile();
             if (!dir.exists()) dir.mkdirs();
-            Desktop.getDesktop().open(dir);
+            if (!BarLocator.openFolder(dir.toPath())) {
+                throw new java.io.IOException(dir.getAbsolutePath());
+            }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, I18n.t("spec.148") + ex.getMessage(), I18n.t("spec.149"), JOptionPane.ERROR_MESSAGE);
         }

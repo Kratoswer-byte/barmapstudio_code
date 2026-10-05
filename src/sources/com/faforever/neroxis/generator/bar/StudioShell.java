@@ -178,8 +178,11 @@ final class StudioShell {
      * @return true se la cartella e' cambiata: le schede gia' aperte la usano dal prossimo avvio
      */
     boolean chooseBarFolder(Component parent) {
-        JFileChooser chooser = new JFileChooser(barData != null && Files.isDirectory(barData) ? barData.toFile() : null);
+        Path start = barData != null && Files.isDirectory(barData) ? barData : BarLocator.browseStart();
+        JFileChooser chooser = new JFileChooser(start != null ? start.toFile() : null);
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        // su Linux e macOS il gioco sta in cartelle nascoste (.local, .var, Library): vanno mostrate
+        chooser.setFileHidingEnabled(BarLocator.isWindows());
         chooser.setDialogTitle(I18n.t("shell.bar.choose.title"));
         if (chooser.showOpenDialog(parent) != JFileChooser.APPROVE_OPTION) {
             return false;

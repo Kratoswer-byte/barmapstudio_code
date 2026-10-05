@@ -66,13 +66,78 @@ final class BarLocator {
             places.add(home.resolve("Library").resolve("Application Support").resolve("Beyond-All-Reason-mac"));
             places.add(home.resolve("Library").resolve("Application Support").resolve("Beyond-All-Reason"));
         } else {
-            String state = System.getenv("XDG_STATE_HOME");
-            places.add((state == null || state.isBlank() ? home.resolve(".local").resolve("state") : Path.of(state)).resolve("Beyond-All-Reason"));
-            places.add(home.resolve("Documents").resolve("Beyond-All-Reason"));
-            places.add(home.resolve(".var").resolve("app").resolve("info.beyondallreason.bar").resolve(".local").resolve("state").resolve("Beyond-All-Reason"));
-            places.add(home.resolve(".local").resolve("share").resolve("Beyond-All-Reason"));
+            // Il nome della cartella cambia tra le versioni del gioco (con spazi o con trattini), e il pacchetto
+            // Flatpak tiene i dati nella sua cartella privata.
+            Path flatpak = home.resolve(".var").resolve("app").resolve("info.beyondallreason.bar");
+            for (Path base : linuxBases(home)) {
+                for (String name : FOLDER_NAMES) {
+                    places.add(base.resolve(name));
+                    places.add(base.resolve(name).resolve("data"));
+                }
+            }
+            places.add(flatpak.resolve("data"));
         }
         return places;
+    }
+
+    /** Le cartelle di Linux dentro cui il gioco crea la propria, dalla piu' probabile. */
+    private static List<Path> linuxBases(Path home) {
+        List<Path> bases = new ArrayList<>();
+        Path flatpak = home.resolve(".var").resolve("app").resolve("info.beyondallreason.bar");
+        for (String[] variable : new String[][]{{"XDG_STATE_HOME", ".local/state"}, {"XDG_DATA_HOME", ".local/share"}, {"XDG_CONFIG_HOME", ".config"}}) {
+            String value = System.getenv(variable[0]);
+            if (value != null && !value.isBlank()) {
+                bases.add(Path.of(value));
+            }
+            bases.add(home.resolve(variable[1]));
+            bases.add(flatpak.resolve(variable[1]));
+        }
+        bases.add(flatpak.resolve("data"));
+        bases.add(home.resolve("Documents"));
+        bases.add(home.resolve("Games"));
+        bases.add(home);
+        return bases;
+    }
+
+    /** La cartella da cui far partire la scelta a mano: su Linux quella, nascosta, in cui il gioco tiene i dati. */
+    static Path browseStart() {
+        Path home = Path.of(System.getProperty("user.home"));
+        if (WINDOWS || MAC) {
+            return null;
+        }
+        for (Path base : linuxBases(home)) {
+            for (String name : FOLDER_NAMES) {
+                if (Files.isDirectory(base.resolve(name))) {
+                    return base.resolve(name);
+                }
+            }
+        }
+        Path state = home.resolve(".local").resolve("state");
+        return Files.isDirectory(state) ? state : home;
+    }
+
+    /**
+     * Apre una cartella nel gestore dei file. Su Linux si usa xdg-open: la via di Java funziona solo con alcuni
+     * ambienti grafici.
+     */
+    static boolean openFolder(Path folder) {
+        if (folder == null || !Files.isDirectory(folder)) {
+            return false;
+        }
+        if (!WINDOWS) {
+            try {
+                new ProcessBuilder(MAC ? "open" : "xdg-open", folder.toString())
+                    .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+                return true;
+            } catch (Exception ignored) {
+            }
+        }
+        try {
+            java.awt.Desktop.getDesktop().open(folder.toFile());
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -127,6 +192,9 @@ final class BarLocator {
         bases.add(home);
         bases.add(home.resolve("Games"));
         bases.add(home.resolve("Documents").resolve("My Games"));
+        if (!WINDOWS && !MAC) {
+            bases.addAll(linuxBases(home));
+        }
         for (File root : File.listRoots()) {
             bases.add(root.toPath());
             for (String folder : new String[]{"Games", "Program Files", "Program Files (x86)", "SteamLibrary", "Programs"}) {
