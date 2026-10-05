@@ -916,7 +916,8 @@ public final class MapStudioPanel extends JPanel {
 
         side.add(createFieldRow(I18n.t("map.86"), sizeCombo));
         side.add(Box.createVerticalStrut(6));
-        styleCombo.setSelectedItem("VALLEY");
+        // a ogni avvio stile, bioma e seed sono scelti a caso: niente combinazione fissa di partenza
+        styleCombo.setSelectedIndex(new Random().nextInt(TERRAIN_STYLES.length));
         styleCombo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean selected, boolean focus) {
@@ -949,7 +950,7 @@ public final class MapStudioPanel extends JPanel {
                 return c;
             }
         });
-        biomeCombo.setSelectedItem("DESERT");
+        biomeCombo.setSelectedIndex(new Random().nextInt(BIOMES.length));
         side.add(createFieldRow(I18n.t("map.88"), biomeCombo));
         side.add(Box.createVerticalStrut(6));
         side.add(createFieldRow(I18n.t("map.89"), symmetryCombo));
