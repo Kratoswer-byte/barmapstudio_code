@@ -2614,150 +2614,178 @@ public final class BarMapExporter {
         return result;
     }
 
+    /**
+     * Per ogni cella, la distanza in elmi dall'acqua piu' vicina (zero dentro l'acqua). Si ottiene con due
+     * passate sulla griglia, una in avanti e una all'indietro, che propagano la distanza dai vicini:
+     * 8 elmi per un passo dritto, 11,31 per uno in diagonale.
+     */
     private void buildShoreDistance() {
-        float[] distance = new float[this.mapX * this.mapY];
-        int row = this.mapX + 1;
+        final float straight = 8.0f;
+        final float diagonal = 11.3136f;
+        int width = this.mapX;
+        int height = this.mapY;
+        int row = width + 1;
+        float[] distance = new float[width * height];
         boolean hasWater = false;
-        for (int z = 0; z < this.mapY; z++) {
-            for (int x = 0; x < this.mapX; x++) {
-                float center = (((this.heights[(z * row) + x] + this.heights[((z * row) + x) + 1]) + this.heights[((z + 1) * row) + x]) + this.heights[(((z + 1) * row) + x) + 1]) / 4.0f;
-                distance[(z * this.mapX) + x] = center < SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT ? SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT : 1000000.0f;
-                hasWater |= center < SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT;
+        for (int z = 0; z < height; z++) {
+            for (int x = 0; x < width; x++) {
+                float level = (this.heights[z * row + x] + this.heights[z * row + x + 1]
+                    + this.heights[(z + 1) * row + x] + this.heights[(z + 1) * row + x + 1]) / 4.0f;
+                boolean underwater = level < 0.0f;
+                distance[z * width + x] = underwater ? 0.0f : 1000000.0f;
+                hasWater |= underwater;
             }
         }
         if (hasWater) {
-            for (int z2 = 0; z2 < this.mapY; z2++) {
-                for (int x2 = 0; x2 < this.mapX; x2++) {
-                    float d = distance[(z2 * this.mapX) + x2];
-                    if (x2 > 0) {
-                        d = Math.min(d, distance[((z2 * this.mapX) + x2) - 1] + 8.0f);
+            for (int z = 0; z < height; z++) {
+                for (int x = 0; x < width; x++) {
+                    int i = z * width + x;
+                    float nearest = distance[i];
+                    if (x > 0) {
+                        nearest = Math.min(nearest, distance[i - 1] + straight);
                     }
-                    if (z2 > 0) {
-                        d = Math.min(d, distance[((z2 - 1) * this.mapX) + x2] + 8.0f);
+                    if (z > 0) {
+                        nearest = Math.min(nearest, distance[i - width] + straight);
                     }
-                    if (x2 > 0 && z2 > 0) {
-                        d = Math.min(d, distance[(((z2 - 1) * this.mapX) + x2) - 1] + 11.3136f);
+                    if (x > 0 && z > 0) {
+                        nearest = Math.min(nearest, distance[i - width - 1] + diagonal);
                     }
-                    if (x2 < this.mapX - 1 && z2 > 0) {
-                        d = Math.min(d, distance[((z2 - 1) * this.mapX) + x2 + 1] + 11.3136f);
+                    if (x < width - 1 && z > 0) {
+                        nearest = Math.min(nearest, distance[i - width + 1] + diagonal);
                     }
-                    distance[(z2 * this.mapX) + x2] = d;
+                    distance[i] = nearest;
                 }
             }
-            for (int z3 = this.mapY - 1; z3 >= 0; z3--) {
-                for (int x3 = this.mapX - 1; x3 >= 0; x3--) {
-                    float d2 = distance[(z3 * this.mapX) + x3];
-                    if (x3 < this.mapX - 1) {
-                        d2 = Math.min(d2, distance[(z3 * this.mapX) + x3 + 1] + 8.0f);
+            for (int z = height - 1; z >= 0; z--) {
+                for (int x = width - 1; x >= 0; x--) {
+                    int i = z * width + x;
+                    float nearest = distance[i];
+                    if (x < width - 1) {
+                        nearest = Math.min(nearest, distance[i + 1] + straight);
                     }
-                    if (z3 < this.mapY - 1) {
-                        d2 = Math.min(d2, distance[((z3 + 1) * this.mapX) + x3] + 8.0f);
+                    if (z < height - 1) {
+                        nearest = Math.min(nearest, distance[i + width] + straight);
                     }
-                    if (x3 < this.mapX - 1 && z3 < this.mapY - 1) {
-                        d2 = Math.min(d2, distance[((z3 + 1) * this.mapX) + x3 + 1] + 11.3136f);
+                    if (x < width - 1 && z < height - 1) {
+                        nearest = Math.min(nearest, distance[i + width + 1] + diagonal);
                     }
-                    if (x3 > 0 && z3 < this.mapY - 1) {
-                        d2 = Math.min(d2, distance[(((z3 + 1) * this.mapX) + x3) - 1] + 11.3136f);
+                    if (x > 0 && z < height - 1) {
+                        nearest = Math.min(nearest, distance[i + width - 1] + diagonal);
                     }
-                    distance[(z3 * this.mapX) + x3] = d2;
+                    distance[i] = nearest;
                 }
             }
         }
         this.shoreDistance = distance;
     }
 
+    /**
+     * Quanto un punto e' spiaggia, da 0 a 1: vicino all'acqua, poco sopra il suo livello, non troppo
+     * sott'acqua e non su una parete. {@code wobble} sposta il bordo per renderlo irregolare.
+     */
     private float beachAt(float x, float z, float wobble) {
         if (this.shoreDistance.length == 0) {
-            return SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT;
+            return 0.0f;
         }
-        float sx = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(this.mapX - 1.001f, (x / 8.0f) - 0.5f));
-        float sz = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(this.mapY - 1.001f, (z / 8.0f) - 0.5f));
-        int x0 = (int) sx;
-        int z0 = (int) sz;
-        float tx = sx - x0;
-        float tz = sz - z0;
-        float top = (Math.min(this.shoreDistance[(z0 * this.mapX) + x0], 1000.0f) * (1.0f - tx)) + (Math.min(this.shoreDistance[(z0 * this.mapX) + x0 + 1], 1000.0f) * tx);
-        float bottom = (Math.min(this.shoreDistance[((z0 + 1) * this.mapX) + x0], 1000.0f) * (1.0f - tx)) + (Math.min(this.shoreDistance[((z0 + 1) * this.mapX) + x0 + 1], 1000.0f) * tx);
-        float distance = (top * (1.0f - tz)) + (bottom * tz);
+        float cellX = Math.max(0.0f, Math.min(this.mapX - 1.001f, x / 8.0f - 0.5f));
+        float cellZ = Math.max(0.0f, Math.min(this.mapY - 1.001f, z / 8.0f - 0.5f));
+        int x0 = (int) cellX;
+        int z0 = (int) cellZ;
+        float fractionX = cellX - x0;
+        float fractionZ = cellZ - z0;
+        int i = z0 * this.mapX + x0;
+        float near = Math.min(this.shoreDistance[i], 1000.0f) * (1.0f - fractionX) + Math.min(this.shoreDistance[i + 1], 1000.0f) * fractionX;
+        float far = Math.min(this.shoreDistance[i + this.mapX], 1000.0f) * (1.0f - fractionX) + Math.min(this.shoreDistance[i + this.mapX + 1], 1000.0f) * fractionX;
+        float fromWater = near * (1.0f - fractionZ) + far * fractionZ;
         float height = heightAt(x, z);
-        float byDistance = smoothStep(BEACH_WIDTH, 31.5f, distance + (wobble * MAX_WADING_DEPTH));
-        float byHeight = smoothStep(GEO_MARK_RADIUS, 16.0f, height);
-        float shallow = smoothStep(-70.0f, -12.0f, height);
-        return byDistance * byHeight * shallow * (1.0f - smoothStep(MAX_SATURATION, 0.6f, slopeAt(x, z)));
+        float byDistance = smoothStep(BEACH_WIDTH, 31.5f, fromWater + wobble * 22.0f);
+        float byHeight = smoothStep(34.0f, 16.0f, height);
+        float notTooDeep = smoothStep(-70.0f, -12.0f, height);
+        float notSteep = 1.0f - smoothStep(MAX_SATURATION, 0.6f, slopeAt(x, z));
+        return byDistance * byHeight * notTooDeep * notSteep;
     }
 
+    private static float luminance(float[] rgb) {
+        return rgb[0] * 0.2126f + rgb[1] * 0.7152f + rgb[2] * 0.0722f;
+    }
+
+    /**
+     * Sceglie i colori di roccia, terra e sabbia guardando la mappa: campiona il colore del terreno sui
+     * pendii ripidi (roccia) e sui piani (suolo) e li usa come base, cosi' si intonano al bioma.
+     * Ricava anche le quote di "terreno basso" e "terreno alto" usate per variare i colori.
+     */
     private void pickRockAndSandColors() {
-        float[] landHeights = new float[4096];
+        float[] landHeights = new float[64 * 64];
         int landCount = 0;
         for (int gz = 0; gz < 64; gz++) {
             for (int gx = 0; gx < 64; gx++) {
-                float landHeight = heightAt(((gx + 0.5f) / 64.0f) * this.mapX * 8.0f, ((gz + 0.5f) / 64.0f) * this.mapY * 8.0f);
-                if (landHeight > 2.0f) {
-                    int i = landCount;
-                    landCount++;
-                    landHeights[i] = landHeight;
+                float h = heightAt((gx + 0.5f) / 64.0f * this.mapX * 8.0f, (gz + 0.5f) / 64.0f * this.mapY * 8.0f);
+                if (h > 2.0f) {
+                    landHeights[landCount++] = h;
                 }
             }
         }
         if (landCount > 10) {
             Arrays.sort(landHeights, 0, landCount);
             this.lowGround = landHeights[landCount / 5];
-            this.highGround = Math.max(this.lowGround + 40.0f, landHeights[(landCount * 9) / 10]);
+            this.highGround = Math.max(this.lowGround + 40.0f, landHeights[landCount * 9 / 10]);
         }
+
         float[] rock = new float[3];
         float[] ground = new float[3];
         float rockWeight = 0.0f;
         float groundWeight = 0.0f;
-        for (int gz2 = 0; gz2 < 160; gz2++) {
-            for (int gx2 = 0; gx2 < 160; gx2++) {
-                float x = ((gx2 + 0.5f) / 160) * this.mapX * 8.0f;
-                float z = ((gz2 + 0.5f) / 160) * this.mapY * 8.0f;
-                if (heightAt(x, z) >= 6.0f) {
-                    float slope = slopeAt(x, z);
-                    float[] color = blendLayers(x, z, SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, slope);
-                    float steepWeight = smoothStep(0.6f, 1.1f, slope);
-                    float flatWeight = 1.0f - smoothStep(0.05f, 0.2f, slope);
-                    for (int c = 0; c < 3; c++) {
-                        int i2 = c;
-                        rock[i2] = rock[i2] + (color[c] * steepWeight);
-                        int i3 = c;
-                        ground[i3] = ground[i3] + (color[c] * flatWeight);
-                    }
-                    rockWeight += steepWeight;
-                    groundWeight += flatWeight;
+        for (int gz = 0; gz < 160; gz++) {
+            for (int gx = 0; gx < 160; gx++) {
+                float x = (gx + 0.5f) / 160 * this.mapX * 8.0f;
+                float z = (gz + 0.5f) / 160 * this.mapY * 8.0f;
+                if (heightAt(x, z) < 6.0f) {
+                    continue;
                 }
+                float slope = slopeAt(x, z);
+                float[] color = blendLayers(x, z, 0.0f, 0.0f, slope);
+                float steep = smoothStep(0.6f, 1.1f, slope);
+                float flat = 1.0f - smoothStep(0.05f, 0.2f, slope);
+                for (int c = 0; c < 3; c++) {
+                    rock[c] += color[c] * steep;
+                    ground[c] += color[c] * flat;
+                }
+                rockWeight += steep;
+                groundWeight += flat;
             }
         }
-        if (groundWeight > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-            float[] brown = {0.47f, 0.37f, 0.25f};
-            float groundLum = (((ground[0] * 0.2126f) + (ground[1] * 0.7152f)) + (ground[2] * 0.0722f)) / groundWeight;
+
+        if (groundWeight > 0.0f) {
+            float groundLight = luminance(ground) / groundWeight;
             float groundSaturation = (Math.max(ground[0], Math.max(ground[1], ground[2])) - Math.min(ground[0], Math.min(ground[1], ground[2]))) / groundWeight;
-            this.snowGround = groundLum > 0.55f && groundSaturation < 0.14f;
-            float brownLum = (brown[0] * 0.2126f) + (brown[1] * 0.7152f) + (brown[2] * 0.0722f);
-            for (int c2 = 0; c2 < 3; c2++) {
-                this.dirtColor[c2] = (((ground[c2] / groundWeight) * 0.35f) + (brown[c2] * (groundLum / brownLum) * 0.65f)) * 0.92f;
+            this.snowGround = groundLight > 0.55f && groundSaturation < 0.14f;
+            // terra: un marrone portato alla stessa luminosita' del suolo, con un terzo del suo colore
+            float[] brown = {0.47f, 0.37f, 0.25f};
+            float brownLight = luminance(brown);
+            for (int c = 0; c < 3; c++) {
+                this.dirtColor[c] = (ground[c] / groundWeight * 0.35f + brown[c] * (groundLight / brownLight) * 0.65f) * 0.92f;
             }
+            // sabbia: calda, piu' chiara o piu' scura secondo il suolo
             float[] warmSand = {0.7f, 0.62f, 0.44f};
-            float groundLuminance = (((ground[0] * 0.2126f) + (ground[1] * 0.7152f)) + (ground[2] * 0.0722f)) / groundWeight;
-            float brightness = Math.max(0.75f, Math.min(1.15f, (groundLuminance + 0.22f) / 0.6f));
-            for (int c3 = 0; c3 < 3; c3++) {
-                this.sandColor[c3] = ((warmSand[c3] * 0.72f) + ((ground[c3] / groundWeight) * 0.28f)) * brightness;
+            float brightness = Math.max(0.75f, Math.min(1.15f, (groundLight + 0.22f) / 0.6f));
+            for (int c = 0; c < 3; c++) {
+                this.sandColor[c] = (warmSand[c] * 0.72f + ground[c] / groundWeight * 0.28f) * brightness;
             }
         }
         if (rockWeight <= 4.0f) {
-            if (groundWeight > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-                for (int c4 = 0; c4 < 3; c4++) {
-                    this.rockColor[c4] = ((ground[c4] / groundWeight) * 0.45f) + 0.2f;
+            // quasi nessun pendio ripido da cui campionare: la roccia si ricava dal suolo
+            if (groundWeight > 0.0f) {
+                for (int c = 0; c < 3; c++) {
+                    this.rockColor[c] = ground[c] / groundWeight * 0.45f + 0.2f;
                 }
-                return;
             }
             return;
         }
-        float luminance = (((rock[0] * 0.2126f) + (rock[1] * 0.7152f)) + (rock[2] * 0.0722f)) / rockWeight;
+        float rockLight = luminance(rock) / rockWeight;
         float[] warmGrey = {1.04f, 1.0f, 0.94f};
-        float rockLuminance = Math.max(0.24f, Math.min(TARGET_LUMINANCE, luminance));
-        for (int c5 = 0; c5 < 3; c5++) {
-            this.rockColor[c5] = ((rock[c5] / rockWeight) * (rockLuminance / Math.max(luminance, 0.01f)) * 0.4f) + (rockLuminance * warmGrey[c5] * 0.6f);
+        float targetLight = Math.max(0.24f, Math.min(TARGET_LUMINANCE, rockLight));
+        for (int c = 0; c < 3; c++) {
+            this.rockColor[c] = rock[c] / rockWeight * (targetLight / Math.max(rockLight, 0.01f)) * 0.4f + targetLight * warmGrey[c] * 0.6f;
         }
     }
 
