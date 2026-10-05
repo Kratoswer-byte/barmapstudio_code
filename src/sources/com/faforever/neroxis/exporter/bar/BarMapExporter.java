@@ -1078,97 +1078,94 @@ public final class BarMapExporter {
         return this.options.maxMetal() / 3.0600002f;
     }
 
+    /**
+     * Gli oggetti da piazzare sulla mappa: geyser, alberi, e il materiale da recuperare (rocce e relitti), di
+     * cui si tiene solo la parte che rientra nel totale di metallo previsto per il numero di giocatori.
+     *
+     * @param featureTypes elenco dei nomi usati, riempito man mano
+     */
     private List<SpringMapFile.Feature> buildFeatures(List<String> featureTypes) {
-        String str;
-        int i;
-        int iFloorMod;
         List<SpringMapFile.Feature> features = new ArrayList<>();
         String rockSet = getRockSet();
         this.plantSets = MapFlora.forBiome(String.valueOf(this.map.getBiome().name()), this.options.featuresRepository());
         List<ReclaimFeature> reclaim = new ArrayList<>();
         for (float[] geo : this.geoPositions) {
-            addFeature(features, featureTypes, "geovent", geo[0], geo[1], SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT);
+            addFeature(features, featureTypes, "geovent", geo[0], geo[1], 0.0f);
         }
         for (Prop prop : this.map.getProps()) {
             float x = prop.getPosition().x() * this.elmosPerCell;
             float z = prop.getPosition().z() * this.elmosPerCell;
-            hash(x, z);
             String path = prop.getPath().toLowerCase(Locale.ROOT);
             if (!path.contains("tree")) {
+                // roccia: la variante dipende dalla posizione rispetto alle basi, cosi' i lati specchiati combaciano
                 int rockHash = symmetricHash(x, z);
-                if (prop.isBoulder()) {
-                    i = 12;
-                    iFloorMod = Math.floorMod(rockHash, 10);
-                } else {
-                    i = 1;
-                    iFloorMod = Math.floorMod(rockHash, 8);
-                }
-                int rockIndex = i + iFloorMod;
-                reclaim.add(new ReclaimFeature("rocks30_%s_%02d".formatted(rockSet, Integer.valueOf(rockIndex)), x, z, prop.getRotation(), 9 + rockIndex, ((rockHash >>> 8) & 65535) / 65536.0f));
-            } else if (heightAt(x, z) >= 4.0f) {
-                int groveHash = symmetricHash(x, z);
-                MapFlora.PlantSet plants = this.plantSets.isEmpty() ? null : this.plantSets.get(Math.floorMod(groveHash >>> 3, this.plantSets.size()));
-                if (plants == null || ((groveHash >>> 9) & 255) / 256.0f < plants.keep()) {
-                    int groveSize = plants != null ? plants.perGroup() : 4;
-                    int treeCount = path.contains("group") ? groveSize : 1;
-                    int i2 = 0;
-                    while (i2 < treeCount) {
-                        int treeHash = hash(x + (i2 * 31.7f), z - (i2 * 17.3f));
-                        float tx = i2 == 0 ? x : x + ((((treeHash & 255) / 255.0f) - 0.5f) * 5.0f * this.elmosPerCell);
-                        float tz = i2 == 0 ? z : z + (((((treeHash >> 8) & 255) / 255.0f) - 0.5f) * 5.0f * this.elmosPerCell);
-                        if (i2 <= 0 || (isInsideMap(tx, tz, 32.0f) && !isNearResource(tx, tz, 56.0f) && heightAt(tx, tz) >= 4.0f && slopeAt(tx, tz) <= 0.35f)) {
-                            if (plants != null) {
-                                str = plants.names().get(Math.floorMod((groveHash * 31) + (i2 * 7919), plants.names().size()));
-                            } else {
-                                str = "treetype" + ((treeHash >>> 16) % 16);
-                            }
-                            String tree = str;
-                            addFeature(features, featureTypes, tree, tx, tz, prop.getRotation());
-                        }
-                        i2++;
-                    }
+                int variant = prop.isBoulder() ? 12 + Math.floorMod(rockHash, 10) : 1 + Math.floorMod(rockHash, 8);
+                String name = "rocks30_" + rockSet + "_" + (variant < 10 ? "0" : "") + variant;
+                reclaim.add(new ReclaimFeature(name, x, z, prop.getRotation(), 9 + variant, ((rockHash >>> 8) & 65535) / 65536.0f));
+                continue;
+            }
+            if (heightAt(x, z) < 4.0f) {
+                continue; // niente alberi in acqua o sulla riva
+            }
+            int groveHash = symmetricHash(x, z);
+            MapFlora.PlantSet plants = this.plantSets.isEmpty() ? null : this.plantSets.get(Math.floorMod(groveHash >>> 3, this.plantSets.size()));
+            if (plants != null && ((groveHash >>> 9) & 255) / 256.0f >= plants.keep()) {
+                continue; // questo insieme di piante e' piu' rado: il punto resta vuoto
+            }
+            int groveSize = plants != null ? plants.perGroup() : 4;
+            int treeCount = path.contains("group") ? groveSize : 1;
+            for (int tree = 0; tree < treeCount; tree++) {
+                int treeHash = hash(x + tree * 31.7f, z - tree * 17.3f);
+                // il primo albero sta nel punto indicato, gli altri sparsi intorno
+                float treeX = tree == 0 ? x : x + ((treeHash & 255) / 255.0f - 0.5f) * 5.0f * this.elmosPerCell;
+                float treeZ = tree == 0 ? z : z + (((treeHash >> 8) & 255) / 255.0f - 0.5f) * 5.0f * this.elmosPerCell;
+                boolean goodSpot = tree <= 0 || (isInsideMap(treeX, treeZ, 32.0f) && !isNearResource(treeX, treeZ, 56.0f)
+                    && heightAt(treeX, treeZ) >= 4.0f && slopeAt(treeX, treeZ) <= 0.35f);
+                if (goodSpot) {
+                    String name = plants != null
+                        ? plants.names().get(Math.floorMod(groveHash * 31 + tree * 7919, plants.names().size()))
+                        : "treetype" + ((treeHash >>> 16) % 16);
+                    addFeature(features, featureTypes, name, treeX, treeZ, prop.getRotation());
                 }
             }
         }
         for (Army army : this.map.getArmies()) {
             for (Group group : army.getGroups()) {
                 for (Unit unit : group.getUnits()) {
-                    float x2 = unit.getPosition().x() * this.elmosPerCell;
-                    float z2 = unit.getPosition().z() * this.elmosPerCell;
-                    String wreck = getWreck(unit.getType(), hash(x2, z2), heightAt(x2, z2) < -8.0f);
-                    if (wreck != null && isInsideMap(x2, z2, 32.0f) && !isNearResource(x2, z2, 56.0f)) {
-                        reclaim.add(new ReclaimFeature(wreck, x2, z2, unit.getRotation(), WRECK_METAL.getOrDefault(wreck, 150).intValue(), ((symmetricHash(x2, z2) >>> 8) & 65535) / 65536.0f));
+                    float x = unit.getPosition().x() * this.elmosPerCell;
+                    float z = unit.getPosition().z() * this.elmosPerCell;
+                    String wreck = getWreck(unit.getType(), hash(x, z), heightAt(x, z) < -8.0f);
+                    if (wreck != null && isInsideMap(x, z, 32.0f) && !isNearResource(x, z, 56.0f)) {
+                        reclaim.add(new ReclaimFeature(wreck, x, z, unit.getRotation(), WRECK_METAL.getOrDefault(wreck, 150),
+                            ((symmetricHash(x, z) >>> 8) & 65535) / 65536.0f));
                     }
                 }
             }
         }
         long totalMetal = 0;
-        Iterator<ReclaimFeature> it = reclaim.iterator();
-        while (it.hasNext()) {
-            totalMetal += (long) it.next().metal();
+        for (ReclaimFeature feature : reclaim) {
+            totalMetal += feature.metal();
         }
         float budget = RECLAIM_METAL_PER_PLAYER * Math.max(2, this.map.getSpawnCount()) * this.options.reclaim();
-        float keep = totalMetal > 0 ? Math.min(1.0f, budget / totalMetal) : SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT;
+        float keep = totalMetal > 0 ? Math.min(1.0f, budget / totalMetal) : 0.0f;
         long keptMetal = 0;
         for (ReclaimFeature feature : reclaim) {
             if (feature.order() < keep) {
                 addFeature(features, featureTypes, feature.name(), feature.x(), feature.z(), feature.rotation());
-                keptMetal += (long) feature.metal();
+                keptMetal += feature.metal();
             }
         }
-        // Aggiunta Features statiche personalizzate posizionate sulla mappa
-        for (Object customObj : this.map.getCustomEntities()) {
-            if (customObj instanceof com.faforever.neroxis.generator.bar.PlacedCustomEntity ce) {
-                com.faforever.neroxis.generator.bar.ObjectEntity ent = ce.getEntity();
-                if (ent.getCategory() == com.faforever.neroxis.generator.bar.ObjectEntity.Category.STATIC_PROP) {
-                    float fx = ce.getPosition().x() * this.elmosPerCell;
-                    float fz = ce.getPosition().y() * this.elmosPerCell;
-                    addFeature(features, featureTypes, ent.getId(), fx, fz, ce.getRotation());
+        // oggetti statici creati nello Studio e piazzati sulla mappa
+        for (Object placed : this.map.getCustomEntities()) {
+            if (placed instanceof com.faforever.neroxis.generator.bar.PlacedCustomEntity custom) {
+                com.faforever.neroxis.generator.bar.ObjectEntity entity = custom.getEntity();
+                if (entity.getCategory() == com.faforever.neroxis.generator.bar.ObjectEntity.Category.STATIC_PROP) {
+                    addFeature(features, featureTypes, entity.getId(), custom.getPosition().x() * this.elmosPerCell,
+                        custom.getPosition().y() * this.elmosPerCell, custom.getRotation());
                 }
             }
         }
-
-        System.out.printf(Locale.ROOT, "Reclaim: %d of %d metal in rocks and wrecks kept (budget %.0f)%n", Long.valueOf(keptMetal), Long.valueOf(totalMetal), Float.valueOf(budget));
+        System.out.printf(Locale.ROOT, "Reclaim: %d of %d metal in rocks and wrecks kept (budget %.0f)%n", keptMetal, totalMetal, budget);
         return features;
     }
 
@@ -2279,19 +2276,24 @@ public final class BarMapExporter {
         return sb.toString();
     }
 
+    /**
+     * Un numero che dipende solo dalla distanza del punto dalla base piu' vicina e dal centro della mappa:
+     * punti in posizioni specchiate ottengono lo stesso numero, e quindi la stessa scelta.
+     */
     private int symmetricHash(float x, float z) {
         float nearestSpawn = Float.MAX_VALUE;
         for (Spawn spawn : this.map.getSpawns()) {
-            float dx = (spawn.getPosition().x() * this.elmosPerCell) - x;
-            float dz = (spawn.getPosition().z() * this.elmosPerCell) - z;
-            nearestSpawn = Math.min(nearestSpawn, (float) StrictMath.sqrt((dx * dx) + (dz * dz)));
+            float dx = spawn.getPosition().x() * this.elmosPerCell - x;
+            float dz = spawn.getPosition().z() * this.elmosPerCell - z;
+            nearestSpawn = Math.min(nearestSpawn, (float) StrictMath.sqrt(dx * dx + dz * dz));
         }
-        float centerX = ((this.mapX * 8) / 2.0f) - x;
-        float centerZ = ((this.mapY * 8) / 2.0f) - z;
-        float center = (float) StrictMath.sqrt((centerX * centerX) + (centerZ * centerZ));
-        return hash(Math.round(nearestSpawn / 24.0f), Math.round(center / 24.0f));
+        float dx = this.mapX * 8 / 2.0f - x;
+        float dz = this.mapY * 8 / 2.0f - z;
+        float fromCentre = (float) StrictMath.sqrt(dx * dx + dz * dz);
+        return hash(Math.round(nearestSpawn / 24.0f), Math.round(fromCentre / 24.0f));
     }
 
+    /** Aggiunge un oggetto appoggiato al terreno, se il punto e' dentro la mappa. */
     private void addFeature(List<SpringMapFile.Feature> features, List<String> featureTypes, String type, float x, float z, float rotationRadians) {
         if (!isInsideMap(x, z, 8.0f)) {
             return;
@@ -2301,7 +2303,8 @@ public final class BarMapExporter {
             typeIndex = featureTypes.size();
             featureTypes.add(type);
         }
-        float heading = (float) (((((double) rotationRadians) / 6.283185307179586d) % 1.0d) * 65536.0d);
+        // il motore vuole la direzione come numero da -32768 a 32767 per un giro completo
+        float heading = (float) (rotationRadians / 6.283185307179586d % 1.0d * 65536.0d);
         if (heading > 32767.0f) {
             heading -= 65536.0f;
         } else if (heading < -32768.0f) {
@@ -2310,82 +2313,72 @@ public final class BarMapExporter {
         features.add(new SpringMapFile.Feature(typeIndex, x, heightAt(x, z), z, heading, 1.0f));
     }
 
+    /**
+     * Il relitto di BAR che sostituisce un'unita' dell'editor, scelto in base al tipo (terzo carattere del
+     * codice: S nave, A aereo, B edificio) e alla taglia. Null se in quel punto non ha senso un relitto.
+     */
     private static String getWreck(String unitType, int hash, boolean underwater) {
-        String[] options;
         String type = unitType.toUpperCase(Locale.ROOT);
         char domain = type.length() > 2 ? type.charAt(2) : 'L';
-        if (underwater || domain == 'S') {
-            if (!underwater) {
-                return null;
-            }
-            options = SHIP_WRECKS;
+        String[] choices;
+        if (underwater) {
+            choices = SHIP_WRECKS;
+        } else if (domain == 'S' || domain == 'A') {
+            return null; // navi all'asciutto e aerei non lasciano relitti
+        } else if (domain == 'B') {
+            choices = BUILDING_WRECKS;
+        } else if (T1_LAND.contains(type)) {
+            choices = SMALL_WRECKS;
+        } else if (T3_LAND.contains(type)) {
+            choices = LARGE_WRECKS;
         } else {
-            if (domain == 'A') {
-                return null;
-            }
-            if (domain == 'B') {
-                options = BUILDING_WRECKS;
-            } else if (T1_LAND.contains(type)) {
-                options = SMALL_WRECKS;
-            } else if (T3_LAND.contains(type)) {
-                options = LARGE_WRECKS;
-            } else {
-                options = MEDIUM_WRECKS;
-            }
+            choices = MEDIUM_WRECKS;
         }
-        return options[Math.floorMod(hash, options.length)];
+        return choices[Math.floorMod(hash, choices.length)];
     }
 
+    /** La famiglia di rocce di BAR intonata al bioma. */
     private String getRockSet() {
         String biome = String.valueOf(this.map.getBiome().name()).toLowerCase(Locale.ROOT);
-        switch (biome) {
-            case "desert":
-            case "mars":
-            case "syrtis":
-            case "sunset":
-                return "desert";
-            case "frithen":
-            case "crystalline":
-                return "snow";
-            case "earlyautumn":
-            case "windingriver":
-            case "wonder":
-            case "prayer":
-                return "moss";
-            default:
-                return "def";
-        }
+        return switch (biome) {
+            case "desert", "mars", "syrtis", "sunset" -> "desert";
+            case "frithen", "crystalline" -> "snow";
+            case "earlyautumn", "windingriver", "wonder", "prayer" -> "moss";
+            default -> "def";
+        };
     }
 
     private boolean isInsideMap(float x, float z, float margin) {
-        return x >= margin && z >= margin && x <= ((float) (this.mapX * 8)) - margin && z <= ((float) (this.mapY * 8)) - margin;
+        return x >= margin && z >= margin && x <= (float) (this.mapX * 8) - margin && z <= (float) (this.mapY * 8) - margin;
     }
 
+    /** Vero se il punto e' entro la distanza data da un punto metallo o da un geyser. */
     private boolean isNearResource(float x, float z, float distance) {
-        float distanceSquared = distance * distance;
-        for (float[] mex : this.mexPositions) {
-            if (((mex[0] - x) * (mex[0] - x)) + ((mex[1] - z) * (mex[1] - z)) < distanceSquared) {
-                return true;
-            }
-        }
-        for (float[] geo : this.geoPositions) {
-            if (((geo[0] - x) * (geo[0] - x)) + ((geo[1] - z) * (geo[1] - z)) < distanceSquared) {
-                return true;
+        float limit = distance * distance;
+        for (List<float[]> resources : List.of(this.mexPositions, this.geoPositions)) {
+            for (float[] resource : resources) {
+                float dx = resource[0] - x;
+                float dz = resource[1] - z;
+                if (dx * dx + dz * dz < limit) {
+                    return true;
+                }
             }
         }
         return false;
     }
 
+    /** Pendenza del terreno nel punto, misurata su 16 elmi. */
     private float slopeAt(float x, float z) {
         float dx = heightAt(x + 8.0f, z) - heightAt(x - 8.0f, z);
         float dz = heightAt(x, z + 8.0f) - heightAt(x, z - 8.0f);
-        return ((float) StrictMath.sqrt((dx * dx) + (dz * dz))) / 16.0f;
+        return (float) StrictMath.sqrt(dx * dx + dz * dz) / 16.0f;
     }
 
+    /** Un numero intero che sembra casuale ma dipende solo dalle due coordinate. */
     private static int hash(float x, float z) {
-        int h = (Float.floatToIntBits(x) * (-1640531535)) + (Float.floatToIntBits(z) * (-2048144777));
-        int h2 = (h ^ (h >>> 15)) * 739982445;
-        return h2 ^ (h2 >>> 12);
+        int h = Float.floatToIntBits(x) * -1640531535 + Float.floatToIntBits(z) * -2048144777;
+        h = (h ^ (h >>> 15)) * 739982445;
+        return h ^ (h >>> 12);
     }
 
     private static float[][] readLayerWeights(BufferedImage low, BufferedImage high) {
