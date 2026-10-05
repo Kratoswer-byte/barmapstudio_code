@@ -1,12 +1,12 @@
 --@weapon missile range=900 reload=2.5 damage=120
 --@invulnerable
--- Gentleman: balla sul posto e scatena un'apocalisse continua. Senza pause piovono razzi su tutta
--- la mappa (una decina al secondo) e ogni pochi secondi parte una salva di missili grossi:
--- il loro numero dipende dalla potenza dell'arma (2-3 nucleari, oppure piu' missili tattici).
--- In piu' la riga "--@weapon" qui sopra gli da' un lanciamissili a ricerca per la difesa vicina.
--- E' indistruttibile: la riga "--@invulnerable" fa azzerare alla mappa ogni danno (D-gun compreso),
--- e lo script in piu' si cura da solo e annulla i colpi che riceve.
--- I pezzi sono gli oggetti dell'OBJ: body (radice), left_arm, right_arm, left_foot, right_foot.
+-- Gentleman: dances on the spot and unleashes a never-ending apocalypse. Rockets rain on the whole
+-- map without a pause (about a dozen per second) and every few seconds a salvo of big missiles
+-- goes off: how many depends on the power of the weapon (2-3 nukes, or more tactical missiles).
+-- On top of that, the "--@weapon" line above gives it a homing missile launcher for close defence.
+-- It cannot be destroyed: the "--@invulnerable" line makes the map cancel every damage (D-gun
+-- included), and the script also heals the unit and cancels the hits it takes.
+-- The pieces are the objects of the OBJ file: body (root), left_arm, right_arm, left_foot, right_foot.
 
 local body = piece "body"
 local left_arm = piece "left_arm"
@@ -14,63 +14,63 @@ local right_arm = piece "right_arm"
 local left_foot = piece "left_foot"
 local right_foot = piece "right_foot"
 
--- ===================== REGOLAZIONI =====================
-local RANGE = 900            -- difesa vicina: come "range" nella riga --@weapon
-local BEAT = 400             -- durata di un tempo del ballo, in millisecondi
-local ATTESA_INIZIALE = 15000 -- secondi di tregua a inizio partita (ms)
-local RAZZI_AL_SECONDO = 12  -- pioggia continua di razzi piccoli su tutta la mappa
-local SALVA_OGNI = 10000     -- ogni quanto parte una salva di missili grossi (ms)
-local POTENZA_SALVA = 25000  -- danno totale di una salva: numero di missili = potenza / danno del missile
-local SALVA_MIN = 2          -- minimo di missili grossi per salva
-local SALVA_MAX = 8          -- massimo di missili grossi per salva
-local SUI_NEMICI = 0.5       -- 0..1: parte dei colpi mirata vicino a unita' nemiche (il resto e' a caso sulla mappa)
-local DISPERSIONE = 350      -- quanto lontano dall'unita' nemica puo' cadere un colpo mirato (elmi)
-local PARTENZA = "cielo"     -- "cielo": i missili piovono dall'alto sul bersaglio (piu' sicuro e piu' fitto)
-                             -- "braccia": partono dalle braccia del gentleman e volano fino al bersaglio
-local QUOTA_CIELO = 1400     -- altezza da cui piovono i missili in modalita' "cielo" (elmi)
-local MARGINE_BORDO = 200    -- i bersagli stanno almeno a questa distanza dal bordo mappa (elmi)
+-- ====================== SETTINGS ======================
+local RANGE = 900             -- close defence: same as "range" in the --@weapon line
+local BEAT = 400              -- length of one beat of the dance, in milliseconds
+local START_DELAY = 15000     -- truce at the start of the match (ms)
+local ROCKETS_PER_SECOND = 12 -- continuous rain of small rockets on the whole map
+local SALVO_EVERY = 10000     -- how often a salvo of big missiles goes off (ms)
+local SALVO_POWER = 25000     -- total damage of a salvo: number of missiles = power / damage of the missile
+local SALVO_MIN = 2           -- fewest big missiles in a salvo
+local SALVO_MAX = 8           -- most big missiles in a salvo
+local ON_ENEMIES = 0.5        -- 0..1: share of the shots aimed near enemy units (the rest land at random)
+local SPREAD = 350            -- how far from the enemy unit an aimed shot can land (elmos)
+local LAUNCH_FROM = "sky"     -- "sky": the missiles rain from above onto the target (safer and denser)
+                              -- "arms": they leave from the arms of the gentleman and fly to the target
+local SKY_HEIGHT = 1400       -- height the missiles rain from in "sky" mode (elmos)
+local EDGE_MARGIN = 200       -- targets stay at least this far from the map edge (elmos)
 
--- Unita' di BAR da cui prendere i missili. Se un nome non esiste in questa versione
--- del gioco viene semplicemente saltato.
-local UNITA_GROSSE = { "armsilo", "corsilo", "legsilo", "cortron", "armemp" }
-local UNITA_PICCOLE = { "armrock", "corstorm", "armmerl", "corvroc", "armmh", "cormh" }
+-- BAR units the missiles are taken from. A name that does not exist in this version
+-- of the game is simply skipped.
+local BIG_UNITS = { "armsilo", "corsilo", "legsilo", "cortron", "armemp" }
+local SMALL_UNITS = { "armrock", "corstorm", "armmerl", "corvroc", "armmh", "cormh" }
 -- =======================================================
 
 local CMD_ATTACK = 20
 local rad = math.rad
-local beatSpeed = 1000 / BEAT   -- "angolo al tempo" -> "angolo al secondo"
-local bounce = 4                -- altezza del saltello, ricalcolata in Create dalla taglia dell'unita'
-local nextArm = left_arm        -- braccio da cui parte il prossimo missile
+local beatSpeed = 1000 / BEAT   -- "angle per beat" -> "angle per second"
+local bounce = 4                -- height of the hop, recomputed in Create from the size of the unit
+local nextArm = left_arm        -- arm the next missile leaves from
 
 local mapX = (Game and Game.mapSizeX) or 8192
 local mapZ = (Game and Game.mapSizeZ) or 8192
 
--- Raccoglie i lanciamissili (MissileLauncher / StarburstLauncher) delle unita' elencate.
-local function RaccogliMissili(nomiUnita)
-	local trovati = { n = 0 }   -- n = quanti missili contiene
+-- Collects the missile launchers (MissileLauncher / StarburstLauncher) of the listed units.
+local function CollectMissiles(unitNames)
+	local found = { n = 0 }   -- n = how many missiles it holds
 	if not (UnitDefNames and WeaponDefs) then
-		return trovati
+		return found
 	end
-	for _, nome in ipairs(nomiUnita) do
-		local ud = UnitDefNames[nome]
+	for _, name in ipairs(unitNames) do
+		local ud = UnitDefNames[name]
 		if ud and ud.weapons then
 			for _, w in ipairs(ud.weapons) do
 				local wd = WeaponDefs[w.weaponDef]
 				if wd and (wd.type == "MissileLauncher" or wd.type == "StarburstLauncher") then
-					trovati.n = trovati.n + 1
-					trovati[trovati.n] = w.weaponDef
+					found.n = found.n + 1
+					found[found.n] = w.weaponDef
 				end
 			end
 		end
 	end
-	return trovati
+	return found
 end
 
-local missiliGrossi = { n = 0 }
-local missiliPiccoli = { n = 0 }
+local bigMissiles = { n = 0 }
+local smallMissiles = { n = 0 }
 
--- Le braccia del modello puntano in diagonale: per alzarle e abbassarle
--- le ruoto insieme su X e su Z.
+-- The arms of the model point diagonally: to raise and lower them
+-- they are turned on X and on Z together.
 local function Flap(arm, angle, speed)
 	Turn(arm, x_axis, angle, speed)
 	Turn(arm, z_axis, angle, speed)
@@ -83,28 +83,28 @@ local function Dance()
 		step = step + 1
 		local side = (step % 2 == 0) and 1 or -1
 
-		-- corpo: saltello, ancheggiamento e torsione a destra e a sinistra
+		-- body: hop, hip sway and twist to the right and to the left
 		Move(body, y_axis, bounce, bounce * 2 * beatSpeed)
 		Turn(body, z_axis, rad(7) * side, rad(14) * beatSpeed)
 		Turn(body, y_axis, twist + rad(22) * side, rad(44) * beatSpeed)
 
-		-- braccia: una su e una giu', alternate
+		-- arms: one up and one down, in turn
 		Flap(left_arm, rad(38) * side, rad(76) * beatSpeed)
 		Flap(right_arm, rad(-38) * side, rad(76) * beatSpeed)
 		Turn(left_arm, y_axis, rad(25) * side, rad(50) * beatSpeed)
 		Turn(right_arm, y_axis, rad(25) * side, rad(50) * beatSpeed)
 
-		-- piedi: calcio alternato
-		Turn(left_foot, x_axis, rad(30) * math.max(0, side), rad(60) * beatSpeed)
-		Turn(left_foot, z_axis, rad(-30) * math.max(0, side), rad(60) * beatSpeed)
-		Turn(right_foot, x_axis, rad(30) * math.max(0, -side), rad(60) * beatSpeed)
-		Turn(right_foot, z_axis, rad(-30) * math.max(0, -side), rad(60) * beatSpeed)
+		-- feet: alternate kick, forwards (the model faces +Z like every BAR unit)
+		Turn(left_foot, x_axis, rad(-30) * math.max(0, side), rad(60) * beatSpeed)
+		Turn(left_foot, z_axis, rad(30) * math.max(0, side), rad(60) * beatSpeed)
+		Turn(right_foot, x_axis, rad(-30) * math.max(0, -side), rad(60) * beatSpeed)
+		Turn(right_foot, z_axis, rad(30) * math.max(0, -side), rad(60) * beatSpeed)
 
 		Sleep(BEAT / 2)
 		Move(body, y_axis, 0, bounce * 2 * beatSpeed)
 		Sleep(BEAT / 2)
 
-		-- ogni 8 tempi una piroetta completa
+		-- every 8 beats a full pirouette
 		if step % 8 == 0 then
 			twist = twist + rad(360)
 			Turn(body, y_axis, twist, rad(360) * beatSpeed / 2)
@@ -116,7 +116,7 @@ local function Dance()
 	end
 end
 
--- Difesa vicina: cerca il nemico piu' vicino e ordina di attaccarlo (vale anche se l'unita' e' di Gaia).
+-- Close defence: looks for the nearest enemy and orders an attack on it (works for a Gaia unit too).
 local function Hunt()
 	while true do
 		local target = Spring.GetUnitNearestEnemy(unitID, RANGE, false)
@@ -127,11 +127,11 @@ local function Hunt()
 	end
 end
 
-local lanciati = 0
-local falliti = 0
+local launched = 0
+local failed = 0
 
--- Lancia un missile di tipo weaponDefID verso il punto (tx, tz) della mappa.
-local function Lancia(weaponDefID, tx, tz)
+-- Launches a missile of type weaponDefID towards the point (tx, tz) of the map.
+local function Launch(weaponDefID, tx, tz)
 	local wd = WeaponDefs[weaponDefID]
 	if not wd then
 		return
@@ -139,13 +139,13 @@ local function Lancia(weaponDefID, tx, tz)
 	local arm = nextArm
 	nextArm = (nextArm == left_arm) and right_arm or left_arm
 	local ty = math.max(0, Spring.GetGroundHeight(tx, tz) or 0)
-	local speed = math.max(4, wd.projectilespeed or 10) -- elmi per frame
+	local speed = math.max(4, wd.projectilespeed or 10) -- elmos per frame
 	local x, y, z
-	if PARTENZA == "cielo" then
-		-- nasce in alto, un po' spostato, e scende in picchiata sul bersaglio
+	if LAUNCH_FROM == "sky" then
+		-- it appears high up, slightly off to one side, and dives onto the target
 		x = tx + (math.random() - 0.5) * 500
 		z = tz + (math.random() - 0.5) * 500
-		y = ty + QUOTA_CIELO
+		y = ty + SKY_HEIGHT
 	else
 		x, y, z = Spring.GetUnitPiecePosDir(unitID, arm)
 		if not x then
@@ -163,105 +163,105 @@ local function Lancia(weaponDefID, tx, tz)
 		maxRange = dist + 500,
 		ttl = math.floor(dist / speed) + 300,
 	}
-	if wd.type == "StarburstLauncher" and PARTENZA ~= "cielo" then
-		-- dalle braccia: sale in verticale, poi vira verso il bersaglio (nuke, missili tattici, EMP)
+	if wd.type == "StarburstLauncher" and LAUNCH_FROM ~= "sky" then
+		-- from the arms: it climbs straight up, then turns towards the target (nuke, tactical missiles, EMP)
 		params.speed = { 0, speed, 0 }
 		params.upTime = (wd.uptime or 3) * 30
 		params.ttl = params.ttl + params.upTime + 600
 	else
-		-- gia' puntato sul bersaglio; dalle braccia un po' verso l'alto per scavalcare i rilievi
-		local lift = (PARTENZA == "cielo") and 0 or dist * 0.15
+		-- already aimed at the target; from the arms slightly upwards, to clear the hills
+		local lift = (LAUNCH_FROM == "sky") and 0 or dist * 0.15
 		local len = math.sqrt(dx * dx + (dy + lift) * (dy + lift) + dz * dz)
 		params.speed = { dx / len * speed, (dy + lift) / len * speed, dz / len * speed }
 		params.upTime = 0
 		params.tracking = true
 	end
 	if Spring.SpawnProjectile(weaponDefID, params) then
-		lanciati = lanciati + 1
+		launched = launched + 1
 	else
-		falliti = falliti + 1
+		failed = failed + 1
 	end
-	-- gesto di lancio sul braccio
+	-- throwing gesture of the arm
 	Turn(arm, y_axis, rad(-60), rad(900))
 end
 
--- Danno del missile contro un bersaglio normale (serve a decidere quanti lanciarne).
-local function Danno(weaponDefID)
+-- Damage of the missile against a normal target (used to decide how many to launch).
+local function DamageOf(weaponDefID)
 	local wd = WeaponDefs[weaponDefID]
-	local danno = wd and wd.damages and (wd.damages[0] or wd.damages[1])
-	if not danno or danno <= 0 then
-		danno = 200
+	local damage = wd and wd.damages and (wd.damages[0] or wd.damages[1])
+	if not damage or damage <= 0 then
+		damage = 200
 	end
-	return danno
+	return damage
 end
 
--- Sceglie il bersaglio: vicino a un'unita' nemica a caso, oppure un punto a caso della mappa.
-local function Bersaglio()
-	if math.random() < SUI_NEMICI then
-		local mioAlleato = Spring.GetUnitAllyTeam(unitID)
-		local tutte = Spring.GetAllUnits()
-		local quante = table.getn(tutte)
-		for tentativo = 1, 6 do
-			local altra = quante > 0 and tutte[math.random(quante)]
-			if altra and altra ~= unitID and Spring.GetUnitAllyTeam(altra) ~= mioAlleato then
-				local ux, _, uz = Spring.GetUnitPosition(altra)
+-- Picks the target: near a random enemy unit, or a random point of the map.
+local function PickTarget()
+	if math.random() < ON_ENEMIES then
+		local myAllyTeam = Spring.GetUnitAllyTeam(unitID)
+		local all = Spring.GetAllUnits()
+		local count = table.getn(all)
+		for attempt = 1, 6 do
+			local other = count > 0 and all[math.random(count)]
+			if other and other ~= unitID and Spring.GetUnitAllyTeam(other) ~= myAllyTeam then
+				local ux, _, uz = Spring.GetUnitPosition(other)
 				if ux then
-					local tx = ux + (math.random() - 0.5) * 2 * DISPERSIONE
-					local tz = uz + (math.random() - 0.5) * 2 * DISPERSIONE
+					local tx = ux + (math.random() - 0.5) * 2 * SPREAD
+					local tz = uz + (math.random() - 0.5) * 2 * SPREAD
 					return math.max(0, math.min(mapX, tx)), math.max(0, math.min(mapZ, tz))
 				end
 			end
 		end
 	end
-	return MARGINE_BORDO + math.random() * math.max(1, mapX - 2 * MARGINE_BORDO),
-		MARGINE_BORDO + math.random() * math.max(1, mapZ - 2 * MARGINE_BORDO)
+	return EDGE_MARGIN + math.random() * math.max(1, mapX - 2 * EDGE_MARGIN),
+		EDGE_MARGIN + math.random() * math.max(1, mapZ - 2 * EDGE_MARGIN)
 end
 
--- Pioggia continua: senza pause, RAZZI_AL_SECONDO razzi piccoli su tutta la mappa.
-local function Pioggia()
-	Sleep(ATTESA_INIZIALE)
-	local perColpo = math.max(1, math.floor(RAZZI_AL_SECONDO / 4 + 0.5))
+-- Continuous rain: without a pause, ROCKETS_PER_SECOND small rockets on the whole map.
+local function Rain()
+	Sleep(START_DELAY)
+	local perShot = math.max(1, math.floor(ROCKETS_PER_SECOND / 4 + 0.5))
 	while true do
-		local lista = (missiliPiccoli.n > 0) and missiliPiccoli or missiliGrossi
-		if lista.n > 0 then
-			for i = 1, perColpo do
-				local tx, tz = Bersaglio()
-				Lancia(lista[math.random(lista.n)], tx, tz)
+		local list = (smallMissiles.n > 0) and smallMissiles or bigMissiles
+		if list.n > 0 then
+			for i = 1, perShot do
+				local tx, tz = PickTarget()
+				Launch(list[math.random(list.n)], tx, tz)
 			end
 		end
 		Sleep(250)
 	end
 end
 
--- Salve grosse: ogni SALVA_OGNI un tipo di missile grosso a caso, tanti quanti ne servono
--- per POTENZA_SALVA (2-3 nucleari, oppure piu' missili tattici o EMP).
-local function Salve()
-	Sleep(ATTESA_INIZIALE)
+-- Big salvos: every SALVO_EVERY one random kind of big missile, as many as it takes
+-- to reach SALVO_POWER (2-3 nukes, or more tactical or EMP missiles).
+local function Salvos()
+	Sleep(START_DELAY)
 	while true do
-		if missiliGrossi.n > 0 then
-			local weaponDefID = missiliGrossi[math.random(missiliGrossi.n)]
-			local quanti = math.floor(POTENZA_SALVA / Danno(weaponDefID) + 0.5)
-			quanti = math.max(SALVA_MIN, math.min(SALVA_MAX, quanti))
-			for i = 1, quanti do
-				local tx, tz = Bersaglio()
-				Lancia(weaponDefID, tx, tz)
+		if bigMissiles.n > 0 then
+			local weaponDefID = bigMissiles[math.random(bigMissiles.n)]
+			local count = math.floor(SALVO_POWER / DamageOf(weaponDefID) + 0.5)
+			count = math.max(SALVO_MIN, math.min(SALVO_MAX, count))
+			for i = 1, count do
+				local tx, tz = PickTarget()
+				Launch(weaponDefID, tx, tz)
 				Sleep(400)
 			end
 		end
-		Sleep(SALVA_OGNI)
+		Sleep(SALVO_EVERY)
 	end
 end
 
--- Diagnostica: ogni 30 secondi scrive nel log di BAR (infolog.txt) quanti missili sono partiti.
-local function Diario()
+-- Diagnostics: every 30 seconds writes into the BAR log (infolog.txt) how many missiles went off.
+local function Diary()
 	while true do
 		Sleep(30000)
-		Spring.Echo("[gentleman] missili lanciati: " .. lanciati .. ", falliti: " .. falliti)
+		Spring.Echo("[gentleman] missiles launched: " .. launched .. ", failed: " .. failed)
 	end
 end
 
--- Indistruttibile: ogni decimo di secondo riporta la vita al massimo e toglie paralisi e cattura.
-local function Immortale()
+-- Indestructible: every tenth of a second restores full health and removes paralysis and capture.
+local function Immortal()
 	Spring.SetUnitArmored(unitID, true, 0)
 	while true do
 		local _, maxHealth = Spring.GetUnitHealth(unitID)
@@ -272,7 +272,7 @@ local function Immortale()
 	end
 end
 
--- Qualunque colpo ricevuto fa zero danni.
+-- Every hit taken does zero damage.
 function script.HitByWeapon(x, z, weaponDefID, damage)
 	return 0
 end
@@ -280,18 +280,18 @@ end
 function script.Create()
 	local height = Spring.GetUnitHeight(unitID) or 40
 	bounce = math.max(2, height * 0.06)
-	missiliGrossi = RaccogliMissili(UNITA_GROSSE)
-	missiliPiccoli = RaccogliMissili(UNITA_PICCOLE)
-	Spring.Echo("[gentleman] pronto: " .. missiliPiccoli.n .. " tipi di razzi, " .. missiliGrossi.n .. " tipi di missili grossi, partenza " .. PARTENZA)
-	StartThread(Immortale)
+	bigMissiles = CollectMissiles(BIG_UNITS)
+	smallMissiles = CollectMissiles(SMALL_UNITS)
+	Spring.Echo("[gentleman] ready: " .. smallMissiles.n .. " kinds of rockets, " .. bigMissiles.n .. " kinds of big missiles, launching from " .. LAUNCH_FROM)
+	StartThread(Immortal)
 	StartThread(Dance)
 	StartThread(Hunt)
-	StartThread(Pioggia)
-	StartThread(Salve)
-	StartThread(Diario)
+	StartThread(Rain)
+	StartThread(Salvos)
+	StartThread(Diary)
 end
 
--- Arma 1 (difesa vicina): il missile parte da un braccio, alternando sinistro e destro.
+-- Weapon 1 (close defence): the missile leaves from an arm, left and right in turn.
 function script.AimFromWeapon(num)
 	return body
 end
@@ -301,11 +301,11 @@ function script.QueryWeapon(num)
 end
 
 function script.AimWeapon(num, heading, pitch)
-	return true   -- nessuna torretta da orientare: il missile cerca da solo il bersaglio
+	return true   -- no turret to aim: the missile finds the target by itself
 end
 
 function script.FireWeapon(num)
-	-- contraccolpo sul braccio che ha sparato, poi tocca all'altro
+	-- recoil of the arm that fired, then it is the turn of the other one
 	local arm = nextArm
 	Turn(arm, y_axis, rad(-60), rad(900))
 	nextArm = (nextArm == left_arm) and right_arm or left_arm
