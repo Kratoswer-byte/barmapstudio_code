@@ -248,6 +248,7 @@ public class BarMapStudio {
             AppPaths.setBarData(finalBarData);
 
             // Instantiate Map Editor Panel
+            final MapLibraryPanel[] libraryHolder = new MapLibraryPanel[1];
             MapStudioPanel editorPanel = new MapStudioPanel(
                 home,
                 finalBarData,
@@ -256,6 +257,9 @@ public class BarMapStudio {
                         mRefresh.invoke(launcher, archive);
                     } catch (Exception ex) {
                         ex.printStackTrace();
+                    }
+                    if (libraryHolder[0] != null) {
+                        libraryHolder[0].refresh(archive);
                     }
                 },
                 archive -> {
@@ -333,7 +337,28 @@ public class BarMapStudio {
             masterViewPanel.add(textureStudioPanel, "TEXTURES");
             masterViewPanel.add(objectsStudioPanel, "OBJECTS");
             if (libraryView != null) {
-                masterViewPanel.add(libraryView, "LIBRARY");
+                // la libreria e' un pannello dello Studio: "apri nell'editor" porta la mappa nella scheda MAPS
+                MapLibraryPanel library = new MapLibraryPanel(file -> {
+                    if (mapsTabHolder[0] != null) {
+                        mapsTabHolder[0].doClick();
+                    }
+                    editorPanel.importBarMap(file);
+                });
+                library.setScriptLauncher((script, engineVersion) -> {
+                    try {
+                        mStartEngine.invoke(launcher, script, engineVersion);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                });
+                library.addComponentListener(new java.awt.event.ComponentAdapter() {
+                    @Override
+                    public void componentShown(java.awt.event.ComponentEvent e) {
+                        library.refresh(null);
+                    }
+                });
+                libraryHolder[0] = library;
+                masterViewPanel.add(library, "LIBRARY");
             }
 
             // Build Brand-New Modern Header

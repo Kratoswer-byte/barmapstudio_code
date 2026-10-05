@@ -1917,7 +1917,11 @@ public final class MapStudioPanel extends JPanel {
         if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
             return;
         }
-        File file = chooser.getSelectedFile();
+        importBarMap(chooser.getSelectedFile());
+    }
+
+    /** Carica nell'editor la mappa BAR indicata (usato anche dalla libreria delle mappe). */
+    public void importBarMap(File file) {
         setStatus(I18n.t("import.running", file.getName()));
         progressBar.setIndeterminate(true);
         progressBar.setVisible(true);
