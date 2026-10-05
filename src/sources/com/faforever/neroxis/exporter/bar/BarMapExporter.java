@@ -1,6 +1,5 @@
 package com.faforever.neroxis.exporter.bar;
 
-import com.faforever.neroxis.generator.terrain.SetonishLastTerrainGenerator;
 import com.faforever.neroxis.map.Army;
 import com.faforever.neroxis.map.Group;
 import com.faforever.neroxis.map.Marker;
@@ -8,7 +7,6 @@ import com.faforever.neroxis.map.Prop;
 import com.faforever.neroxis.map.SCMap;
 import com.faforever.neroxis.map.Spawn;
 import com.faforever.neroxis.map.Unit;
-import com.faforever.neroxis.util.dds.DDSHeader;
 import com.faforever.neroxis.util.serial.biome.TerrainMaterials;
 import com.faforever.neroxis.util.vector.Vector3;
 import java.awt.image.BufferedImage;
@@ -17,20 +15,14 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.runtime.ObjectMethods;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.attribute.FileAttribute;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -48,29 +40,79 @@ import javax.imageio.ImageIO;
  * di descrizione, il terreno, le texture, gli oggetti e gli script.
  */
 public final class BarMapExporter {
-    private static final float EXTRACTS_METAL = 0.001f;
+    /** Porta su cui il motore ascolta quando si ospita una partita. */
+    public static final int HOST_PORT = 8452;
+    /** Inizio del nome delle mappe generate senza un nome scelto dall'utente. */
+    public static final String GENERATED_PREFIX = "Map_";
+
+    // ---- terreno
+    /** Una mappa senz'acqua viene alzata almeno a questa quota, in elmi. */
     private static final float DRY_MAP_MIN_HEIGHT = 48.0f;
+    /** Pendenza massima che veicoli e bot riescono a salire (dislivello per elmo). */
+    private static final float VEHICLE_MAX_GRADIENT = 0.48f;
+    private static final float BOT_MAX_GRADIENT = 1.37f;
+    /** Profondita' massima, in elmi, che le unita' di terra attraversano a guado. */
+    private static final float MAX_WADING_DEPTH = 22.0f;
+
+    // ---- risorse
+    /** Due punti metallo piu' vicini di cosi', in elmi, vengono fusi in uno. */
     private static final float MIN_METAL_SPOT_SPACING = 112.0f;
-    private static final float BEACH_WIDTH = 90.0f;
+    /** Metallo totale lasciato in rocce e relitti per ogni giocatore. */
+    private static final float RECLAIM_METAL_PER_PLAYER = 600.0f;
+    /** Raggio, in elmi, del segno disegnato a terra sotto un punto metallo e sotto un geyser. */
+    private static final float MEX_MARK_RADIUS = 36.0f;
+    private static final float GEO_MARK_RADIUS = 34.0f;
+    /** Raggio, in elmi, entro cui il terreno intorno a un punto metallo appare consumato. */
     private static final float WORN_GROUND_RADIUS = 120.0f;
+
+    // ---- colori
+    /** Larghezza della spiaggia, in elmi dall'acqua. */
+    private static final float BEACH_WIDTH = 90.0f;
+    /** Dispersione del rumore usato per variare i colori. */
     private static final float NOISE_DEVIATION = 0.23f;
+    /** Luminosita' e vivacita' medie a cui viene portato il terreno; oltre la terza la vivacita' viene ridotta. */
     private static final float TARGET_LUMINANCE = 0.38f;
     private static final float TARGET_SATURATION = 0.16f;
     private static final float MAX_SATURATION = 0.3f;
-    public static final int HOST_PORT = 8452;
-    private static final float VEHICLE_MAX_GRADIENT = 0.48f;
-    private static final float BOT_MAX_GRADIENT = 1.37f;
-    private static final float MAX_WADING_DEPTH = 22.0f;
-    private static final float MEX_MARK_RADIUS = 36.0f;
-    private static final float GEO_MARK_RADIUS = 34.0f;
-    private static final float RECLAIM_METAL_PER_PLAYER = 600.0f;
+
+    // ---- relitti di BAR usati al posto delle unita' piazzate nell'editor, per taglia
+    private static final String[] SMALL_WRECKS = {
+        "armstump_dead", "corraid_dead", "armpw_dead", "corak_dead",
+        "armflash_dead", "corgator_dead", "armham_dead", "corthud_dead"};
+    private static final String[] MEDIUM_WRECKS = {"armbull_dead", "correap_dead", "armzeus_dead", "corcan_dead"};
+    private static final String[] LARGE_WRECKS = {"armbull_dead", "correap_dead", "corcan_dead", "armzeus_dead"};
+    private static final String[] SHIP_WRECKS = {
+        "armpship_dead", "corpship_dead", "armcrus_dead",
+        "corcrus_dead", "armroy_dead", "corroy_dead"};
+    private static final String[] BUILDING_WRECKS = {
+        "armsolar_dead", "corsolar_dead", "armllt_dead", "corllt_dead",
+        "armwin_dead", "corwin_dead", "armmstor_dead", "cormstor_dead"};
+    /** Metallo che si recupera da ogni relitto. */
+    private static final Map<String, Integer> WRECK_METAL = Map.ofEntries(
+        Map.entry("armstump_dead", 152), Map.entry("corraid_dead", 167), Map.entry("armpw_dead", 29),
+        Map.entry("corak_dead", 22), Map.entry("armflash_dead", 71), Map.entry("corgator_dead", 77),
+        Map.entry("armham_dead", 79), Map.entry("corthud_dead", 96), Map.entry("armbull_dead", 549),
+        Map.entry("correap_dead", 350), Map.entry("armzeus_dead", 214), Map.entry("corcan_dead", 339),
+        Map.entry("armpship_dead", 195), Map.entry("corpship_dead", 205), Map.entry("armcrus_dead", 500),
+        Map.entry("corcrus_dead", 500), Map.entry("armroy_dead", 440), Map.entry("corroy_dead", 480),
+        Map.entry("armsolar_dead", 75), Map.entry("corsolar_dead", 72), Map.entry("armllt_dead", 53),
+        Map.entry("corllt_dead", 55), Map.entry("armwin_dead", 23), Map.entry("corwin_dead", 27),
+        Map.entry("armmstor_dead", 198), Map.entry("cormstor_dead", 208));
+    /** Codici delle unita' dell'editor considerate piccole (primo livello) e grandi (terzo livello). */
+    private static final List<String> T1_LAND = List.of("UEL0201", "URL0107", "UAL0201", "XSL0201");
+    private static final List<String> T3_LAND = List.of("XEL0305", "UEL0303", "URL0303", "XRL0305", "UAL0303", "XSL0303");
+
+    // ---- la mappa dell'editor e le scelte di export
     private final SCMap map;
+    private BarExportOptions options;
+    /** Immagine scelta dall'utente come colore del terreno (null = colori generati). */
     private final BufferedImage customTexture;
     /** Materiali delle 4 zone del pannello Texture (null = texturizzazione automatica o immagine unica). */
     private final ZoneMaterials zoneMaterials;
     /** Bioma ricavato da una mappa BAR (null = bioma Neroxis): tavolozza, luce, atmosfera e acqua. */
     private final BarBiomes.BarBiome barBiome;
-    private BarExportOptions options;
+
+    // ---- dimensioni: celle dell'editor, quadrati di BAR (8 elmi), pixel della texture
     private final int faSize;
     private final int faWidth;
     private final int faHeight;
@@ -79,39 +121,42 @@ public final class BarMapExporter {
     private final int textureWidth;
     private final int textureHeight;
     private final float elmosPerCell;
+
+    // ---- quote
+    /** Livello dell'acqua nell'editor (NaN = mappa asciutta). */
     private final float waterElevation;
+    /** Quote dell'editor, una per punto della sua griglia. */
     private float[] faHeights;
+    /** Quote della mappa di BAR in elmi, una per vertice dei quadrati. */
+    private final float[] heights;
+    private float minHeight;
+    private float maxHeight;
+    /** Quote tipiche del terreno basso e di quello alto, per variare i colori con l'altitudine. */
+    private float lowGround;
+    private float highGround = 1.0f;
+    /** Distanza di ogni quadrato dall'acqua piu' vicina. */
+    private float[] shoreDistance = new float[0];
+
+    // ---- colori
+    /** Copertura di ognuno degli otto strati di texture dell'editor, e dimensioni delle loro maschere. */
     private final float[][] layerWeights;
     private final int layerWidth;
     private final int layerHeight;
+    /** Colore dello strato di fondo e degli otto strati; tipo di ogni strato (0 suolo, 1 pendio, 2 roccia). */
     private final float[][] layerColors;
-    private final float[] heights;
+    private final int[] layerKinds;
     private final float[] noise;
     private final float[] sunDirection;
-    private GroundDetail.Material groundMaterial;
-    private final int[] layerKinds;
-    private boolean snowGround;
-    private float lowGround;
-    private float minHeight;
-    private float maxHeight;
-    public static final String GENERATED_PREFIX = "Map_";
-    public static final String OLD_GENERATED_PREFIX = "Neroxis_";
-    private static final String[] SMALL_WRECKS = {"armstump_dead", "corraid_dead", "armpw_dead", "corak_dead", "armflash_dead", "corgator_dead", "armham_dead", "corthud_dead"};
-    private static final String[] MEDIUM_WRECKS = {"armbull_dead", "correap_dead", "armzeus_dead", "corcan_dead"};
-    private static final String[] LARGE_WRECKS = {"armbull_dead", "correap_dead", "corcan_dead", "armzeus_dead"};
-    private static final Map<String, Integer> WRECK_METAL = Map.ofEntries(Map.entry("armstump_dead", 152), Map.entry("corraid_dead", 167), Map.entry("armpw_dead", 29), Map.entry("corak_dead", 22), Map.entry("armflash_dead", 71), Map.entry("corgator_dead", 77), Map.entry("armham_dead", 79), Map.entry("corthud_dead", 96), Map.entry("armbull_dead", 549), Map.entry("correap_dead", 350), Map.entry("armzeus_dead", 214), Map.entry("corcan_dead", 339), Map.entry("armpship_dead", 195), Map.entry("corpship_dead", 205), Map.entry("armcrus_dead", 500), Map.entry("corcrus_dead", 500), Map.entry("armroy_dead", 440), Map.entry("corroy_dead", 480), Map.entry("armsolar_dead", 75), Map.entry("corsolar_dead", 72), Map.entry("armllt_dead", 53), Map.entry("corllt_dead", 55), Map.entry("armwin_dead", 23), Map.entry("corwin_dead", 27), Map.entry("armmstor_dead", 198), Map.entry("cormstor_dead", 208));
-    private static final String[] SHIP_WRECKS = {"armpship_dead", "corpship_dead", "armcrus_dead", "corcrus_dead", "armroy_dead", "corroy_dead"};
-    private static final String[] BUILDING_WRECKS = {"armsolar_dead", "corsolar_dead", "armllt_dead", "corllt_dead", "armwin_dead", "corwin_dead", "armmstor_dead", "cormstor_dead"};
-    private static final List<String> T1_LAND = List.of("UEL0201", "URL0107", "UAL0201", "XSL0201");
-    private static final List<String> T3_LAND = List.of("XEL0305", "UEL0303", "URL0303", "XRL0305", "UAL0303", "XSL0303");
-    private final List<float[]> mexPositions = new ArrayList();
-    private final List<float[]> geoPositions = new ArrayList();
-    private List<MapFlora.PlantSet> plantSets = List.of();
-    private float[] shoreDistance = new float[0];
     private float[] rockColor = {0.42f, 0.4f, TARGET_LUMINANCE};
     private float[] sandColor = {0.62f, 0.56f, 0.42f};
     private float[] dirtColor = {0.4f, 0.33f, 0.24f};
-    private float highGround = 1.0f;
+    private boolean snowGround;
+    private GroundDetail.Material groundMaterial;
+
+    // ---- risorse e vegetazione; ogni punto: x, z in elmi, metallo, quanti punti riunisce
+    private final List<float[]> mexPositions = new ArrayList<>();
+    private final List<float[]> geoPositions = new ArrayList<>();
+    private List<MapFlora.PlantSet> plantSets = List.of();
 
     /** Un oggetto da recuperare (roccia o relitto): quanto metallo da' e in che ordine tenerlo se sono troppi. */
     private static record ReclaimFeature(String name, float x, float z, float rotation, int metal, float order) {}
@@ -3145,7 +3190,7 @@ public final class BarMapExporter {
             return cached;
         }
         Vector3 sunColor = this.map.getBiome().lightingSettings().sunColor();
-        float sunMax = Math.max(sunColor.x(), Math.max(sunColor.y(), Math.max(sunColor.z(), EXTRACTS_METAL)));
+        float sunMax = Math.max(sunColor.x(), Math.max(sunColor.y(), Math.max(sunColor.z(), 0.001f)));
         float cos = this.sunDirection[1];
         float[] result = {
             Math.max(1.0f, 0.52f + ((sunColor.x() / sunMax) * 0.95f * cos)),
