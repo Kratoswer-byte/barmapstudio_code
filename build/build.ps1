@@ -74,6 +74,18 @@ $sourceJar = Join-Path $app "app\launcher.jar"
 if (-not (Test-Path -LiteralPath $sourceJar)) { throw "Manca $sourceJar" }
 $finalJar = Join-Path $work "launcher.jar"
 
+# Il programma deriva da un vecchio launcher: nessun suo indirizzo o nome deve finire nel pacchetto.
+# (Si tolgono con:  python build\clean_legacy_refs.py "extracted\{app}pp\launcher.jar")
+$python = Get-Command python -ErrorAction SilentlyContinue
+if ($python) {
+    Step "Controllo dei riferimenti al vecchio launcher"
+    $report = & python (Join-Path $PSScriptRoot "clean_legacy_refs.py") $sourceJar --check
+    if (($report | Select-Object -Last 1) -notmatch "trovati: 0$") {
+        $report | Select-Object -First 20 | ForEach-Object { Write-Host $_ }
+        throw "launcher.jar contiene riferimenti al vecchio launcher: esegui clean_legacy_refs.py prima di creare il pacchetto."
+    }
+}
+
 if ($NoObfuscate) {
     Step "Offuscamento saltato (-NoObfuscate)"
     Copy-Item -LiteralPath $sourceJar -Destination $finalJar

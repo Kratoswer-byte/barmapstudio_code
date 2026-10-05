@@ -1986,7 +1986,7 @@ public final class BarLauncher {
 
     private void createShortcut(Path script) {
         Path icon = writeIcon();
-        String command = "$d = [Environment]::GetFolderPath('Desktop'); Remove-Item -ErrorAction SilentlyContinue ($d + '\\Neroxis Launcher.lnk'); Remove-Item -ErrorAction SilentlyContinue ($d + '\\Eclipse.lnk'); $s = (New-Object -ComObject WScript.Shell).CreateShortcut($d + '\\BAR Map Studio.lnk'); $s.TargetPath = '" + script.toString().replace("'", "''") + "'; $s.WorkingDirectory = '" + this.home.toString().replace("'", "''") + "'; $s.WindowStyle = 7; " + (Files.isRegularFile(icon, new LinkOption[0]) ? "$s.IconLocation = '" + icon.toString().replace("'", "''") + "'; " : "") + "$s.Description = 'BAR Map Studio, map creator and launcher for Beyond All Reason'; $s.Save()";
+        String command = "$d = [Environment]::GetFolderPath('Desktop'); Remove-Item -ErrorAction SilentlyContinue ($d + '\\Neroxis Launcher.lnk'); Remove-Item -ErrorAction SilentlyContinue ($d + '\\BARMapStudio-old.lnk'); $s = (New-Object -ComObject WScript.Shell).CreateShortcut($d + '\\BAR Map Studio.lnk'); $s.TargetPath = '" + script.toString().replace("'", "''") + "'; $s.WorkingDirectory = '" + this.home.toString().replace("'", "''") + "'; $s.WindowStyle = 7; " + (Files.isRegularFile(icon, new LinkOption[0]) ? "$s.IconLocation = '" + icon.toString().replace("'", "''") + "'; " : "") + "$s.Description = 'BAR Map Studio, map creator and launcher for Beyond All Reason'; $s.Save()";
         try {
             new ProcessBuilder("powershell", "-NoProfile", "-Command", command).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
         } catch (IOException e) {
