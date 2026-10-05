@@ -3293,32 +3293,37 @@ public final class BarMapExporter {
         }
     }
 
+    /**
+     * L'immagine di anteprima per le librerie di mappe: l'anteprima del gioco con il rilievo messo in
+     * evidenza da una luce radente, come in una carta geografica.
+     */
     private BufferedImage renderPreview(BufferedImage minimapImage) {
         int width = minimapImage.getWidth();
         int height = minimapImage.getHeight();
-        int[] pixels = minimapImage.getRGB(0, 0, width, height, (int[]) null, 0, width);
-        float scaleX = this.textureWidth / (float) width;
-        float scaleZ = this.textureHeight / (float) height;
-        float lightX = -0.6f;
-        float lightY = 0.64f;
-        float lightZ = -0.48f;
-        IntStream.range(0, height).parallel().forEach(y -> {
-            for (int x = 0; x < width; x++) {
-                float wx = (x + 0.5f) * scaleX;
-                float wz = (y + 0.5f) * scaleZ;
-                float slopeX = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, heightAt(wx + scaleX, wz)) - Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, heightAt(wx - scaleX, wz));
-                float slopeZ = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, heightAt(wx, wz + scaleZ)) - Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, heightAt(wx, wz - scaleZ));
+        int[] pixels = minimapImage.getRGB(0, 0, width, height, null, 0, width);
+        float stepX = this.textureWidth / (float) width;
+        float stepZ = this.textureHeight / (float) height;
+        final float lightX = -0.6f;
+        final float lightY = 0.64f;
+        final float lightZ = -0.48f;
+        IntStream.range(0, height).parallel().forEach(row -> {
+            for (int column = 0; column < width; column++) {
+                float x = (column + 0.5f) * stepX;
+                float z = (row + 0.5f) * stepZ;
+                // l'acqua conta come piana: le quote sotto zero valgono zero
+                float slopeX = Math.max(0.0f, heightAt(x + stepX, z)) - Math.max(0.0f, heightAt(x - stepX, z));
+                float slopeZ = Math.max(0.0f, heightAt(x, z + stepZ)) - Math.max(0.0f, heightAt(x, z - stepZ));
                 float nx = -slopeX;
-                float ny = 2.0f * scaleX;
+                float ny = 2.0f * stepX;
                 float nz = -slopeZ;
-                float length = (float) StrictMath.sqrt((nx * nx) + (ny * ny) + (nz * nz));
-                float light = (((nx * lightX) + (ny * lightY)) + (nz * lightZ)) / length;
-                float factor = Math.max(0.5f, Math.min(1.45f, 1.0f + ((light - lightY) * 1.7f)));
-                int rgb = pixels[(y * width) + x];
-                int r = Math.min(255, Math.round(((rgb >> 16) & 255) * factor));
-                int g = Math.min(255, Math.round(((rgb >> 8) & 255) * factor));
-                int b = Math.min(255, Math.round((rgb & 255) * factor));
-                pixels[(y * width) + x] = (r << 16) | (g << 8) | b;
+                float length = (float) StrictMath.sqrt(nx * nx + ny * ny + nz * nz);
+                float lit = (nx * lightX + ny * lightY + nz * lightZ) / length;
+                float factor = Math.max(0.5f, Math.min(1.45f, 1.0f + (lit - lightY) * 1.7f));
+                int rgb = pixels[row * width + column];
+                int red = Math.min(255, Math.round(((rgb >> 16) & 255) * factor));
+                int green = Math.min(255, Math.round(((rgb >> 8) & 255) * factor));
+                int blue = Math.min(255, Math.round((rgb & 255) * factor));
+                pixels[row * width + column] = (red << 16) | (green << 8) | blue;
             }
         });
         BufferedImage preview = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
@@ -3326,31 +3331,38 @@ public final class BarMapExporter {
         return preview;
     }
 
+    /** L'anteprima 1024x1024 mostrata dal gioco: la texture del terreno, con l'acqua tinta di blu secondo la profondita'. */
     private BufferedImage renderMinimap() {
-        int size = DDSHeader.CUBEMAP_POSITIVEX_FLAG;
-        BufferedImage image = new BufferedImage(DDSHeader.CUBEMAP_POSITIVEX_FLAG, DDSHeader.CUBEMAP_POSITIVEX_FLAG, 1);
-        float scaleX = this.textureWidth / DDSHeader.CUBEMAP_POSITIVEX_FLAG;
-        float scaleZ = this.textureHeight / DDSHeader.CUBEMAP_POSITIVEX_FLAG;
-        int[] pixels = new int[DDSHeader.CUBEMAP_POSITIVEX_FLAG * DDSHeader.CUBEMAP_POSITIVEX_FLAG];
-        IntStream.range(0, DDSHeader.CUBEMAP_POSITIVEX_FLAG).parallel().forEach(y -> {
-            for (int x = 0; x < size; x++) {
-                int rgb = shade((x + 0.5f) * scaleX, (y + 0.5f) * scaleZ, this.mexPositions, this.geoPositions);
-                float height = heightAt((x + 0.5f) * scaleX, (y + 0.5f) * scaleZ);
-                if (height < SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-                    float depth = Math.min(1.0f, (-height) / 160.0f);
-                    float keep = 0.55f - (depth * MAX_SATURATION);
-                    int r = (int) ((((rgb >> 16) & 255) * keep) + (30.0f * (1.0f - keep)));
-                    int g = (int) ((((rgb >> 8) & 255) * keep) + (80.0f * (1.0f - keep)));
-                    int b = (int) (((rgb & 255) * keep) + (125.0f * (1.0f - keep)));
-                    rgb = (r << 16) | (g << 8) | b;
+        final int size = SpringMapFile.MINIMAP_SIZE;
+        float stepX = this.textureWidth / size;
+        float stepZ = this.textureHeight / size;
+        int[] pixels = new int[size * size];
+        IntStream.range(0, size).parallel().forEach(row -> {
+            for (int column = 0; column < size; column++) {
+                float x = (column + 0.5f) * stepX;
+                float z = (row + 0.5f) * stepZ;
+                int rgb = shade(x, z, this.mexPositions, this.geoPositions);
+                float height = heightAt(x, z);
+                if (height < 0.0f) {
+                    float depth = Math.min(1.0f, -height / 160.0f);
+                    float keep = 0.55f - depth * MAX_SATURATION;
+                    int red = (int) (((rgb >> 16) & 255) * keep + 30.0f * (1.0f - keep));
+                    int green = (int) (((rgb >> 8) & 255) * keep + 80.0f * (1.0f - keep));
+                    int blue = (int) ((rgb & 255) * keep + 125.0f * (1.0f - keep));
+                    rgb = (red << 16) | (green << 8) | blue;
                 }
-                pixels[(y * size) + x] = rgb;
+                pixels[row * size + column] = rgb;
             }
         });
-        image.setRGB(0, 0, DDSHeader.CUBEMAP_POSITIVEX_FLAG, DDSHeader.CUBEMAP_POSITIVEX_FLAG, pixels, 0, DDSHeader.CUBEMAP_POSITIVEX_FLAG);
+        BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
+        image.setRGB(0, 0, size, size, pixels, 0, size);
         return image;
     }
 
+    /**
+     * Dove cresce l'erba, una cella ogni 32 elmi (solo se il suolo della mappa e' erboso): sul piano, lontano
+     * da acqua, basi, risorse e chiazze di terra; il valore dice quanto e' fitta.
+     */
     private byte[] buildGrassMap() {
         int width = this.mapX / 4;
         int height = this.mapY / 4;
@@ -3358,130 +3370,142 @@ public final class BarMapExporter {
         if (getSplatMaterials()[2] != GroundDetail.Material.GRASS) {
             return grass;
         }
-        List<float[]> spawns = this.map.getSpawns().stream().map((v1) -> {
-            return toElmos(v1);
-        }).toList();
-        IntStream.range(0, height).parallel().forEach(gz -> {
-            float z = (gz + 0.5f) * 4.0f * 8.0f;
-            for (int gx = 0; gx < width; gx++) {
-                float x = (gx + 0.5f) * 4.0f * 8.0f;
-                float patches = noiseAt((((x * 0.788f) + (z * 0.616f)) * 0.017f) + 211.0f, (((z * 0.788f) - (x * 0.616f)) * 0.017f) + 97.0f);
-                float gravelPatches = earthPatches(x, z);
-                boolean nearSpawn = false;
-                Iterator i$ = spawns.iterator();
-                while (i$.hasNext()) {
-                    float[] spawn = (float[]) i$.next();
-                    nearSpawn |= distance(spawn, x, z) < 260.0f;
+        List<float[]> bases = this.map.getSpawns().stream().map(this::toElmos).toList();
+        IntStream.range(0, height).parallel().forEach(row -> {
+            float z = (row + 0.5f) * 4.0f * 8.0f;
+            for (int column = 0; column < width; column++) {
+                float x = (column + 0.5f) * 4.0f * 8.0f;
+                float clumps = noiseAt((x * 0.788f + z * 0.616f) * 0.017f + 211.0f, (z * 0.788f - x * 0.616f) * 0.017f + 97.0f);
+                float bare = earthPatches(x, z);
+                boolean nearBase = false;
+                for (float[] base : bases) {
+                    nearBase |= distance(base, x, z) < 260.0f;
                 }
-                if (gravelPatches < 0.26f && heightAt(x, z) > 4.0f && slopeAt(x, z) < 0.12f && beachAt(x, z, SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) < 0.25f && !nearSpawn && !isNearResource(x, z, BEACH_WIDTH)) {
-                    float size = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(1.0f, (patches + 1.0f) / 2.0f)) * (1.0f - (Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, gravelPatches) * 3.0f));
-                    grass[(gz * width) + gx] = (byte) (70 + Math.round(size * 185.0f));
+                boolean grows = bare < 0.26f && heightAt(x, z) > 4.0f && slopeAt(x, z) < 0.12f && beachAt(x, z, 0.0f) < 0.25f
+                    && !nearBase && !isNearResource(x, z, BEACH_WIDTH);
+                if (grows) {
+                    float density = Math.max(0.0f, Math.min(1.0f, (clumps + 1.0f) / 2.0f)) * (1.0f - Math.max(0.0f, bare) * 3.0f);
+                    grass[row * width + column] = (byte) (70 + Math.round(density * 185.0f));
                 }
             }
         });
         return grass;
     }
 
+    /**
+     * La texture delle normali dell'intera mappa: piccole ondulazioni che danno grana alla luce, piu' marcate
+     * sui pendii. Nella trasparenza c'e' quanto il punto riflette (poco sott'acqua, di piu' sulla roccia).
+     */
     private byte[] buildNormalsTexture() {
-        int sizeX = Math.min(DDSHeader.CUBEMAP_NEGATIVEX_FLAG, this.mapX * 2);
-        int sizeY = Math.min(DDSHeader.CUBEMAP_NEGATIVEX_FLAG, this.mapY * 2);
-        float texelSizeX = (this.mapX * 8.0f) / sizeX;
-        float texelSizeZ = (this.mapY * 8.0f) / sizeY;
+        int sizeX = Math.min(2048, this.mapX * 2);
+        int sizeY = Math.min(2048, this.mapY * 2);
+        float stepX = this.mapX * 8.0f / sizeX;
+        float stepZ = this.mapY * 8.0f / sizeY;
         int[] argb = new int[sizeX * sizeY];
-        IntStream.range(0, sizeY).parallel().forEach(py -> {
-            float z = (py + 0.5f) * texelSizeZ;
-            for (int px = 0; px < sizeX; px++) {
-                float x = (px + 0.5f) * texelSizeX;
-                float slope = Math.min(1.0f, slopeAt(x, z) / 0.5f);
-                float strength = 0.5f + (slope * 2.4f);
-                float dx = ((relief(x + texelSizeX, z) - relief(x - texelSizeX, z)) / (2.0f * texelSizeX)) * strength;
-                float dz = ((relief(x, z + texelSizeZ) - relief(x, z - texelSizeZ)) / (2.0f * texelSizeZ)) * strength;
-                float length = (float) StrictMath.sqrt((dx * dx) + (dz * dz) + 1.0f);
-                int red = toByte((((-dx) / length) * 0.5f) + 0.5f);
-                int green = toByte((((-dz) / length) * 0.5f) + 0.5f);
-                int blue = toByte(((1.0f / length) * 0.5f) + 0.5f);
-                int alpha = toByte(heightAt(x, z) < -20.0f ? 0.25f : 0.45f + (slope * MAX_SATURATION));
-                argb[(py * sizeX) + px] = (alpha << 24) | (red << 16) | (green << 8) | blue;
+        IntStream.range(0, sizeY).parallel().forEach(row -> {
+            float z = (row + 0.5f) * stepZ;
+            for (int column = 0; column < sizeX; column++) {
+                float x = (column + 0.5f) * stepX;
+                float steep = Math.min(1.0f, slopeAt(x, z) / 0.5f);
+                float strength = 0.5f + steep * 2.4f;
+                float dx = (relief(x + stepX, z) - relief(x - stepX, z)) / (2.0f * stepX) * strength;
+                float dz = (relief(x, z + stepZ) - relief(x, z - stepZ)) / (2.0f * stepZ) * strength;
+                float length = (float) StrictMath.sqrt(dx * dx + dz * dz + 1.0f);
+                int red = toByte(-dx / length * 0.5f + 0.5f);
+                int green = toByte(-dz / length * 0.5f + 0.5f);
+                int blue = toByte(1.0f / length * 0.5f + 0.5f);
+                int alpha = toByte(heightAt(x, z) < -20.0f ? 0.25f : 0.45f + steep * MAX_SATURATION);
+                argb[row * sizeX + column] = (alpha << 24) | (red << 16) | (green << 8) | blue;
             }
         });
         return GroundDetail.encodeTga(argb, sizeX, sizeY);
     }
 
+    /** Le piccole ondulazioni del suolo in un punto: due onde di rumore a passo diverso. */
     private float relief(float x, float z) {
-        return (smoothNoise(x, z, 24.0f, 0.891f, -0.454f, 17) * 2.2f) + (smoothNoise(x, z, 55.0f, 0.602f, 0.799f, 131) * 4.2f);
+        return smoothNoise(x, z, 24.0f, 0.891f, -0.454f, 17) * 2.2f + smoothNoise(x, z, 55.0f, 0.602f, 0.799f, 131) * 4.2f;
     }
 
+    /**
+     * Rumore morbido tra -1 e 1 con onde lunghe circa {@code wavelength} elmi, ruotato dell'angolo di cui
+     * {@code cos} e {@code sin} sono coseno e seno (cosi' le onde non seguono gli assi della mappa).
+     */
     private static float smoothNoise(float x, float z, float wavelength, float cos, float sin, int seed) {
         float domain = wavelength * 64.0f;
-        float u = ((x * cos) - (z * sin)) / domain;
-        float v = ((x * sin) + (z * cos)) / domain;
-        return (GroundDetail.tileableNoise(u - ((float) Math.floor(u)), v - ((float) Math.floor(v)), 64, 2, 0.5f, seed) * 2.0f) - 1.0f;
+        float u = (x * cos - z * sin) / domain;
+        float v = (x * sin + z * cos) / domain;
+        return GroundDetail.tileableNoise(u - (float) Math.floor(u), v - (float) Math.floor(v), 64, 2, 0.5f, seed) * 2.0f - 1.0f;
     }
 
+    /**
+     * La texture dei riflessi, un pixel per cella: piu' lucido dove e' bagnato, sulla roccia e sulla neve.
+     * Con i materiali di zona vale la lucentezza scelta per ciascuno.
+     */
     private byte[] buildSpecularTexture() {
         int sizeX = this.mapX;
         int sizeY = this.mapY;
-        float texelSize = 8.0f;
+        final float texel = 8.0f;
         boolean snow = getSplatMaterials()[2] == GroundDetail.Material.SNOW;
         int[] argb = new int[sizeX * sizeY];
-        IntStream.range(0, sizeY).parallel().forEach(py -> {
-            float z = (py + 0.5f) * texelSize;
-            float[] weights = new float[4];
-            for (int px = 0; px < sizeX; px++) {
-                float x = (px + 0.5f) * texelSize;
+        IntStream.range(0, sizeY).parallel().forEach(row -> {
+            float z = (row + 0.5f) * texel;
+            float[] zones = new float[4];
+            for (int column = 0; column < sizeX; column++) {
+                float x = (column + 0.5f) * texel;
                 float height = heightAt(x, z);
                 float rock = smoothStep(0.2f, VEHICLE_MAX_GRADIENT, slopeAt(x, z));
                 float wet = smoothStep(16.0f, -4.0f, height);
-                float variation = noiseAt((x * 0.11f) + 3.0f, (z * 0.11f) + 29.0f) * 0.02f;
-                float specular = (snow ? 0.13f : 0.05f) + (rock * 0.05f) + (wet * TARGET_SATURATION) + variation;
+                float variation = noiseAt(x * 0.11f + 3.0f, z * 0.11f + 29.0f) * 0.02f;
+                float shine = (snow ? 0.13f : 0.05f) + rock * 0.05f + wet * TARGET_SATURATION + variation;
                 if (this.zoneMaterials != null) {
-                    // lucentezza del materiale di zona al posto della stima roccia/neve
-                    this.zoneMaterials.weights(x / this.textureWidth, z / this.textureHeight, 0.0f, weights);
+                    this.zoneMaterials.weights(x / this.textureWidth, z / this.textureHeight, 0.0f, zones);
                     float gloss = 0.0f;
                     for (int i = 0; i < 4; i++) {
-                        gloss += weights[i] * this.zoneMaterials.layers[i].material.gloss;
+                        gloss += zones[i] * this.zoneMaterials.layers[i].material.gloss;
                     }
-                    specular = gloss + (wet * TARGET_SATURATION) + variation;
+                    shine = gloss + wet * TARGET_SATURATION + variation;
                     rock = 0.0f;
                 }
-                int red = toByte(specular * (1.0f - (wet * 0.15f)));
-                int green = toByte(specular);
-                int blue = toByte(specular * (1.0f + (wet * 0.2f)));
-                int alpha = toByte(0.35f + (wet * 0.4f) + (rock * 0.1f));
-                argb[(py * sizeX) + px] = (alpha << 24) | (red << 16) | (green << 8) | blue;
+                int red = toByte(shine * (1.0f - wet * 0.15f));
+                int green = toByte(shine);
+                int blue = toByte(shine * (1.0f + wet * 0.2f));
+                int alpha = toByte(0.35f + wet * 0.4f + rock * 0.1f);
+                argb[row * sizeX + column] = (alpha << 24) | (red << 16) | (green << 8) | blue;
             }
         });
         return TextureCodec.dxt5File(argb, sizeX, sizeY);
     }
 
+    /** Da un valore tra 0 e 1 a un byte tra 0 e 255. */
     private static int toByte(float value) {
         return Math.max(0, Math.min(255, Math.round(value * 255.0f)));
     }
 
+    /** La texture usata oltre il bordo della mappa: l'anteprima resa piu' grigia e piu' scura. */
     private byte[] buildEdgeTexture(BufferedImage minimapImage) {
         int width = minimapImage.getWidth();
         int height = minimapImage.getHeight();
-        int[] pixels = minimapImage.getRGB(0, 0, width, height, (int[]) null, 0, width);
+        int[] pixels = minimapImage.getRGB(0, 0, width, height, null, 0, width);
         for (int i = 0; i < pixels.length; i++) {
-            int r = (pixels[i] >> 16) & 255;
-            int g = (pixels[i] >> 8) & 255;
-            int b = pixels[i] & 255;
-            float grey = (r * MAX_SATURATION) + (g * 0.59f) + (b * 0.11f);
-            int nr = Math.round((grey + ((r - grey) * 0.35f)) * 0.5f);
-            int ng = Math.round((grey + ((g - grey) * 0.35f)) * 0.5f);
-            int nb = Math.round((grey + ((b - grey) * 0.35f)) * 0.5f);
-            pixels[i] = (-16777216) | (nr << 16) | (ng << 8) | nb;
+            int red = (pixels[i] >> 16) & 255;
+            int green = (pixels[i] >> 8) & 255;
+            int blue = pixels[i] & 255;
+            float grey = red * MAX_SATURATION + green * 0.59f + blue * 0.11f;
+            int fadedRed = Math.round((grey + (red - grey) * 0.35f) * 0.5f);
+            int fadedGreen = Math.round((grey + (green - grey) * 0.35f) * 0.5f);
+            int fadedBlue = Math.round((grey + (blue - grey) * 0.35f) * 0.5f);
+            pixels[i] = 0xFF000000 | (fadedRed << 16) | (fadedGreen << 8) | fadedBlue;
         }
         return TextureCodec.dxt5File(pixels, width, height);
     }
 
+    /** Comprime un'immagine in DXT1 con i suoi livelli di dettaglio, ognuno grande la meta' del precedente. */
     private static byte[] compressWithMips(BufferedImage image, int levels) {
         int width = image.getWidth();
         int height = image.getHeight();
-        int[] pixels = image.getRGB(0, 0, width, height, (int[]) null, 0, width);
+        int[] pixels = image.getRGB(0, 0, width, height, null, 0, width);
         for (int i = 0; i < pixels.length; i++) {
-            int i2 = i;
-            pixels[i2] = pixels[i2] & 16777215;
+            pixels[i] &= 0xFFFFFF;
         }
         ByteArrayOutputStream result = new ByteArrayOutputStream();
         for (int level = 0; level < levels; level++) {
