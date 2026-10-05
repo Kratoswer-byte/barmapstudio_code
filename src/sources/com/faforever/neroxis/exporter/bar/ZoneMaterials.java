@@ -401,7 +401,7 @@ public final class ZoneMaterials {
          * La normal map viene dal file se presente, altrimenti dal rilievo o dalla luminosita' del colore.
          */
         byte[] createDetailTexture() {
-            int size = DetailTextures.SIZE;
+            int size = GroundDetail.SIZE;
             int mask = size - 1;
             int[] diffusePx = pixels(resize(this.material.diffuse, size, size));
             float[] lum = new float[size * size];
@@ -464,7 +464,7 @@ public final class ZoneMaterials {
                     argb[i] = (alpha << 24) | rgb;
                 }
             }
-            return DetailTextures.encodeTga(argb, size, size);
+            return GroundDetail.encodeTga(argb, size, size);
         }
     }
 

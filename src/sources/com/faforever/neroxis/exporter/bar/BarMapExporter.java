@@ -90,7 +90,7 @@ public final class BarMapExporter {
     private final float[] heights;
     private final float[] noise;
     private final float[] sunDirection;
-    private DetailTextures.Material groundMaterial;
+    private GroundDetail.Material groundMaterial;
     private final int[] layerKinds;
     private boolean snowGround;
     private float lowGround;
@@ -108,7 +108,7 @@ public final class BarMapExporter {
     private static final List<String> T3_LAND = List.of("XEL0305", "UEL0303", "URL0303", "XRL0305", "UAL0303", "XSL0303");
     private final List<float[]> mexPositions = new ArrayList();
     private final List<float[]> geoPositions = new ArrayList();
-    private List<BiomeFlora.PlantSet> plantSets = List.of();
+    private List<MapFlora.PlantSet> plantSets = List.of();
     private float[] shoreDistance = new float[0];
     private float[] rockColor = {0.42f, 0.4f, TARGET_LUMINANCE};
     private float[] sandColor = {0.62f, 0.56f, 0.42f};
@@ -438,7 +438,7 @@ public final class BarMapExporter {
             this.geoPositions.add(toElmos(hydro));
         });
         List<String> featureTypes = new ArrayList<>();
-        List<SmfWriter.Feature> features = buildFeatures(featureTypes);
+        List<SpringMapFile.Feature> features = buildFeatures(featureTypes);
         byte[] metalMap = buildMetalMap();
         short[] smfHeights = new short[this.heights.length];
         float heightRange = Math.max(this.maxHeight - this.minHeight, 1.0f);
@@ -461,18 +461,18 @@ public final class BarMapExporter {
             zip.write(buildMapInfo().getBytes(StandardCharsets.UTF_8));
             zip.closeEntry();
             zip.putNextEntry(new ZipEntry("maps/" + archiveName + ".smf"));
-            SmfWriter.write(zip, this.map.getName().hashCode() & Integer.MAX_VALUE, this.mapX, this.mapY, this.minHeight, this.maxHeight, smfHeights, metalMap, buildGrassMap(), minimap, archiveName + ".smt", featureTypes, features);
+            SpringMapFile.write(zip, this.map.getName().hashCode() & Integer.MAX_VALUE, this.mapX, this.mapY, this.minHeight, this.maxHeight, smfHeights, metalMap, buildGrassMap(), minimap, archiveName + ".smt", featureTypes, features);
             zip.closeEntry();
             zip.putNextEntry(new ZipEntry("maps/" + archiveName + ".smt"));
             writeTiles(zip);
             zip.closeEntry();
-            DetailTextures.Material[] materials = getSplatMaterials();
+            GroundDetail.Material[] materials = getSplatMaterials();
             for (int i2 = 0; i2 < materials.length; i2++) {
                 zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_dnts" + (i2 + 1) + ".tga"));
                 if (this.zoneMaterials != null) {
                     zip.write(this.zoneMaterials.layers[i2].createDetailTexture());
                 } else {
-                    zip.write(DetailTextures.createTexture(materials[i2], this.map.getName().hashCode() + (i2 * 7919)));
+                    zip.write(GroundDetail.createTexture(materials[i2], this.map.getName().hashCode() + (i2 * 7919)));
                 }
                 zip.closeEntry();
             }
@@ -483,7 +483,7 @@ public final class BarMapExporter {
             if (featuresRepository != null && this.plantSets.stream().anyMatch((v0) -> {
                 return v0.fromRepository();
             })) {
-                for (Map.Entry<String, Path> file : BiomeFlora.collectFiles(this.plantSets, featuresRepository).entrySet()) {
+                for (Map.Entry<String, Path> file : MapFlora.collectFiles(this.plantSets, featuresRepository).entrySet()) {
                     zip.putNextEntry(new ZipEntry(file.getKey()));
                     Files.copy(file.getValue(), zip);
                     zip.closeEntry();
@@ -1040,13 +1040,13 @@ public final class BarMapExporter {
         return this.options.maxMetal() / 3.0600002f;
     }
 
-    private List<SmfWriter.Feature> buildFeatures(List<String> featureTypes) {
+    private List<SpringMapFile.Feature> buildFeatures(List<String> featureTypes) {
         String str;
         int i;
         int iFloorMod;
-        List<SmfWriter.Feature> features = new ArrayList<>();
+        List<SpringMapFile.Feature> features = new ArrayList<>();
         String rockSet = getRockSet();
-        this.plantSets = BiomeFlora.forBiome(String.valueOf(this.map.getBiome().name()), this.options.featuresRepository());
+        this.plantSets = MapFlora.forBiome(String.valueOf(this.map.getBiome().name()), this.options.featuresRepository());
         List<ReclaimFeature> reclaim = new ArrayList<>();
         for (float[] geo : this.geoPositions) {
             addFeature(features, featureTypes, "geovent", geo[0], geo[1], SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT);
@@ -1069,7 +1069,7 @@ public final class BarMapExporter {
                 reclaim.add(new ReclaimFeature("rocks30_%s_%02d".formatted(rockSet, Integer.valueOf(rockIndex)), x, z, prop.getRotation(), 9 + rockIndex, ((rockHash >>> 8) & 65535) / 65536.0f));
             } else if (heightAt(x, z) >= 4.0f) {
                 int groveHash = symmetricHash(x, z);
-                BiomeFlora.PlantSet plants = this.plantSets.isEmpty() ? null : this.plantSets.get(Math.floorMod(groveHash >>> 3, this.plantSets.size()));
+                MapFlora.PlantSet plants = this.plantSets.isEmpty() ? null : this.plantSets.get(Math.floorMod(groveHash >>> 3, this.plantSets.size()));
                 if (plants == null || ((groveHash >>> 9) & 255) / 256.0f < plants.keep()) {
                     int groveSize = plants != null ? plants.perGroup() : 4;
                     int treeCount = path.contains("group") ? groveSize : 1;
@@ -2254,7 +2254,7 @@ public final class BarMapExporter {
         return hash(Math.round(nearestSpawn / 24.0f), Math.round(center / 24.0f));
     }
 
-    private void addFeature(List<SmfWriter.Feature> features, List<String> featureTypes, String type, float x, float z, float rotationRadians) {
+    private void addFeature(List<SpringMapFile.Feature> features, List<String> featureTypes, String type, float x, float z, float rotationRadians) {
         if (!isInsideMap(x, z, 8.0f)) {
             return;
         }
@@ -2269,7 +2269,7 @@ public final class BarMapExporter {
         } else if (heading < -32768.0f) {
             heading += 65536.0f;
         }
-        features.add(new SmfWriter.Feature(typeIndex, x, heightAt(x, z), z, heading, 1.0f));
+        features.add(new SpringMapFile.Feature(typeIndex, x, heightAt(x, z), z, heading, 1.0f));
     }
 
     private static String getWreck(String unitType, int hash, boolean underwater) {
@@ -2412,7 +2412,7 @@ public final class BarMapExporter {
         float[] result = new float[262144];
         IntStream.range(0, 512).parallel().forEach(y -> {
             for (int x = 0; x < 512; x++) {
-                result[(y * 512) + x] = DetailTextures.tileableNoise((x + 0.5f) / 512.0f, (y + 0.5f) / 512.0f, 6, 6, 0.6f, 7919);
+                result[(y * 512) + x] = GroundDetail.tileableNoise((x + 0.5f) / 512.0f, (y + 0.5f) / 512.0f, 6, 6, 0.6f, 7919);
             }
         });
         double mean = 0.0d;
@@ -3054,13 +3054,13 @@ public final class BarMapExporter {
         return result;
     }
 
-    private DetailTextures.Material[] getSplatMaterials() {
-        return new DetailTextures.Material[]{DetailTextures.Material.ROCK, DetailTextures.Material.GRAVEL, getGroundMaterial(), DetailTextures.Material.SEABED};
+    private GroundDetail.Material[] getSplatMaterials() {
+        return new GroundDetail.Material[]{GroundDetail.Material.ROCK, GroundDetail.Material.GRAVEL, getGroundMaterial(), GroundDetail.Material.SEABED};
     }
 
-    private DetailTextures.Material getGroundMaterial() {
-        DetailTextures.Material result;
-        DetailTextures.Material cached = this.groundMaterial;
+    private GroundDetail.Material getGroundMaterial() {
+        GroundDetail.Material result;
+        GroundDetail.Material cached = this.groundMaterial;
         if (cached != null) {
             return cached;
         }
@@ -3079,15 +3079,15 @@ public final class BarMapExporter {
             }
         }
         if (samples == 0) {
-            result = DetailTextures.Material.DUST;
+            result = GroundDetail.Material.DUST;
         } else if (g > r * 1.06f && g > b * 1.12f) {
-            result = DetailTextures.Material.GRASS;
+            result = GroundDetail.Material.GRASS;
         } else if (Math.min(r, Math.min(g, b)) / samples > 150.0f && Math.max(r, Math.max(g, b)) < Math.min(r, Math.min(g, b)) * 1.25f) {
-            result = DetailTextures.Material.SNOW;
+            result = GroundDetail.Material.SNOW;
         } else if (r > b * 1.3f) {
-            result = DetailTextures.Material.DUST;
+            result = GroundDetail.Material.DUST;
         } else {
-            result = DetailTextures.Material.CRACKED;
+            result = GroundDetail.Material.CRACKED;
         }
         this.groundMaterial = result;
         return result;
@@ -3123,7 +3123,7 @@ public final class BarMapExporter {
                 argb[(y * width) + px] = (alpha << 24) | (red << 16) | (green << 8) | blue;
             }
         });
-        return Dxt1Encoder.createDxt5Dds(argb, width, height);
+        return TextureCodec.dxt5File(argb, width, height);
     }
 
     private List<float[]> filterByRows(List<float[]> positions, float minZ, float maxZ, float radius) {
@@ -3155,7 +3155,7 @@ public final class BarMapExporter {
     private void writeTiles(OutputStream out) throws IOException {
         int tilesX = this.textureWidth / 32;
         int tilesY = this.textureHeight / 32;
-        SmfWriter.writeSmtHeader(out, tilesX * tilesY);
+        SpringMapFile.writeTileFileHeader(out, tilesX * tilesY);
         int tileSize = 32;
         int i = 0;
         while (true) {
@@ -3180,9 +3180,9 @@ public final class BarMapExporter {
                         int offset = tileX * 680;
                         int[] mip = tile;
                         for (int size = tileSize; size >= 4; size /= 2) {
-                            offset += Dxt1Encoder.compress(mip, size, size, rowBytes, offset);
+                            offset += TextureCodec.compressDxt1(mip, size, size, rowBytes, offset);
                             if (size > 4) {
-                                mip = Dxt1Encoder.downsample(mip, size, size);
+                                mip = TextureCodec.halve(mip, size, size);
                             }
                         }
                     }
@@ -3260,7 +3260,7 @@ public final class BarMapExporter {
         int width = this.mapX / 4;
         int height = this.mapY / 4;
         byte[] grass = new byte[width * height];
-        if (getSplatMaterials()[2] != DetailTextures.Material.GRASS) {
+        if (getSplatMaterials()[2] != GroundDetail.Material.GRASS) {
             return grass;
         }
         List<float[]> spawns = this.map.getSpawns().stream().map((v1) -> {
@@ -3309,7 +3309,7 @@ public final class BarMapExporter {
                 argb[(py * sizeX) + px] = (alpha << 24) | (red << 16) | (green << 8) | blue;
             }
         });
-        return DetailTextures.encodeTga(argb, sizeX, sizeY);
+        return GroundDetail.encodeTga(argb, sizeX, sizeY);
     }
 
     private float relief(float x, float z) {
@@ -3320,14 +3320,14 @@ public final class BarMapExporter {
         float domain = wavelength * 64.0f;
         float u = ((x * cos) - (z * sin)) / domain;
         float v = ((x * sin) + (z * cos)) / domain;
-        return (DetailTextures.tileableNoise(u - ((float) Math.floor(u)), v - ((float) Math.floor(v)), 64, 2, 0.5f, seed) * 2.0f) - 1.0f;
+        return (GroundDetail.tileableNoise(u - ((float) Math.floor(u)), v - ((float) Math.floor(v)), 64, 2, 0.5f, seed) * 2.0f) - 1.0f;
     }
 
     private byte[] buildSpecularTexture() {
         int sizeX = this.mapX;
         int sizeY = this.mapY;
         float texelSize = 8.0f;
-        boolean snow = getSplatMaterials()[2] == DetailTextures.Material.SNOW;
+        boolean snow = getSplatMaterials()[2] == GroundDetail.Material.SNOW;
         int[] argb = new int[sizeX * sizeY];
         IntStream.range(0, sizeY).parallel().forEach(py -> {
             float z = (py + 0.5f) * texelSize;
@@ -3356,7 +3356,7 @@ public final class BarMapExporter {
                 argb[(py * sizeX) + px] = (alpha << 24) | (red << 16) | (green << 8) | blue;
             }
         });
-        return Dxt1Encoder.createDxt5Dds(argb, sizeX, sizeY);
+        return TextureCodec.dxt5File(argb, sizeX, sizeY);
     }
 
     private static int toByte(float value) {
@@ -3377,7 +3377,7 @@ public final class BarMapExporter {
             int nb = Math.round((grey + ((b - grey) * 0.35f)) * 0.5f);
             pixels[i] = (-16777216) | (nr << 16) | (ng << 8) | nb;
         }
-        return Dxt1Encoder.createDxt5Dds(pixels, width, height);
+        return TextureCodec.dxt5File(pixels, width, height);
     }
 
     private static byte[] compressWithMips(BufferedImage image, int levels) {
@@ -3391,10 +3391,10 @@ public final class BarMapExporter {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
         for (int level = 0; level < levels; level++) {
             byte[] compressed = new byte[Math.max(1, width / 4) * Math.max(1, height / 4) * 8];
-            Dxt1Encoder.compress(pixels, width, height, compressed, 0);
+            TextureCodec.compressDxt1(pixels, width, height, compressed, 0);
             result.writeBytes(compressed);
             if (level < levels - 1) {
-                pixels = Dxt1Encoder.downsample(pixels, width, height);
+                pixels = TextureCodec.halve(pixels, width, height);
                 width /= 2;
                 height /= 2;
             }
