@@ -553,35 +553,42 @@ public final class BarMapExporter {
         }
     }
 
+    /** Le quote dell'editor, una per punto della griglia, gia' moltiplicate per la scala della mappa. */
     private static float[] readHeights(BufferedImage heightmap, float heightMapScale) {
         int width = heightmap.getWidth();
         int height = heightmap.getHeight();
         WritableRaster raster = heightmap.getRaster();
-        float[] result = new float[width * height];
+        float[] values = new float[width * height];
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                result[(y * width) + x] = raster.getSample(x, y, 0) * heightMapScale;
+                values[y * width + x] = raster.getSample(x, y, 0) * heightMapScale;
             }
         }
-        return result;
+        return values;
     }
 
+    /**
+     * Costruisce le quote della mappa di BAR: ripulisce quelle dell'editor, le porta alla risoluzione del gioco
+     * (in elmi, con il mare a quota zero), poi applica i ritocchi e ricava minimo e massimo.
+     */
     private void buildHeights() {
-        int faW = this.faWidth + 1;
-        int faH = this.faHeight + 1;
-        this.faHeights = cleanHeights(this.faHeights, faW, faH);
+        int gridWidth = this.faWidth + 1;
+        int gridHeight = this.faHeight + 1;
+        this.faHeights = cleanHeights(this.faHeights, gridWidth, gridHeight);
         float lowest = Float.MAX_VALUE;
-        for (float faHeight : this.faHeights) {
-            lowest = Math.min(lowest, faHeight);
+        for (float value : this.faHeights) {
+            lowest = Math.min(lowest, value);
         }
+        // senza acqua il livello zero sta un po' sotto il punto piu' basso
         float seaLevel = Float.isNaN(this.waterElevation) ? lowest - 4.0f : this.waterElevation;
         float verticalScale = this.elmosPerCell * this.options.heightScale();
         int squaresPerCell = this.options.squaresPerCell();
+        int row = this.mapX + 1;
         IntStream.rangeClosed(0, this.mapY).parallel().forEach(y -> {
-            float fy = y / (float) squaresPerCell;
+            float cellY = y / (float) squaresPerCell;
             for (int x = 0; x <= this.mapX; x++) {
-                float fx = x / (float) squaresPerCell;
-                this.heights[(y * (this.mapX + 1)) + x] = (sampleCubic(this.faHeights, faW, faH, fx, fy) - seaLevel) * verticalScale;
+                float cellX = x / (float) squaresPerCell;
+                this.heights[y * row + x] = (sampleCubic(this.faHeights, gridWidth, gridHeight, cellX, cellY) - seaLevel) * verticalScale;
             }
         });
         sharpenCliffs();
@@ -592,24 +599,24 @@ public final class BarMapExporter {
         buildShoreDistance();
         pickRockAndSandColors();
         applyBarBiomeAccents();
-        this.minHeight = Float.MAX_VALUE;
-        this.maxHeight = -3.4028235E38f;
-        for (float height : this.heights) {
-            this.minHeight = Math.min(this.minHeight, height);
-            this.maxHeight = Math.max(this.maxHeight, height);
+
+        float low = Float.MAX_VALUE;
+        float high = -Float.MAX_VALUE;
+        for (float value : this.heights) {
+            low = Math.min(low, value);
+            high = Math.max(high, value);
         }
-        if (this.minHeight >= SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT && this.minHeight < DRY_MAP_MIN_HEIGHT) {
-            float offset = DRY_MAP_MIN_HEIGHT - this.minHeight;
+        // una mappa asciutta troppo vicina a quota zero viene alzata, per non far comparire acqua
+        if (low >= 0.0f && low < DRY_MAP_MIN_HEIGHT) {
+            float lift = DRY_MAP_MIN_HEIGHT - low;
             for (int i = 0; i < this.heights.length; i++) {
-                float[] fArr = this.heights;
-                int i2 = i;
-                fArr[i2] = fArr[i2] + offset;
+                this.heights[i] += lift;
             }
-            this.minHeight += offset;
-            this.maxHeight += offset;
+            low += lift;
+            high += lift;
         }
-        this.minHeight = (float) Math.floor(this.minHeight);
-        this.maxHeight = (float) Math.ceil(this.maxHeight);
+        this.minHeight = (float) Math.floor(low);
+        this.maxHeight = (float) Math.ceil(high);
     }
 
     /** Rilievo vero dei materiali di zona (es. bottoncini): sposta le quote, 1 punto ogni 8 elmi. */
@@ -635,200 +642,204 @@ public final class BarMapExporter {
         });
     }
 
+    /**
+     * Ripulisce le quote dell'editor in tre passi: toglie i punti isolati (mediana 3x3), liscia le superfici
+     * conservando i gradini (due passate che pesano poco i vicini a quota molto diversa), infine ammorbidisce.
+     */
     private static float[] cleanHeights(float[] heights, int width, int height) {
-        float[] median = new float[heights.length];
+        float[] despeckled = new float[heights.length];
         IntStream.range(0, height).parallel().forEach(y -> {
-            float[] window = new float[9];
+            float[] around = new float[9];
             for (int x = 0; x < width; x++) {
-                int n = 0;
+                int count = 0;
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dx = -1; dx <= 1; dx++) {
-                        int i = n;
-                        n++;
-                        window[i] = heights[(clamp(y + dy, height) * width) + clamp(x + dx, width)];
+                        around[count++] = heights[clamp(y + dy, height) * width + clamp(x + dx, width)];
                     }
                 }
-                Arrays.sort(window);
-                float center = heights[(y * width) + x];
-                median[(y * width) + x] = Math.abs(center - window[4]) > 0.35f ? window[4] : center;
+                Arrays.sort(around);
+                float own = heights[y * width + x];
+                despeckled[y * width + x] = Math.abs(own - around[4]) > 0.35f ? around[4] : own;
             }
         });
-        float[] source = median;
+
+        float[] current = despeckled;
         for (int pass = 0; pass < 2; pass++) {
-            float[] input = source;
+            float[] input = current;
             float[] output = new float[heights.length];
-            IntStream.range(0, height).parallel().forEach(y2 -> {
+            IntStream.range(0, height).parallel().forEach(y -> {
                 for (int x = 0; x < width; x++) {
-                    float center = input[(y2 * width) + x];
+                    float own = input[y * width + x];
                     float sum = 0.0f;
-                    float weights = 0.0f;
+                    float total = 0.0f;
                     for (int dy = -2; dy <= 2; dy++) {
                         for (int dx = -2; dx <= 2; dx++) {
-                            float value = input[(clamp(y2 + dy, height) * width) + clamp(x + dx, width)];
-                            float difference = value - center;
-                            float weight = (float) StrictMath.exp(((-((dx * dx) + (dy * dy))) / 3.4f) - ((difference * difference) / 1.3f));
+                            float value = input[clamp(y + dy, height) * width + clamp(x + dx, width)];
+                            float difference = value - own;
+                            // conta di piu' chi e' vicino e a quota simile
+                            float weight = (float) StrictMath.exp(-(dx * dx + dy * dy) / 3.4f - difference * difference / 1.3f);
                             sum += value * weight;
-                            weights += weight;
+                            total += weight;
                         }
                     }
-                    output[(y2 * width) + x] = sum / weights;
+                    output[y * width + x] = sum / total;
                 }
             });
-            source = output;
+            current = output;
         }
-        float[] input2 = source;
+
+        float[] smoothed = current;
         float[] result = new float[heights.length];
-        IntStream.range(0, height).parallel().forEach(y3 -> {
+        IntStream.range(0, height).parallel().forEach(y -> {
             for (int x = 0; x < width; x++) {
                 float sum = 0.0f;
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dx = -1; dx <= 1; dx++) {
-                        sum += input2[(clamp(y3 + dy, height) * width) + clamp(x + dx, width)] * (2 - Math.abs(dx)) * (2 - Math.abs(dy));
+                        sum += smoothed[clamp(y + dy, height) * width + clamp(x + dx, width)] * (2 - Math.abs(dx)) * (2 - Math.abs(dy));
                     }
                 }
-                result[(y3 * width) + x] = sum / 16.0f;
+                result[y * width + x] = sum / 16.0f;
             }
         });
         return result;
     }
 
+    /**
+     * Se i punti di partenza sono collegati per i bot ma non per i veicoli, abbassa tutto il rilievo quel tanto
+     * che basta perche' anche i veicoli possano raggiungere ogni base.
+     */
     private void ensureVehiclePaths() {
-        List<Spawn> spawns = this.map.getSpawns();
-        if (spawns.size() < 2) {
+        if (this.map.getSpawns().size() < 2) {
             return;
         }
         int row = this.mapX + 1;
-        float[] gradient = new float[this.mapX * this.mapY];
-        float[] center = new float[this.mapX * this.mapY];
+        float[] steepness = new float[this.mapX * this.mapY];
+        float[] level = new float[this.mapX * this.mapY];
         IntStream.range(0, this.mapY).parallel().forEach(z -> {
             for (int x = 0; x < this.mapX; x++) {
-                float h00 = this.heights[(z * row) + x];
-                float h01 = this.heights[(z * row) + x + 1];
-                float h10 = this.heights[((z + 1) * row) + x];
-                float h11 = this.heights[((z + 1) * row) + x + 1];
-                float dx = (((h01 + h11) - h00) - h10) / 16.0f;
-                float dz = (((h10 + h11) - h00) - h01) / 16.0f;
-                gradient[(z * this.mapX) + x] = (float) StrictMath.sqrt((dx * dx) + (dz * dz));
-                center[(z * this.mapX) + x] = (((h00 + h01) + h10) + h11) / 4.0f;
+                float nearLeft = this.heights[z * row + x];
+                float nearRight = this.heights[z * row + x + 1];
+                float farLeft = this.heights[(z + 1) * row + x];
+                float farRight = this.heights[(z + 1) * row + x + 1];
+                float slopeX = (nearRight + farRight - nearLeft - farLeft) / 16.0f;
+                float slopeZ = (farLeft + farRight - nearLeft - nearRight) / 16.0f;
+                steepness[z * this.mapX + x] = (float) StrictMath.sqrt(slopeX * slopeX + slopeZ * slopeZ);
+                level[z * this.mapX + x] = (nearLeft + nearRight + farLeft + farRight) / 4.0f;
             }
         });
-        if (!startsConnected(gradient, center, 1.0f, BOT_MAX_GRADIENT) || startsConnected(gradient, center, 1.0f, VEHICLE_MAX_GRADIENT)) {
+        boolean botsConnected = startsConnected(steepness, level, 1.0f, BOT_MAX_GRADIENT);
+        if (!botsConnected || startsConnected(steepness, level, 1.0f, VEHICLE_MAX_GRADIENT)) {
             return;
         }
         for (float factor : new float[]{0.93f, 0.86f, 0.8f, 0.74f, 0.68f, 0.62f}) {
-            if (startsConnected(gradient, center, factor, VEHICLE_MAX_GRADIENT)) {
+            if (startsConnected(steepness, level, factor, VEHICLE_MAX_GRADIENT)) {
                 for (int i = 0; i < this.heights.length; i++) {
-                    float[] fArr = this.heights;
-                    int i2 = i;
-                    fArr[i2] = fArr[i2] * factor;
+                    this.heights[i] *= factor;
                 }
-                System.out.printf(Locale.ROOT, "Flattened the terrain to %.0f%% so vehicles can reach every start position%n", Float.valueOf(factor * 100.0f));
+                System.out.printf(Locale.ROOT, "Flattened the terrain to %.0f%% so vehicles can reach every start position%n", factor * 100.0f);
                 return;
             }
         }
     }
 
-    private boolean startsConnected(float[] gradient, float[] center, float factor, float maxGradient) {
-        int i;
-        int i2;
-        boolean[] visited = new boolean[gradient.length];
-        int[] queue = new int[gradient.length];
+    /**
+     * Vero se da un punto di partenza si raggiungono tutti gli altri passando solo per celle abbastanza piane
+     * e non troppo sott'acqua, con il rilievo moltiplicato per {@code factor}.
+     */
+    private boolean startsConnected(float[] steepness, float[] level, float factor, float maxSteepness) {
+        boolean[] reached = new boolean[steepness.length];
+        int[] queue = new int[steepness.length];
         List<Spawn> spawns = this.map.getSpawns();
-        int start = toSquareIndex((Spawn) spawns.getFirst());
+        int first = toSquareIndex(spawns.get(0));
         int head = 0;
-        int tail = 0 + 1;
-        queue[0] = start;
-        visited[start] = true;
+        int tail = 0;
+        queue[tail++] = first;
+        reached[first] = true;
+        int[] stepX = {1, -1, 0, 0};
+        int[] stepZ = {0, 0, 1, -1};
         while (head < tail) {
-            int i3 = head;
-            head++;
-            int index = queue[i3];
-            int x = index % this.mapX;
-            int z = index / this.mapX;
-            int direction = 0;
-            while (direction < 4) {
-                if (direction == 0) {
-                    i = 1;
-                } else {
-                    i = direction == 1 ? -1 : 0;
+            int cell = queue[head++];
+            int x = cell % this.mapX;
+            int z = cell / this.mapX;
+            for (int direction = 0; direction < 4; direction++) {
+                int nx = x + stepX[direction];
+                int nz = z + stepZ[direction];
+                if (nx < 0 || nz < 0 || nx >= this.mapX || nz >= this.mapY) {
+                    continue;
                 }
-                int nx = x + i;
-                if (direction == 2) {
-                    i2 = 1;
-                } else {
-                    i2 = direction == 3 ? -1 : 0;
+                int next = nz * this.mapX + nx;
+                if (!reached[next] && steepness[next] * factor <= maxSteepness && level[next] * factor > -MAX_WADING_DEPTH) {
+                    reached[next] = true;
+                    queue[tail++] = next;
                 }
-                int nz = z + i2;
-                if (nx >= 0 && nz >= 0 && nx < this.mapX && nz < this.mapY) {
-                    int next = (nz * this.mapX) + nx;
-                    if (!visited[next] && gradient[next] * factor <= maxGradient && center[next] * factor > -22.0f) {
-                        visited[next] = true;
-                        int i4 = tail;
-                        tail++;
-                        queue[i4] = next;
-                    }
-                }
-                direction++;
             }
         }
-        return spawns.stream().allMatch(spawn -> {
-            return visited[toSquareIndex(spawn)];
-        });
+        for (Spawn spawn : spawns) {
+            if (!reached[toSquareIndex(spawn)]) {
+                return false;
+            }
+        }
+        return true;
     }
 
+    /** La cella della mappa di BAR in cui cade un punto di partenza. */
     private int toSquareIndex(Spawn spawn) {
-        int x = Math.max(0, Math.min(this.mapX - 1, Math.round(spawn.getPosition().x() * this.options.squaresPerCell())));
-        int z = Math.max(0, Math.min(this.mapY - 1, Math.round(spawn.getPosition().z() * this.options.squaresPerCell())));
-        return (z * this.mapX) + x;
+        int scale = this.options.squaresPerCell();
+        int x = Math.max(0, Math.min(this.mapX - 1, Math.round(spawn.getPosition().x() * scale)));
+        int z = Math.max(0, Math.min(this.mapY - 1, Math.round(spawn.getPosition().z() * scale)));
+        return z * this.mapX + x;
     }
 
+    /** Valore in un punto qualsiasi della griglia, interpolato con curve morbide sui 16 punti intorno. */
     private static float sampleCubic(float[] values, int width, int height, float x, float y) {
-        int x1 = (int) Math.floor(x);
-        int y1 = (int) Math.floor(y);
-        float tx = x - x1;
-        float ty = y - y1;
-        if (tx == SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT && ty == SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-            return values[(clamp(y1, height) * width) + clamp(x1, width)];
+        int baseX = (int) Math.floor(x);
+        int baseY = (int) Math.floor(y);
+        float fractionX = x - baseX;
+        float fractionY = y - baseY;
+        if (fractionX == 0.0f && fractionY == 0.0f) {
+            return values[clamp(baseY, height) * width + clamp(baseX, width)];
         }
         float result = 0.0f;
         for (int j = -1; j <= 2; j++) {
-            float wy = catmullRom(j - ty);
-            int row = clamp(y1 + j, height) * width;
+            float weightY = catmullRom(j - fractionY);
+            int rowStart = clamp(baseY + j, height) * width;
             float rowSum = 0.0f;
             for (int i = -1; i <= 2; i++) {
-                rowSum += values[row + clamp(x1 + i, width)] * catmullRom(i - tx);
+                rowSum += values[rowStart + clamp(baseX + i, width)] * catmullRom(i - fractionX);
             }
-            result += rowSum * wy;
+            result += rowSum * weightY;
         }
         return result;
     }
 
+    /** Peso di un punto a distanza {@code t} nell'interpolazione di Catmull-Rom. */
     private static float catmullRom(float t) {
-        float t2 = Math.abs(t);
-        if (t2 < 1.0f) {
-            return ((((1.5f * t2) * t2) * t2) - ((2.5f * t2) * t2)) + 1.0f;
+        float d = Math.abs(t);
+        if (d < 1.0f) {
+            return 1.5f * d * d * d - 2.5f * d * d + 1.0f;
         }
-        if (t2 < 2.0f) {
-            return ((((((-0.5f) * t2) * t2) * t2) + ((2.5f * t2) * t2)) - (4.0f * t2)) + 2.0f;
+        if (d < 2.0f) {
+            return -0.5f * d * d * d + 2.5f * d * d - 4.0f * d + 2.0f;
         }
-        return SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT;
+        return 0.0f;
     }
 
     private static int clamp(int value, int size) {
         return Math.max(0, Math.min(size - 1, value));
     }
 
+    /** La quota della mappa in un punto dato in elmi. */
     private float heightAt(float x, float z) {
-        float sx = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(this.mapX, x / 8.0f));
-        float sz = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(this.mapY, z / 8.0f));
-        int x0 = Math.min((int) sx, this.mapX - 1);
-        int z0 = Math.min((int) sz, this.mapY - 1);
-        float tx = sx - x0;
-        float tz = sz - z0;
+        float squareX = Math.max(0.0f, Math.min(this.mapX, x / 8.0f));
+        float squareZ = Math.max(0.0f, Math.min(this.mapY, z / 8.0f));
+        int x0 = Math.min((int) squareX, this.mapX - 1);
+        int z0 = Math.min((int) squareZ, this.mapY - 1);
+        float fractionX = squareX - x0;
+        float fractionZ = squareZ - z0;
         int row = this.mapX + 1;
-        float top = (this.heights[(z0 * row) + x0] * (1.0f - tx)) + (this.heights[(z0 * row) + x0 + 1] * tx);
-        float bottom = (this.heights[((z0 + 1) * row) + x0] * (1.0f - tx)) + (this.heights[((z0 + 1) * row) + x0 + 1] * tx);
-        return (top * (1.0f - tz)) + (bottom * tz);
+        float near = this.heights[z0 * row + x0] * (1.0f - fractionX) + this.heights[z0 * row + x0 + 1] * fractionX;
+        float far = this.heights[(z0 + 1) * row + x0] * (1.0f - fractionX) + this.heights[(z0 + 1) * row + x0 + 1] * fractionX;
+        return near * (1.0f - fractionZ) + far * fractionZ;
     }
 
     private float[] toElmos(Marker marker) {
