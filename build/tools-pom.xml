@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Serve solo a scaricare ProGuard con Maven: build.ps1 -FetchTools lo copia in build/tools/proguard. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>barmapstudio</groupId>
+    <artifactId>build-tools</artifactId>
+    <version>1</version>
+    <packaging>pom</packaging>
+    <dependencies>
+        <dependency>
+            <groupId>com.guardsquare</groupId>
+            <artifactId>proguard-base</artifactId>
+            <version>7.8.1</version>
+        </dependency>
+    </dependencies>
+</project>
