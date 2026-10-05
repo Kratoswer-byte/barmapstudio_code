@@ -121,7 +121,7 @@ public class BarMapStudio {
             Field fFrame = BarLauncher.class.getDeclaredField("frame");
             fFrame.setAccessible(true);
             JFrame frame = (JFrame) fFrame.get(launcher);
-            frame.setTitle("BAR MAP");
+            frame.setTitle(I18n.t("map.209"));
 
             Field fLobby = BarLauncher.class.getDeclaredField("lobby");
             fLobby.setAccessible(true);
@@ -154,15 +154,22 @@ public class BarMapStudio {
 
             frame.setBounds(normalBounds);
 
-            // Apply Application Icon
+            // Icona dell'applicazione: una immagine per ogni grandezza, cosi' barra del titolo, barra delle
+            // applicazioni e Alt+Tab usano ciascuna quella piu' adatta
             try {
-                InputStream iconStream = BarMapStudio.class.getResourceAsStream("barmap.png");
-                if (iconStream != null) {
-                    Image iconImg = ImageIO.read(iconStream);
-                    if (iconImg != null) {
-                        frame.setIconImage(iconImg);
+                java.util.List<Image> icons = new java.util.ArrayList<>();
+                for (int size : new int[]{16, 24, 32, 48, 64, 128, 256}) {
+                    try (InputStream iconStream = BarMapStudio.class.getResourceAsStream("bms_icon_" + size + ".png")) {
+                        if (iconStream != null) {
+                            Image iconImg = ImageIO.read(iconStream);
+                            if (iconImg != null) {
+                                icons.add(iconImg);
+                            }
+                        }
                     }
-                    iconStream.close();
+                }
+                if (!icons.isEmpty()) {
+                    frame.setIconImages(icons);
                 }
             } catch (Exception ignored) {}
 
@@ -259,7 +266,7 @@ public class BarMapStudio {
             );
 
             // Build Unified MAPS Master Panel (Editor sub-tab + Library sub-tab)
-            MapsMasterPanel mapsMasterPanel = new MapsMasterPanel(editorPanel, libraryView);
+            // la libreria mappe e' una scheda di primo livello (dopo OBJECTS & UNITS), non piu' una sotto-scheda di MAPS
 
             // Master CardLayout for top-level tabs (MAPS, TEXTURES and UNITS)
             CardLayout masterCards = new CardLayout();
@@ -287,6 +294,12 @@ public class BarMapStudio {
                 if (texturesTabHolder[0] != null) texturesTabHolder[0].setSelected(true);
             });
 
+            textureStudioPanel.setSyncWithEditor(() -> {
+                if (editorPanel.getCurrentMap() != null) {
+                    textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround(), editorPanel.getCurrentSlopeOverlay());
+                }
+            });
+
             editorPanel.setOnMapChangedCallback(() -> {
                 textureStudioPanel.setActiveMap(editorPanel.getCurrentMap(), editorPanel.getCurrentGround(), editorPanel.getCurrentSlopeOverlay());
             });
@@ -305,12 +318,15 @@ public class BarMapStudio {
                 if (objectsTabHolder[0] != null) objectsTabHolder[0].setSelected(true);
             });
 
-            masterViewPanel.add(mapsMasterPanel, "MAPS");
+            masterViewPanel.add(editorPanel, "MAPS");
             masterViewPanel.add(textureStudioPanel, "TEXTURES");
             masterViewPanel.add(objectsStudioPanel, "OBJECTS");
+            if (libraryView != null) {
+                masterViewPanel.add(libraryView, "LIBRARY");
+            }
 
             // Build Brand-New Modern Header
-            JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj, mapsTabHolder, texturesTabHolder, objectsTabHolder, textureStudioPanel, editorPanel, objectsStudioPanel);
+            JPanel customHeader = buildCustomHeader(frame, launcher, lobby, masterCards, masterViewPanel, mEnsureLoaded, unitsObj, mapsTabHolder, texturesTabHolder, objectsTabHolder, textureStudioPanel, editorPanel, objectsStudioPanel, libraryView != null);
 
             // Build Slim Modern Footer with Status & Help Overlays
             JPanel customFooter = buildCustomFooter(frame, launcher, barStatus, lobby);
@@ -417,7 +433,8 @@ public class BarMapStudio {
         JToggleButton[] objectsTabHolder,
         TextureStudioPanel textureStudioPanel,
         MapStudioPanel editorPanel,
-        ObjectsUnitsStudioPanel objectsStudioPanel
+        ObjectsUnitsStudioPanel objectsStudioPanel,
+        boolean hasLibrary
     ) {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(BG_HEADER);
@@ -429,23 +446,26 @@ public class BarMapStudio {
         makeDraggable(header, frame, dragPoint, lobby);
 
         // Left: Logo and Badge
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 14));
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 7));
         left.setOpaque(false);
         makeDraggable(left, frame, dragPoint, lobby);
 
-        URL logoUrl = BarMapStudio.class.getResource("barmap.png");
+        URL logoUrl = BarMapStudio.class.getResource("bms_logo.png");
         if (logoUrl != null) {
             ImageIcon icon = new ImageIcon(logoUrl);
-            Image scaled = icon.getImage().getScaledInstance(160, 17, Image.SCALE_SMOOTH);
+            // alto quanto l'intestazione consente, largo in proporzione
+            int logoH = 42;
+            int logoW = Math.max(1, Math.round(icon.getIconWidth() * (logoH / (float) Math.max(1, icon.getIconHeight()))));
+            Image scaled = icon.getImage().getScaledInstance(logoW, logoH, Image.SCALE_SMOOTH);
             left.add(new JLabel(new ImageIcon(scaled)));
         } else {
-            JLabel title = new JLabel("BAR MAP");
+            JLabel title = new JLabel(I18n.t("map.209"));
             title.setFont(fontCond(Font.BOLD, 20));
             title.setForeground(ACCENT_CYAN);
             left.add(title);
         }
 
-        JLabel badge = new JLabel("  STANDALONE  ");
+        JLabel badge = new JLabel(I18n.t("map.210"));
         badge.setFont(fontCond(Font.BOLD, 10));
         badge.setForeground(TEXT_MUTED);
         badge.setBackground(new Color(22, 28, 42));
@@ -462,7 +482,7 @@ public class BarMapStudio {
         ButtonGroup navGroup = new ButtonGroup();
         JToggleButton mapsTab = createTopNavButton("MAPS", "MAP", true);
         JToggleButton texturesTab = createTopNavButton("TEXTURES", "PALETTE", false);
-        JToggleButton objectsTab = createTopNavButton("OBJECTS & UNITS", "CUBE", false);
+        JToggleButton objectsTab = createTopNavButton(I18n.t("map.211"), "CUBE", false);
 
         if (mapsTabHolder != null && mapsTabHolder.length > 0) mapsTabHolder[0] = mapsTab;
         if (texturesTabHolder != null && texturesTabHolder.length > 0) texturesTabHolder[0] = texturesTab;
@@ -495,6 +515,12 @@ public class BarMapStudio {
         center.add(mapsTab);
         center.add(texturesTab);
         center.add(objectsTab);
+        if (hasLibrary) {
+            JToggleButton libraryTab = createTopNavButton(I18n.t("nav.library"), "FOLDER", false);
+            navGroup.add(libraryTab);
+            libraryTab.addActionListener(e -> masterCards.show(masterViewPanel, "LIBRARY"));
+            center.add(libraryTab);
+        }
         header.add(center, BorderLayout.CENTER);
 
         // Right: Window Controls Only (Clean & Symmetrical)
@@ -504,13 +530,13 @@ public class BarMapStudio {
         JPanel windowBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         windowBtns.setOpaque(false);
 
-        JButton minBtn = new WindowControlButton(WindowControlType.MIN, "Riduci a icona");
+        JButton minBtn = new WindowControlButton(WindowControlType.MIN, I18n.t("map.212"));
         minBtn.addActionListener(e -> frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED));
 
-        JButton maxBtn = new WindowControlButton(WindowControlType.MAX, "Ingrandisci / Finestra");
+        JButton maxBtn = new WindowControlButton(WindowControlType.MAX, I18n.t("map.213"));
         maxBtn.addActionListener(e -> toggleMaximize(frame, lobby));
 
-        JButton closeBtn = new WindowControlButton(WindowControlType.CLOSE, "Chiudi");
+        JButton closeBtn = new WindowControlButton(WindowControlType.CLOSE, I18n.t("win.close"));
         closeBtn.addActionListener(e -> frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING)));
 
         windowBtns.add(minBtn);
@@ -531,7 +557,7 @@ public class BarMapStudio {
         // Left: Studio Branding
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 3));
         left.setOpaque(false);
-        JLabel brand = new JLabel("BAR MAP STUDIO");
+        JLabel brand = new JLabel(I18n.t("map.214"));
         brand.setFont(fontCond(Font.BOLD, 10));
         brand.setForeground(new Color(100, 116, 139));
         left.add(brand);
@@ -548,6 +574,7 @@ public class BarMapStudio {
         right.add(barBtn);
         right.add(specsBtn);
         right.add(helpBtn);
+        right.add(createSettingsOverlayButton());
         footer.add(right, BorderLayout.EAST);
 
         return footer;
@@ -588,7 +615,7 @@ public class BarMapStudio {
         };
 
         btn.setPreferredSize(new Dimension(56, 20));
-        btn.setToolTipText("Dettagli connessione BAR ed Engine (Clicca per visualizzare overlay)");
+        btn.setToolTipText(I18n.t("map.215"));
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setContentAreaFilled(false);
@@ -610,7 +637,7 @@ public class BarMapStudio {
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setOpaque(false);
 
-        JLabel title = new JLabel("STATO BEYOND ALL REASON");
+        JLabel title = new JLabel(I18n.t("map.216"));
         title.setFont(fontCond(Font.BOLD, 12));
         title.setForeground(ACCENT_CYAN);
         title.setAlignmentX(0f);
@@ -618,7 +645,7 @@ public class BarMapStudio {
         content.add(Box.createVerticalStrut(8));
 
         String raw = barStatus.getText();
-        if (raw == null || raw.isEmpty()) raw = "Verifica stato in corso...";
+        if (raw == null || raw.isEmpty()) raw = I18n.t("map.217");
         raw = raw.replaceFirst("^[●•\u25CF]\\s*", "");
 
         Color fg = barStatus.getForeground();
@@ -647,7 +674,7 @@ public class BarMapStudio {
             JTextField barFolder = (JTextField) fBarFolder.get(launcher);
             String path = barFolder.getText().trim();
             if (!path.isEmpty()) {
-                JButton openFolderBtn = new JButton("Apri Cartella BAR");
+                JButton openFolderBtn = new JButton(I18n.t("map.218"));
                 openFolderBtn.setFont(fontCond(Font.BOLD, 11));
                 openFolderBtn.setBackground(new Color(18, 24, 38));
                 openFolderBtn.setForeground(ACCENT_CYAN);
@@ -709,13 +736,84 @@ public class BarMapStudio {
         };
 
         btn.setPreferredSize(new Dimension(66, 20));
-        btn.setToolTipText("Linee guida e specifiche tecniche per Heightmap, Texture e Modelli 3D (Clicca per aprire)");
+        btn.setToolTipText(I18n.t("map.219"));
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setContentAreaFilled(false);
         btn.setOpaque(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.addActionListener(e -> AssetSpecsDialog.toggle(frame, lobby));
+        return btn;
+    }
+
+    /** Icona impostazioni (ingranaggio disegnato in Java2D): per ora contiene la scelta della lingua. */
+    private static JButton createSettingsOverlayButton() {
+        JButton btn = new JButton() {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g = (Graphics2D) graphics.create();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+                int w = getWidth();
+                int h = getHeight();
+                boolean hover = getModel().isRollover();
+
+                g.setColor(hover ? new Color(0, 229, 255, 40) : BG_CARD);
+                g.fillRoundRect(0, 0, w, h, 8, 8);
+                g.setColor(hover ? ACCENT_CYAN : BORDER_COLOR);
+                g.drawRoundRect(0, 0, w - 1, h - 1, 8, 8);
+
+                // ingranaggio: 8 denti attorno a un anello
+                double cx = w / 2.0;
+                double cy = h / 2.0;
+                g.setColor(hover ? ACCENT_CYAN : TEXT_MUTED);
+                java.awt.geom.Path2D.Double gear = new java.awt.geom.Path2D.Double();
+                int teeth = 8;
+                double outer = 6.4;
+                double inner = 4.7;
+                for (int i = 0; i < teeth * 4; i++) {
+                    double angle = (Math.PI * 2 * i) / (teeth * 4) - Math.PI / (teeth * 2);
+                    double radius = (i % 4 < 2) ? outer : inner;
+                    double px = cx + Math.cos(angle) * radius;
+                    double py = cy + Math.sin(angle) * radius;
+                    if (i == 0) gear.moveTo(px, py); else gear.lineTo(px, py);
+                }
+                gear.closePath();
+                java.awt.geom.Area shape = new java.awt.geom.Area(gear);
+                shape.subtract(new java.awt.geom.Area(new java.awt.geom.Ellipse2D.Double(cx - 2.1, cy - 2.1, 4.2, 4.2)));
+                g.fill(shape);
+                g.dispose();
+            }
+        };
+
+        btn.setPreferredSize(new Dimension(24, 20));
+        btn.setToolTipText(I18n.t("settings.tooltip"));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> {
+            JPopupMenu popup = new JPopupMenu();
+            JMenuItem header = new JMenuItem(I18n.t("settings.language"));
+            header.setEnabled(false);
+            popup.add(header);
+            ButtonGroup group = new ButtonGroup();
+            for (int i = 0; i < I18n.LANGUAGES.length; i++) {
+                String code = I18n.LANGUAGES[i];
+                JRadioButtonMenuItem item = new JRadioButtonMenuItem(I18n.LANGUAGE_NAMES[i], code.equals(I18n.getLanguage()));
+                item.addActionListener(ev -> {
+                    if (!code.equals(I18n.getLanguage())) {
+                        I18n.setLanguage(code);
+                        JOptionPane.showMessageDialog(SwingUtilities.getWindowAncestor(btn), I18n.t("settings.restart"),
+                            I18n.t("settings.title"), JOptionPane.INFORMATION_MESSAGE);
+                    }
+                });
+                group.add(item);
+                popup.add(item);
+            }
+            popup.show(btn, 0, -popup.getPreferredSize().height);
+        });
         return btn;
     }
 
@@ -745,7 +843,7 @@ public class BarMapStudio {
         };
 
         btn.setPreferredSize(new Dimension(24, 20));
-        btn.setToolTipText("Guida e scorciatoie da tastiera (Clicca per visualizzare overlay)");
+        btn.setToolTipText(I18n.t("map.220"));
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setContentAreaFilled(false);
@@ -767,7 +865,7 @@ public class BarMapStudio {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
 
-        JLabel title = new JLabel("SCORCIATOIE & CONTROLLI MAP STUDIO");
+        JLabel title = new JLabel(I18n.t("map.221"));
         title.setFont(fontCond(Font.BOLD, 12));
         title.setForeground(ACCENT_CYAN);
         title.setAlignmentX(0f);
@@ -775,22 +873,22 @@ public class BarMapStudio {
         panel.add(Box.createVerticalStrut(10));
 
         String[][] shortcuts = {
-            {"[ S ]", "Seleziona ed ispeziona entità"},
-            {"[ M ]", "Piazza Mex (Estrattore metallo)"},
-            {"[ 1 - 5 ]", "Imposta valore metallo Mex rapido"},
-            {"[ G ]", "Piazza Geotermico (Fessura idrotermale)"},
-            {"[ P ]", "Piazza Spawn Giocatore"},
-            {"[ R ]", "Piazza Rocce da Reclaim"},
-            {"[ T ]", "Piazza Alberi da Reclaim"},
-            {"[ W ]", "Piazza Relitti da Reclaim"},
-            {"[ E ]", "Gomma: cancella entità sotto cursore"},
-            {"[ DEL ]", "Elimina entità attualmente selezionata"},
-            {"[ Spazio ]", "Attiva / Disattiva modalità Simmetria"},
-            {"[ X ]", "Cicla Asse Simmetria (Diag / Z / X / Quad)"},
-            {"[ Ctrl+Z / Y ]", "Annulla (Undo) e Ripristina (Redo)"},
-            {"[ L ]", "Attiva / Disattiva Slope Map (Pendenze)"},
-            {"[ Rotellina ]", "Zoom dinamico centrato su cursore"},
-            {"[ Drag Destro ]", "Sposta visuale mappa (Pan)"}
+            {"[ S ]", I18n.t("map.222")},
+            {"[ M ]", I18n.t("map.223")},
+            {"[ 1 - 5 ]", I18n.t("map.224")},
+            {"[ G ]", I18n.t("map.225")},
+            {"[ P ]", I18n.t("map.226")},
+            {"[ R ]", I18n.t("map.227")},
+            {"[ T ]", I18n.t("map.228")},
+            {"[ W ]", I18n.t("map.229")},
+            {"[ E ]", I18n.t("map.230")},
+            {"[ DEL ]", I18n.t("map.231")},
+            {"[ Spazio ]", I18n.t("map.232")},
+            {"[ X ]", I18n.t("map.233")},
+            {"[ Ctrl+Z / Y ]", I18n.t("map.234")},
+            {"[ L ]", I18n.t("map.235")},
+            {"[ Rotellina ]", I18n.t("map.236")},
+            {I18n.t("map.237"), I18n.t("map.238")}
         };
 
         JPanel grid = new JPanel(new GridLayout(shortcuts.length, 2, 14, 4));
@@ -826,7 +924,7 @@ public class BarMapStudio {
             super(text, selected);
             this.iconType = iconType;
             setFont(fontCond(Font.BOLD, 13));
-            setPreferredSize(new Dimension(text.length() > 8 ? 164 : 130, 34));
+            setPreferredSize(new Dimension(text.length() > 18 ? 214 : text.length() > 8 ? 164 : 130, 34));
             setFocusPainted(false);
             setBorderPainted(false);
             setContentAreaFilled(false);
@@ -879,6 +977,8 @@ public class BarMapStudio {
                 drawPaletteVector(g, startX, iconY, iconSize, iconSize, fg);
             } else if ("CUBE".equals(iconType)) {
                 drawCubeVector(g, startX, iconY, iconSize, iconSize, fg);
+            } else if ("FOLDER".equals(iconType)) {
+                MapsMasterPanel.drawFolderVector(g, startX, iconY, iconSize, iconSize, fg);
             } else if ("SWORDS".equals(iconType)) {
                 drawSwordsVector(g, startX, iconY, iconSize, iconSize, fg);
             }

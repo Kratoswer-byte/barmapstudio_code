@@ -86,6 +86,11 @@ public final class GroundGenerator {
     ) throws Exception {
         int maxDim = Math.max(width, height);
         SplittableRandom random = new SplittableRandom(seed);
+        // biomi ricavati dalle mappe BAR: forma del terreno dal bioma Neroxis di base, colori/luce/acqua dal bioma BAR
+        com.faforever.neroxis.exporter.bar.BarBiomes.BarBiome barBiome = com.faforever.neroxis.exporter.bar.BarBiomes.find(biomeNameStr);
+        if (barBiome != null) {
+            biomeNameStr = barBiome.base;
+        }
         BiomeName biomeName;
         try {
             biomeName = BiomeName.valueOf(biomeNameStr.toUpperCase());
@@ -207,8 +212,14 @@ public final class GroundGenerator {
                     validSpawns.add(new Spawn(s.getId(), new Vector2(sx, sz), s.getNoRushOffset(), s.getTeamID()));
                 }
             }
-            boolean symOk = false;
-            if (validSpawns.size() == 2) {
+            // Il terreno nasce quadrato e viene ritagliato: le basi finite fuori dal ritaglio si perdono.
+            // Se dopo il ritaglio le due squadre non hanno tutte le loro basi, si ridispongono tutte in modo
+            // simmetrico dentro la mappa (prima, con piu' di un giocatore per squadra, si ricadeva sempre su 1 contro 1).
+            int perTeam = Math.max(1, (spawnCount > 0 ? spawnCount : 2) / 2);
+            long team0 = validSpawns.stream().filter(sp -> sp.getTeamID() == 0).count();
+            long team1 = validSpawns.stream().filter(sp -> sp.getTeamID() == 1).count();
+            boolean symOk = validSpawns.size() == perTeam * 2 && team0 == perTeam && team1 == perTeam;
+            if (symOk && validSpawns.size() == 2) {
                 Spawn s0 = validSpawns.get(0);
                 Spawn s1 = validSpawns.get(1);
                 if (effectiveSymmetry == Symmetry.X) {
@@ -220,35 +231,11 @@ public final class GroundGenerator {
                 } else if (effectiveSymmetry == Symmetry.POINT2) {
                     symOk = Math.abs((s0.getPosition().x() + s1.getPosition().x()) - width) < 40f
                          && Math.abs((s0.getPosition().z() + s1.getPosition().z()) - height) < 40f;
-                } else {
-                    symOk = true;
                 }
             }
-            if (validSpawns.size() < 2 || !symOk) {
+            if (!symOk) {
                 validSpawns.clear();
-                if (effectiveSymmetry == Symmetry.X) {
-                    validSpawns.add(new Spawn("Spawn_0", new Vector2(width * 0.18f, height / 2f), new Vector2(0, 0), 0));
-                    validSpawns.add(new Spawn("Spawn_1", new Vector2(width * 0.82f, height / 2f), new Vector2(0, 0), 1));
-                } else if (effectiveSymmetry == Symmetry.Z) {
-                    validSpawns.add(new Spawn("Spawn_0", new Vector2(width / 2f, height * 0.18f), new Vector2(0, 0), 0));
-                    validSpawns.add(new Spawn("Spawn_1", new Vector2(width / 2f, height * 0.82f), new Vector2(0, 0), 1));
-                } else if (effectiveSymmetry == Symmetry.POINT2) {
-                    validSpawns.add(new Spawn("Spawn_0", new Vector2(width * 0.18f, height * 0.18f), new Vector2(0, 0), 0));
-                    validSpawns.add(new Spawn("Spawn_1", new Vector2(width * 0.82f, height * 0.82f), new Vector2(0, 0), 1));
-                } else if (effectiveSymmetry == Symmetry.QUAD) {
-                    validSpawns.add(new Spawn("Spawn_0", new Vector2(width * 0.18f, height * 0.18f), new Vector2(0, 0), 0));
-                    validSpawns.add(new Spawn("Spawn_1", new Vector2(width * 0.82f, height * 0.18f), new Vector2(0, 0), 1));
-                    validSpawns.add(new Spawn("Spawn_2", new Vector2(width * 0.18f, height * 0.82f), new Vector2(0, 0), 0));
-                    validSpawns.add(new Spawn("Spawn_3", new Vector2(width * 0.82f, height * 0.82f), new Vector2(0, 0), 1));
-                } else {
-                    if (height >= width) {
-                        validSpawns.add(new Spawn("Spawn_0", new Vector2(width / 2f, height * 0.18f), new Vector2(0, 0), 0));
-                        validSpawns.add(new Spawn("Spawn_1", new Vector2(width / 2f, height * 0.82f), new Vector2(0, 0), 1));
-                    } else {
-                        validSpawns.add(new Spawn("Spawn_0", new Vector2(width * 0.18f, height / 2f), new Vector2(0, 0), 0));
-                        validSpawns.add(new Spawn("Spawn_1", new Vector2(width * 0.82f, height / 2f), new Vector2(0, 0), 1));
-                    }
-                }
+                validSpawns.addAll(layoutSpawns(map, width, height, effectiveSymmetry, perTeam));
             }
             map.getSpawns().clear();
             map.getSpawns().addAll(validSpawns);
@@ -260,8 +247,95 @@ public final class GroundGenerator {
         if (preview == null) {
             preview = ImageUtil.scaleImage(map.getHeightmap(), PreviewGenerator.PREVIEW_SIZE, (int) Math.round(PreviewGenerator.PREVIEW_SIZE * ((double) height / width)));
         }
+        preview = applyBarBiome(map, barBiome, preview);
         BufferedImage slopeOverlay = generateSlopeOverlayImage(map, map.getBiome().waterSettings().elevation());
         return new GroundResult(map, preview, symmetrySettings, parameters, seed, slopeOverlay);
+    }
+
+    /** Lega il bioma BAR alla mappa e ne ridisegna l'anteprima con la sua tavolozza. */
+    private static BufferedImage applyBarBiome(SCMap map, com.faforever.neroxis.exporter.bar.BarBiomes.BarBiome barBiome, BufferedImage preview) {
+        com.faforever.neroxis.exporter.bar.BarBiomes.attach(map, barBiome);
+        if (barBiome == null) {
+            return preview;
+        }
+        int w = preview != null ? preview.getWidth() : 512;
+        int h = preview != null ? preview.getHeight() : 512;
+        BufferedImage recolored = com.faforever.neroxis.exporter.bar.BarBiomes.renderPreview(map, barBiome, w, h);
+        map.setPreview(recolored);
+        return recolored;
+    }
+
+    /**
+     * Dispone le basi di due squadre in modo simmetrico: una fila lungo il proprio lato (due file sfalsate
+     * se i giocatori sono tanti). Ogni base viene spostata sul punto piu' piano e asciutto nelle vicinanze,
+     * e quella avversaria e' la sua immagine secondo la simmetria della mappa.
+     */
+    static List<Spawn> layoutSpawns(SCMap map, int width, int height, Symmetry symmetry, int perTeam) {
+        boolean point = symmetry == Symmetry.POINT2;
+        boolean alongX = symmetry == Symmetry.X || (symmetry != Symmetry.Z && width >= height);
+        float length = alongX ? width : height;
+        float depth = alongX ? height : width;
+        float spacing = Math.min(0.8f / perTeam, 0.22f);
+        boolean twoRows = perTeam > 4 || (depth * spacing < 26 && perTeam > 1);
+        float water = Float.NEGATIVE_INFINITY;
+        if (map.getBiome() != null && map.getBiome().waterSettings() != null && map.getBiome().waterSettings().waterPresent()) {
+            water = map.getBiome().waterSettings().elevation();
+        }
+        Raster heights = map.getHeightmap() != null ? map.getHeightmap().getRaster() : null;
+        float scale = map.getHeightMapScale();
+        List<Spawn> team0 = new ArrayList<>();
+        List<Spawn> team1 = new ArrayList<>();
+        for (int i = 0; i < perTeam; i++) {
+            float a = Math.max(20f, length * 0.14f) + ((twoRows && (i % 2 == 1)) ? Math.min(30f, length * 0.07f) : 0f);
+            float b = depth * (0.5f + ((i - ((perTeam - 1) / 2.0f)) * spacing));
+            float x = alongX ? a : b;
+            float z = alongX ? b : a;
+            // punto piu' piano e asciutto entro 24 celle; un po' di preferenza per restare vicino al posto ideale
+            float bestX = x;
+            float bestZ = z;
+            float bestScore = Float.MAX_VALUE;
+            // quota piu' bassa (asciutta) della zona: le basi vanno in pianura, non in cima a un altopiano
+            float lowest = Float.MAX_VALUE;
+            if (heights != null) {
+                for (int dz = -24; dz <= 24; dz += 4) {
+                    for (int dx = -24; dx <= 24; dx += 4) {
+                        int hx = Math.max(0, Math.min(heights.getWidth() - 1, Math.round(x + dx)));
+                        int hz = Math.max(0, Math.min(heights.getHeight() - 1, Math.round(z + dz)));
+                        float h = heights.getSample(hx, hz, 0) * scale;
+                        if (h >= water + 1.0f) lowest = Math.min(lowest, h);
+                    }
+                }
+            }
+            for (int dz = -24; dz <= 24; dz += 4) {
+                for (int dx = -24; dx <= 24; dx += 4) {
+                    float px = x + dx;
+                    float pz = z + dz;
+                    if (px < 18 || pz < 18 || px > width - 18 || pz > height - 18) continue;
+                    // resta nella propria meta'
+                    if ((alongX ? px : pz) > length * 0.42f) continue;
+                    float score = calculateSlope(map, Math.round(px), Math.round(pz)) * 40f + ((Math.abs(dx) + Math.abs(dz)) * 0.02f);
+                    if (heights != null) {
+                        int hx = Math.max(0, Math.min(heights.getWidth() - 1, Math.round(px)));
+                        int hz = Math.max(0, Math.min(heights.getHeight() - 1, Math.round(pz)));
+                        float h = heights.getSample(hx, hz, 0) * scale;
+                        if (h < water + 1.0f) score += 1000f;
+                        else if (lowest < Float.MAX_VALUE) score += (h - lowest) * 1.5f;
+                    }
+                    if (score < bestScore) {
+                        bestScore = score;
+                        bestX = px;
+                        bestZ = pz;
+                    }
+                }
+            }
+            float mx = (alongX || point) ? width - bestX : bestX;
+            float mz = (!alongX || point) ? height - bestZ : bestZ;
+            team0.add(new Spawn("Spawn_" + (i * 2), new Vector2(bestX, bestZ), new Vector2(0, 0), 0));
+            team1.add(new Spawn("Spawn_" + ((i * 2) + 1), new Vector2(mx, mz), new Vector2(0, 0), 1));
+        }
+        List<Spawn> all = new ArrayList<>(team0);
+        all.addAll(team1);
+        return all;
     }
 
     private static BufferedImage copySubImage(BufferedImage src, int x, int y, int w, int h, int imageType) {
@@ -514,6 +588,20 @@ public final class GroundGenerator {
         public void placeSpawns() {}
     }
 
+    private static final ThreadLocal<BufferedImage> HEIGHT_SOURCE_OVERRIDE = new ThreadLocal<>();
+
+    /**
+     * Heightmap da usare al posto di quella della mappa esistente nella prossima rigenerazione
+     * fatta da questo thread (rilievo modellato dai cursori); null per tornare al comportamento normale.
+     */
+    public static void setHeightSourceOverride(BufferedImage source) {
+        if (source == null) {
+            HEIGHT_SOURCE_OVERRIDE.remove();
+        } else {
+            HEIGHT_SOURCE_OVERRIDE.set(source);
+        }
+    }
+
     public static GroundResult generateGroundFromHeightmap(
         SCMap existingMap,
         BufferedImage customHeightmap,
@@ -529,6 +617,11 @@ public final class GroundGenerator {
     ) throws Exception {
         int maxDim = Math.max(width, height);
         SplittableRandom random = new SplittableRandom(seed);
+        // biomi ricavati dalle mappe BAR: forma del terreno dal bioma Neroxis di base, colori/luce/acqua dal bioma BAR
+        com.faforever.neroxis.exporter.bar.BarBiomes.BarBiome barBiome = com.faforever.neroxis.exporter.bar.BarBiomes.find(biomeNameStr);
+        if (barBiome != null) {
+            biomeNameStr = barBiome.base;
+        }
         BiomeName biomeName;
         try {
             biomeName = BiomeName.valueOf(biomeNameStr.toUpperCase());
@@ -595,6 +688,10 @@ public final class GroundGenerator {
             Graphics2D g = scaled.createGraphics();
             g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
             g.drawImage(customHeightmap, 0, 0, maxDim + 1, maxDim + 1, null);
+            if (width != height) {
+                // mappa rettangolare: l'heightmap va nell'area che verra' ritagliata, non stirata sul quadrato
+                g.drawImage(customHeightmap, (maxDim - width) / 2, (maxDim - height) / 2, width + 1, height + 1, null);
+            }
             g.dispose();
 
             Raster r = scaled.getRaster();
@@ -621,10 +718,14 @@ public final class GroundGenerator {
                 }
             }
         } else if (existingMap != null && existingMap.getHeightmap() != null) {
-            BufferedImage src = existingMap.getHeightmap();
+            BufferedImage src = HEIGHT_SOURCE_OVERRIDE.get() != null ? HEIGHT_SOURCE_OVERRIDE.get() : existingMap.getHeightmap();
             Graphics2D g = workingHm.createGraphics();
             g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
             g.drawImage(src, 0, 0, maxDim + 1, maxDim + 1, null);
+            if (width != height) {
+                // mappa rettangolare: il terreno esistente torna esattamente nell'area ritagliata
+                g.drawImage(src, (maxDim - width) / 2, (maxDim - height) / 2, width + 1, height + 1, null);
+            }
             g.dispose();
 
             rescaleHeightsOnRaster(workingHm, heightScale, maxHeight, waterLevel);
@@ -713,6 +814,7 @@ public final class GroundGenerator {
             map.setHeights();
         }
 
+        preview = applyBarBiome(map, barBiome, preview);
         BufferedImage slopeOverlay = generateSlopeOverlayImage(map, waterLevel);
         return new GroundResult(map, preview, symmetrySettings, parameters, seed, slopeOverlay);
     }

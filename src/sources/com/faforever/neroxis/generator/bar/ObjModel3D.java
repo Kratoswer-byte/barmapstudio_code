@@ -150,8 +150,10 @@ public final class ObjModel3D {
 
         List<String> mtlList = new ArrayList<>(materialColors.keySet());
         int numMtls = mtlList.size();
-        int cellW = 8;
-        int imgW = Math.max(64, numMtls * cellW);
+        // Celle larghe e larghezza potenza di 2: con le mipmap del motore i colori vicini non si mescolano
+        int cellW = 32;
+        int imgW = 64;
+        while (imgW < numMtls * cellW) imgW <<= 1;
         int imgH = 16;
 
         BufferedImage img = new BufferedImage(imgW, imgH, BufferedImage.TYPE_INT_ARGB);
@@ -427,158 +429,239 @@ public final class ObjModel3D {
         return toS3OBytes(modelName, texture1, texture2, 1.0f);
     }
 
+    /** Nome del pezzo per faccia (dagli "o"/"g" dell'OBJ); null = modello a pezzo unico. */
+    private String[] facePieces;
+
+    public String[] getFacePieces() { return facePieces; }
+
+    public void setFacePieces(String[] facePieces) {
+        this.facePieces = (facePieces != null && facePieces.length == this.faces.length) ? facePieces : null;
+    }
+
+    /** Nomi dei pezzi nell'ordine in cui compaiono (vuoto = pezzo unico "base"). */
+    public List<String> getPieceNames() {
+        List<String> names = new ArrayList<>();
+        if (facePieces != null) {
+            for (String name : facePieces) {
+                if (name != null && !names.contains(name)) names.add(name);
+            }
+        }
+        return names;
+    }
+
+    /** Pezzo dell'S3O in costruzione: vertici gia' scalati, in coordinate modello. */
+    private static final class S3OPiece {
+        final String name;
+        final List<float[]> verts = new ArrayList<>(); // pos3, normale3, uv2
+        float ox, oy, oz; // perno, relativo al pezzo padre
+        final List<S3OPiece> children = new ArrayList<>();
+        int offset;
+
+        S3OPiece(String name) { this.name = name; }
+
+        int byteSize() {
+            return 52 + name.length() + 1 + (children.size() * 4) + (verts.size() * 32) + (verts.size() * 4);
+        }
+    }
+
     /**
-     * Esporta la geometria del modello 3D in formato binario nativo S3O (Spring 3D Object)
-     * supportato al 100% dal motore Beyond All Reason.
-     * Include scalatura esatta, centratura orizzontale, appoggio alla base (Y=0) e coordinate UV.
+     * Esporta la geometria del modello 3D in formato binario nativo S3O (Spring 3D Object).
+     * Include scalatura, centratura orizzontale, appoggio alla base (Y=0) e coordinate UV.
+     * Se l'OBJ ha piu' oggetti ("o"/"g") ognuno diventa un pezzo animabile: la radice e' "body"
+     * (o "base", o il pezzo piu' grande) e gli altri sono suoi figli, con il perno nel punto
+     * di attacco al corpo. Senza oggetti il modello resta un pezzo unico "base".
      */
     public byte[] toS3OBytes(String modelName, String texture1, String texture2, float scale) {
         float effectiveScale = Math.max(0.001f, scale);
-        String pieceName = "base";
         byte[] tex1Bytes = (texture1 != null && !texture1.isBlank() ? texture1 : "default_mat.tga").getBytes(StandardCharsets.US_ASCII);
         byte[] tex2Bytes = (texture2 != null ? texture2 : "").getBytes(StandardCharsets.US_ASCII);
-        byte[] nameBytes = pieceName.getBytes(StandardCharsets.US_ASCII);
 
-        int tex1Offset = 52;
-        int tex2Offset = tex1Offset + tex1Bytes.length + 1;
-        int rootPieceOffset = tex2Offset + tex2Bytes.length + 1;
+        float rangeX = Math.max(maxX - minX, 0.001f);
+        float rangeZ = Math.max(maxZ - minZ, 0.001f);
 
-        int pieceHeaderOffset = rootPieceOffset;
-        int pieceNameOffset = pieceHeaderOffset + 52;
-        int verticesOffset = pieceNameOffset + nameBytes.length + 1;
+        // 1. Scelta della radice
+        List<String> names = getPieceNames();
+        String rootName = "base";
+        if (names.size() > 1) {
+            if (names.contains("body")) {
+                rootName = "body";
+            } else if (!names.contains("base")) {
+                int best = -1;
+                for (String name : names) {
+                    int count = 0;
+                    for (String fp : facePieces) if (name.equals(fp)) count++;
+                    if (count > best) { best = count; rootName = name; }
+                }
+            }
+        } else if (names.size() == 1) {
+            rootName = names.get(0);
+        }
+        S3OPiece root = new S3OPiece(rootName);
+        Map<String, S3OPiece> pieces = new java.util.LinkedHashMap<>();
+        pieces.put(rootName, root);
 
-        // Triangolazione facce e associazione UV
-        List<int[]> triangles = new ArrayList<>();
-        List<float[]> triNormals = new ArrayList<>();
-        List<float[]> triUVs = new ArrayList<>();
-
+        // 2. Triangolazione: ogni triangolo va nel suo pezzo (vertici non condivisi, normale di faccia)
         for (int f = 0; f < faces.length; f++) {
             int[] face = faces[f];
             if (face.length < 3) continue;
             float[] fn = (f < faceNormals.length && faceNormals[f] != null) ? faceNormals[f] : new float[]{0, 1, 0};
             float[] uvs = (faceUVs != null && f < faceUVs.length) ? faceUVs[f] : null;
-
+            if (uvs != null && uvs.length < face.length * 2) uvs = null;
+            String pieceName = (names.size() > 1 && facePieces[f] != null) ? facePieces[f] : rootName;
+            S3OPiece piece = pieces.get(pieceName);
+            if (piece == null) {
+                piece = new S3OPiece(pieceName);
+                pieces.put(pieceName, piece);
+                root.children.add(piece);
+            }
             for (int i = 1; i < face.length - 1; i++) {
-                triangles.add(new int[]{face[0], face[i], face[i + 1]});
-                triNormals.add(fn);
-
-                if (uvs != null && uvs.length >= (face.length * 2)) {
-                    triUVs.add(new float[]{
-                        uvs[0], uvs[1],
-                        uvs[i * 2], uvs[i * 2 + 1],
-                        uvs[(i + 1) * 2], uvs[(i + 1) * 2 + 1]
-                    });
-                } else {
-                    triUVs.add(null);
+                int[] corners = {0, i, i + 1};
+                for (int corner : corners) {
+                    int idx = face[corner];
+                    float origX = (idx * 3 < vertices.length) ? vertices[idx * 3] : 0f;
+                    float origY = (idx * 3 + 1 < vertices.length) ? vertices[idx * 3 + 1] : 0f;
+                    float origZ = (idx * 3 + 2 < vertices.length) ? vertices[idx * 3 + 2] : 0f;
+                    float u, v;
+                    if (uvs != null) {
+                        u = uvs[corner * 2];
+                        v = uvs[corner * 2 + 1];
+                    } else {
+                        u = (origX - minX) / rangeX;
+                        v = (origZ - minZ) / rangeZ;
+                    }
+                    // Scalatura, centratura orizzontale e appoggio al suolo Y=0
+                    piece.verts.add(new float[]{
+                        (origX - centerX) * effectiveScale, (origY - minY) * effectiveScale, (origZ - centerZ) * effectiveScale,
+                        fn[0], fn[1], fn[2], u, v});
                 }
             }
         }
 
-        int totalVertices = triangles.size() * 3;
-        int totalIndices = totalVertices;
-        int indicesOffset = verticesOffset + totalVertices * 32;
-        int totalFileSize = indicesOffset + totalIndices * 4;
+        // 3. Perno dei pezzi figli: il punto di attacco, cioe' la media dei vertici piu' vicini al centro del corpo
+        if (!root.children.isEmpty() && !root.verts.isEmpty()) {
+            float[] lo = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
+            float[] hi = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+            for (float[] vert : root.verts) {
+                for (int k = 0; k < 3; k++) {
+                    lo[k] = Math.min(lo[k], vert[k]);
+                    hi[k] = Math.max(hi[k], vert[k]);
+                }
+            }
+            float cx = (lo[0] + hi[0]) * 0.5f, cy = (lo[1] + hi[1]) * 0.5f, cz = (lo[2] + hi[2]) * 0.5f;
+            for (S3OPiece child : root.children) {
+                int n = child.verts.size();
+                if (n == 0) continue;
+                float[] dist = new float[n];
+                for (int i = 0; i < n; i++) {
+                    float[] vert = child.verts.get(i);
+                    float dx = vert[0] - cx, dy = vert[1] - cy, dz = vert[2] - cz;
+                    dist[i] = (dx * dx) + (dy * dy) + (dz * dz);
+                }
+                float[] sorted = dist.clone();
+                Arrays.sort(sorted);
+                float threshold = sorted[Math.min(n - 1, Math.max(2, n / 8))];
+                float px = 0, py = 0, pz = 0;
+                int count = 0;
+                for (int i = 0; i < n; i++) {
+                    if (dist[i] <= threshold) {
+                        float[] vert = child.verts.get(i);
+                        px += vert[0]; py += vert[1]; pz += vert[2];
+                        count++;
+                    }
+                }
+                child.ox = px / count; child.oy = py / count; child.oz = pz / count;
+                for (float[] vert : child.verts) {
+                    vert[0] -= child.ox; vert[1] -= child.oy; vert[2] -= child.oz;
+                }
+            }
+        }
 
-        ByteBuffer buf = ByteBuffer.allocate(totalFileSize);
+        // 4. Disposizione nel file: header, nomi texture, poi i pezzi uno dopo l'altro
+        int tex1Offset = 52;
+        int tex2Offset = tex1Offset + tex1Bytes.length + 1;
+        int cursor = tex2Offset + tex2Bytes.length + 1;
+        List<S3OPiece> ordered = new ArrayList<>();
+        ordered.add(root);
+        ordered.addAll(root.children);
+        for (S3OPiece piece : ordered) {
+            piece.offset = cursor;
+            cursor += piece.byteSize();
+        }
+
+        ByteBuffer buf = ByteBuffer.allocate(cursor);
         buf.order(ByteOrder.LITTLE_ENDIAN);
 
         float scaledRadius = Math.max(1.0f, (maxDimension * 0.5f) * effectiveScale);
         float scaledHeight = Math.max(1.0f, (maxY - minY) * effectiveScale);
 
-        // 1. Header S3O (52 bytes)
-        byte[] magic = new byte[] { 'S', 'p', 'r', 'i', 'n', 'g', ' ', 'u', 'n', 'i', 't', 0 };
-        buf.put(magic);
+        // Header S3O (52 bytes)
+        buf.put(new byte[]{'S', 'p', 'r', 'i', 'n', 'g', ' ', 'u', 'n', 'i', 't', 0});
         buf.putInt(0); // version 0
-        buf.putFloat(scaledRadius); // radius
-        buf.putFloat(scaledHeight); // height
+        buf.putFloat(scaledRadius);
+        buf.putFloat(scaledHeight);
         buf.putFloat(0.0f); // midx centrato
         buf.putFloat(scaledHeight * 0.5f); // midy
         buf.putFloat(0.0f); // midz centrato
-        buf.putInt(rootPieceOffset);
+        buf.putInt(root.offset);
         buf.putInt(0); // collisionDataOffset
         buf.putInt(tex1Offset);
         buf.putInt(tex2Offset);
-
-        // 2. Texture Strings (ASCII null-terminated)
         buf.put(tex1Bytes);
         buf.put((byte) 0);
         buf.put(tex2Bytes);
         buf.put((byte) 0);
 
-        // 3. Root Piece Header (52 bytes)
-        buf.putInt(pieceNameOffset);
-        buf.putInt(0); // numChildren
-        buf.putInt(pieceNameOffset - 1); // childrenOffset
-        buf.putInt(totalVertices);
-        buf.putInt(verticesOffset);
-        buf.putInt(0); // lodsOffset
-        buf.putInt(0); // primitiveType (0 = triangles)
-        buf.putInt(totalIndices);
-        buf.putInt(indicesOffset);
-        buf.putInt(0); // collisionDataOffset
-        buf.putFloat(0.0f); // xOffset
-        buf.putFloat(0.0f); // yOffset
-        buf.putFloat(0.0f); // zOffset
-
-        // 4. Piece Name (ASCII null-terminated)
-        buf.put(nameBytes);
-        buf.put((byte) 0);
-
-        // 5. Vertices (32 bytes each: 3f pos, 3f normal, 2f UV)
-        float rangeX = Math.max(maxX - minX, 0.001f);
-        float rangeZ = Math.max(maxZ - minZ, 0.001f);
-
-        for (int t = 0; t < triangles.size(); t++) {
-            int[] tri = triangles.get(t);
-            float[] fn = triNormals.get(t);
-            float[] uvs = triUVs.get(t);
-
-            for (int vi = 0; vi < 3; vi++) {
-                int idx = tri[vi];
-                float origX = (idx * 3 < vertices.length) ? vertices[idx * 3] : 0f;
-                float origY = (idx * 3 + 1 < vertices.length) ? vertices[idx * 3 + 1] : 0f;
-                float origZ = (idx * 3 + 2 < vertices.length) ? vertices[idx * 3 + 2] : 0f;
-
-                // Scalatura, centratura orizzontale e appoggio al suolo Y=0
-                float vx = (origX - centerX) * effectiveScale;
-                float vy = (origY - minY) * effectiveScale;
-                float vz = (origZ - centerZ) * effectiveScale;
-
-                buf.putFloat(vx);
-                buf.putFloat(vy);
-                buf.putFloat(vz);
-
-                buf.putFloat(fn[0]);
-                buf.putFloat(fn[1]);
-                buf.putFloat(fn[2]);
-
-                float u, v;
-                if (uvs != null) {
-                    u = uvs[vi * 2];
-                    v = uvs[vi * 2 + 1];
-                } else {
-                    u = (origX - minX) / rangeX;
-                    v = (origZ - minZ) / rangeZ;
-                }
-                buf.putFloat(u);
-                buf.putFloat(v);
+        for (S3OPiece piece : ordered) {
+            byte[] nameBytes = piece.name.getBytes(StandardCharsets.US_ASCII);
+            int nameOffset = piece.offset + 52;
+            int childrenOffset = nameOffset + nameBytes.length + 1;
+            int verticesOffset = childrenOffset + (piece.children.size() * 4);
+            int indicesOffset = verticesOffset + (piece.verts.size() * 32);
+            // Piece header (52 bytes)
+            buf.putInt(nameOffset);
+            buf.putInt(piece.children.size());
+            buf.putInt(childrenOffset);
+            buf.putInt(piece.verts.size());
+            buf.putInt(verticesOffset);
+            buf.putInt(0); // vertexType
+            buf.putInt(0); // primitiveType (0 = triangles)
+            buf.putInt(piece.verts.size()); // vertexTableSize (indici)
+            buf.putInt(indicesOffset);
+            buf.putInt(0); // collisionDataOffset
+            buf.putFloat(piece.ox);
+            buf.putFloat(piece.oy);
+            buf.putFloat(piece.oz);
+            buf.put(nameBytes);
+            buf.put((byte) 0);
+            for (S3OPiece child : piece.children) {
+                buf.putInt(child.offset);
+            }
+            // Vertices (32 bytes each: 3f pos, 3f normal, 2f UV)
+            for (float[] vert : piece.verts) {
+                for (float value : vert) buf.putFloat(value);
+            }
+            for (int i = 0; i < piece.verts.size(); i++) {
+                buf.putInt(i);
             }
         }
-
-        // 6. Indices (int32 each)
-        for (int i = 0; i < totalIndices; i++) {
-            buf.putInt(i);
-        }
-
         return buf.array();
     }
 
     /**
      * Converte un BufferedImage in un array di byte formato TGA a 32-bit (BGRA) non compresso,
-     * compatibile al 100% con il motore Spring/BAR. Garantisce canale Alpha = 255 per evitare
-     * che il colore del team sovrascriva i colori del modello.
+     * compatibile al 100% con il motore Spring/BAR. Alpha = 255 su ogni pixel: adatto a tex2
+     * (alpha = opacità). Per tex1 usare {@link #imageToTgaBytes(BufferedImage, int)} con alpha 0.
      */
     public static byte[] imageToTgaBytes(BufferedImage img) {
+        return imageToTgaBytes(img, 255);
+    }
+
+    /**
+     * Come sopra, ma scrive l'alpha indicato su ogni pixel. In tex1 l'alpha è la maschera del
+     * colore squadra (BAR: albedo = mix(tex1.rgb, teamColor, tex1.a)): 0 = colori originali,
+     * 255 = modello interamente tinto col colore squadra.
+     */
+    public static byte[] imageToTgaBytes(BufferedImage img, int alpha) {
         if (img == null) return null;
         int w = img.getWidth();
         int h = img.getHeight();
@@ -596,14 +679,13 @@ public final class ObjModel3D {
         for (int y = h - 1; y >= 0; y--) {
             for (int x = 0; x < w; x++) {
                 int argb = img.getRGB(x, y);
-                int a = (argb >> 24) & 0xFF;
                 int r = (argb >> 16) & 0xFF;
                 int g = (argb >> 8) & 0xFF;
                 int b = argb & 0xFF;
                 tga[offset++] = (byte) b;
                 tga[offset++] = (byte) g;
                 tga[offset++] = (byte) r;
-                tga[offset++] = (byte) (a > 0 ? a : 255);
+                tga[offset++] = (byte) alpha;
             }
         }
         return tga;

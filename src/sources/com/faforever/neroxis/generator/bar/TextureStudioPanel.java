@@ -1,5 +1,6 @@
 package com.faforever.neroxis.generator.bar;
 
+import com.faforever.neroxis.exporter.bar.ZoneMaterials;
 import com.faforever.neroxis.map.SCMap;
 
 import javax.imageio.ImageIO;
@@ -45,15 +46,15 @@ public class TextureStudioPanel extends JPanel {
     private static final Color TEXT_MUTED = new Color(130, 140, 160);
 
     public enum ViewMode {
-        COMPOSITE("1. Terreno Mappa (Colori Fusi)"),
-        MAPS_GROUND("2. Texture Bioma Originale (MAPS)"),
-        SPLAT_RGBA("3. Mappa Splatting RGBA"),
-        CHANNEL_R("4. Zona 1: Pianura (Canale R)"),
-        CHANNEL_G("5. Zona 2: Roccia (Canale G)"),
-        CHANNEL_B("6. Zona 3: Spiaggia (Canale B)"),
-        CHANNEL_A("7. Zona 4: Picchi (Canale A)"),
-        NORMAL_MAP_3D("8. Normal Map 3D (Luce Solare)"),
-        SEAMLESS_TILING("9. Tassello Materiale (Griglia 2x2)");
+        COMPOSITE(I18n.t("tex.1")),
+        MAPS_GROUND(I18n.t("tex.2")),
+        SPLAT_RGBA(I18n.t("tex.3")),
+        CHANNEL_R(I18n.t("tex.4")),
+        CHANNEL_G(I18n.t("tex.5")),
+        CHANNEL_B(I18n.t("tex.6")),
+        CHANNEL_A(I18n.t("tex.7")),
+        NORMAL_MAP_3D(I18n.t("tex.8")),
+        SEAMLESS_TILING(I18n.t("tex.9"));
 
         public final String label;
         ViewMode(String label) { this.label = label; }
@@ -61,14 +62,14 @@ public class TextureStudioPanel extends JPanel {
     }
 
     public enum MaterialPreset {
-        GRASS_MEADOW("Erba & Prato", 5.0f, 4, 0.45f, 1.1f, 0.8f, new Color(80, 130, 50), new Color(55, 95, 35), new Color(38, 58, 24)),
-        ROCK_CLIFF("Roccia & Falesia", 3.5f, 5, 0.55f, 1.4f, 1.8f, new Color(125, 115, 105), new Color(85, 78, 70), new Color(45, 40, 38)),
-        SAND_DUNES("Sabbia & Costa", 2.8f, 3, 0.35f, 0.9f, 0.6f, new Color(210, 180, 130), new Color(185, 155, 105), new Color(145, 115, 75)),
-        SNOW_GLACIER("Neve & Vette", 3.0f, 4, 0.40f, 1.2f, 0.9f, new Color(240, 245, 255), new Color(205, 220, 240), new Color(160, 185, 215)),
-        CRACKED_MUD("Argilla Crepata", 4.2f, 4, 0.60f, 1.6f, 1.5f, new Color(140, 110, 85), new Color(105, 80, 60), new Color(50, 35, 25)),
-        VOLCANIC_BASALT("Basalto Magma", 4.0f, 5, 0.58f, 1.5f, 2.0f, new Color(55, 50, 52), new Color(38, 35, 38), new Color(18, 15, 18)),
-        GRAVEL_PEBBLES("Ghiaia & Sassi", 6.0f, 5, 0.50f, 1.3f, 1.4f, new Color(135, 130, 125), new Color(100, 98, 95), new Color(60, 58, 55)),
-        CRYSTALLINE_ALIEN("Cristalli Alieni", 3.8f, 4, 0.52f, 1.3f, 1.6f, new Color(50, 170, 190), new Color(30, 110, 140), new Color(20, 50, 80));
+        GRASS_MEADOW(I18n.t("tex.10"), 5.0f, 4, 0.45f, 1.1f, 0.8f, new Color(80, 130, 50), new Color(55, 95, 35), new Color(38, 58, 24)),
+        ROCK_CLIFF(I18n.t("tex.11"), 3.5f, 5, 0.55f, 1.4f, 1.8f, new Color(125, 115, 105), new Color(85, 78, 70), new Color(45, 40, 38)),
+        SAND_DUNES(I18n.t("tex.12"), 2.8f, 3, 0.35f, 0.9f, 0.6f, new Color(210, 180, 130), new Color(185, 155, 105), new Color(145, 115, 75)),
+        SNOW_GLACIER(I18n.t("tex.13"), 3.0f, 4, 0.40f, 1.2f, 0.9f, new Color(240, 245, 255), new Color(205, 220, 240), new Color(160, 185, 215)),
+        CRACKED_MUD(I18n.t("tex.14"), 4.2f, 4, 0.60f, 1.6f, 1.5f, new Color(140, 110, 85), new Color(105, 80, 60), new Color(50, 35, 25)),
+        VOLCANIC_BASALT(I18n.t("tex.15"), 4.0f, 5, 0.58f, 1.5f, 2.0f, new Color(55, 50, 52), new Color(38, 35, 38), new Color(18, 15, 18)),
+        GRAVEL_PEBBLES(I18n.t("tex.16"), 6.0f, 5, 0.50f, 1.3f, 1.4f, new Color(135, 130, 125), new Color(100, 98, 95), new Color(60, 58, 55)),
+        CRYSTALLINE_ALIEN(I18n.t("tex.17"), 3.8f, 4, 0.52f, 1.3f, 1.6f, new Color(50, 170, 190), new Color(30, 110, 140), new Color(20, 50, 80));
 
         public final String label;
         public final float defaultScale;
@@ -106,8 +107,16 @@ public class TextureStudioPanel extends JPanel {
         public File maskFile = null;
         public BufferedImage loadedMask = null;
         public MaterialPreset preset;
+        /** true quando l'utente ha scelto un materiale per questa zona: non segue piu' i colori di MAPS. */
+        public boolean presetChanged = false;
         public File customTextureFile = null;
         public BufferedImage customTexture = null;
+        /** Materiale esterno completo (colore + normal + rilievo), null = preset procedurale. */
+        public ZoneMaterials.Material material = null;
+        /** Lato di una ripetizione sul terreno, in elmi. */
+        public float tileElmos = 256.0f;
+        /** Lucentezza 0..1 scritta nella mappa speculare. */
+        public float gloss = 0.05f;
 
         public ZoneConfig(int id, String title, Color col, MaterialPreset preset) {
             this.id = id;
@@ -127,15 +136,19 @@ public class TextureStudioPanel extends JPanel {
     });
 
     // Le 4 Zone
-    private final ZoneConfig zone1 = new ZoneConfig(1, "ZONA 1 - Pianure & Valli", new Color(239, 68, 68), MaterialPreset.GRASS_MEADOW);
-    private final ZoneConfig zone2 = new ZoneConfig(2, "ZONA 2 - Pareti & Rocce", new Color(34, 197, 94), MaterialPreset.ROCK_CLIFF);
-    private final ZoneConfig zone3 = new ZoneConfig(3, "ZONA 3 - Linea di Costa", new Color(59, 130, 246), MaterialPreset.SAND_DUNES);
-    private final ZoneConfig zone4 = new ZoneConfig(4, "ZONA 4 - Cime & Picchi", new Color(234, 179, 8), MaterialPreset.SNOW_GLACIER);
+    private final ZoneConfig zone1 = new ZoneConfig(1, I18n.t("tex.18"), new Color(239, 68, 68), MaterialPreset.GRASS_MEADOW);
+    private final ZoneConfig zone2 = new ZoneConfig(2, I18n.t("tex.19"), new Color(34, 197, 94), MaterialPreset.ROCK_CLIFF);
+    private final ZoneConfig zone3 = new ZoneConfig(3, I18n.t("tex.20"), new Color(59, 130, 246), MaterialPreset.SAND_DUNES);
+    private final ZoneConfig zone4 = new ZoneConfig(4, I18n.t("tex.21"), new Color(234, 179, 8), MaterialPreset.SNOW_GLACIER);
 
     // SLIDERS METODO A (Regole Automatiche da Heightmap e Pendenze)
     private float slopeThreshold = 0.38f;     // ~22 gradi
     private float slopeFalloff = 0.15f;
     private float waterElevation = 35.0f;
+    /** false per le mappe asciutte: niente fondale ne' fascia costiera. */
+    private boolean waterPresent = true;
+    /** Elmi in gioco per ogni unita' di quota dell'heightmap (16 elmi per cella x scala verticale 0.7 dell'export). */
+    private static final float ELMOS_PER_HEIGHT_UNIT = 11.2f;
     private float beachBand = 12.0f;
     private float peakAltitude = 0.75f;
     private float noisePerturbation = 0.30f;
@@ -168,13 +181,18 @@ public class TextureStudioPanel extends JPanel {
     private BufferedImage renderedChannelB;
     private BufferedImage renderedChannelA;
     private volatile BufferedImage renderedSlopeOverlay;
+    // Ultima composizione, passata all'export BAR con "Applica"
+    private volatile float[][] lastMasks;
+    private volatile int lastMaskW;
+    private volatile int lastMaskH;
+    private volatile BufferedImage[] lastTiles;
 
     // Componenti UI
     private JComboBox<String> resCombo;
     private JComboBox<ViewMode> viewModeCombo;
     private JLabel statusLabel;
     private JLabel lblMapStatus;
-    private final JToggleButton slopeToggleBtn = new JToggleButton("Slope Map [L]", false);
+    private final JToggleButton slopeToggleBtn = new JToggleButton(I18n.t("tex.22"), false);
     private final JSlider slopeOpacitySlider = new JSlider(10, 100, 70);
     private TextureCanvas canvas;
     private final Timer debounceTimer = new Timer(50, e -> triggerAsyncGeneration());
@@ -195,7 +213,17 @@ public class TextureStudioPanel extends JPanel {
         JComponent sidebar = buildCompactSidebar();
         JComponent centerCanvas = buildCenterCanvas();
 
-        JSplitPane mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sidebar, centerCanvas);
+        // Stesso schema della scheda MAPS: pannello a sinistra, tela al centro, pannello a destra
+        JSplitPane rightSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, centerCanvas, rightSidebar);
+        rightSplit.setDividerSize(6);
+        rightSplit.setContinuousLayout(true);
+        rightSplit.setBorder(null);
+        rightSplit.setOpaque(false);
+        rightSplit.setResizeWeight(1.0);
+        rightSidebar.setMinimumSize(new Dimension(220, 100));
+        rightSidebar.setPreferredSize(new Dimension(290, 100));
+
+        JSplitPane mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sidebar, rightSplit);
         mainSplit.setDividerLocation(280);
         mainSplit.setDividerSize(6);
         mainSplit.setContinuousLayout(true);
@@ -210,7 +238,7 @@ public class TextureStudioPanel extends JPanel {
         setupHotkeys();
 
         // All'avvio NON generiamo nulla: stato pulito in attesa di azione utente
-        setStatus("In attesa di terreno attivo. Genera in [MAPS] o carica un'Heightmap con [Carica Heightmap].", TEXT_MUTED);
+        setStatus(I18n.t("tex.23"), TEXT_MUTED);
     }
 
     public boolean hasCustomHeightmap() {
@@ -240,13 +268,15 @@ public class TextureStudioPanel extends JPanel {
             this.customLoadedHeightmapName = null;
             if (map.getBiome() != null && map.getBiome().waterSettings() != null) {
                 this.waterElevation = map.getBiome().waterSettings().elevation();
+                this.waterPresent = map.getBiome().waterSettings().waterPresent();
             } else {
                 this.waterElevation = map.getWaterElevation();
+                this.waterPresent = true;
             }
             if (lblMapStatus != null) {
                 int w = map.getWidth() > 0 ? map.getWidth() : map.getSize();
                 int h = map.getHeight() > 0 ? map.getHeight() : map.getSize();
-                lblMapStatus.setText("  MAPPA ATTIVA: " + w + "x" + h + "  ");
+                lblMapStatus.setText(I18n.t("tex.24") + w + "x" + h + "  ");
                 lblMapStatus.setForeground(ACCENT_GREEN);
             }
             if (isNew || activeMap != null) {
@@ -263,10 +293,10 @@ public class TextureStudioPanel extends JPanel {
                 this.renderedChannelA = null;
                 this.renderedSlopeOverlay = null;
                 if (lblMapStatus != null) {
-                    lblMapStatus.setText("  NESSUN TERRENO ATTIVO  ");
+                    lblMapStatus.setText(I18n.t("tex.25"));
                     lblMapStatus.setForeground(ACCENT_AMBER);
                 }
-                setStatus("In attesa di terreno attivo. Genera in [MAPS] o carica un'Heightmap.", TEXT_MUTED);
+                setStatus(I18n.t("tex.26"), TEXT_MUTED);
                 if (canvas != null) canvas.repaint();
             }
         }
@@ -274,8 +304,9 @@ public class TextureStudioPanel extends JPanel {
 
     private void doLoadHeightmap() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Seleziona File Heightmap (PNG, RAW, BMP)");
-        chooser.setFileFilter(new FileNameExtensionFilter("Immagini Heightmap (*.png, *.raw, *.bmp)", "png", "raw", "bmp"));
+        FileChoosers.detailed(chooser);
+        chooser.setDialogTitle(I18n.t("tex.27"));
+        chooser.setFileFilter(new FileNameExtensionFilter(I18n.t("tex.28"), "png", "raw", "bmp"));
         int ret = chooser.showOpenDialog(this);
         if (ret == JFileChooser.APPROVE_OPTION) {
             File f = chooser.getSelectedFile();
@@ -298,7 +329,7 @@ public class TextureStudioPanel extends JPanel {
                             }
                         }
                     } else {
-                        JOptionPane.showMessageDialog(this, "Formato file non supportato o non riconosciuto.", "Errore Import", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, I18n.t("tex.29"), I18n.t("tex.30"), JOptionPane.ERROR_MESSAGE);
                         return;
                     }
                 }
@@ -308,14 +339,14 @@ public class TextureStudioPanel extends JPanel {
                 this.activeGround = null;
                 this.renderedSlopeOverlay = null;
                 if (lblMapStatus != null) {
-                    lblMapStatus.setText("  HEIGHTMAP: " + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + ")  ");
+                    lblMapStatus.setText(I18n.t("tex.31") + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + ")  ");
                     lblMapStatus.setForeground(ACCENT_GREEN);
                 }
-                setStatus("Heightmap caricata: " + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + ")", ACCENT_CYAN);
+                setStatus(I18n.t("tex.32") + f.getName() + " (" + loaded.getWidth() + "x" + loaded.getHeight() + ")", ACCENT_CYAN);
                 triggerAsyncGeneration();
             } catch (Exception ex) {
                 ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Errore caricamento heightmap:\n" + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, I18n.t("tex.33") + ex.getMessage(), I18n.t("tex.34"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -330,12 +361,12 @@ public class TextureStudioPanel extends JPanel {
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         left.setOpaque(false);
 
-        JLabel lblTitle = new JLabel("TEXTURE STUDIO");
+        JLabel lblTitle = new JLabel(I18n.t("tex.35"));
         lblTitle.setFont(BarMapStudio.fontCond(Font.BOLD, 14));
         lblTitle.setForeground(ACCENT_CYAN);
         left.add(lblTitle);
 
-        lblMapStatus = new JLabel("  NESSUN TERRENO ATTIVO  ");
+        lblMapStatus = new JLabel(I18n.t("tex.25"));
         lblMapStatus.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
         lblMapStatus.setForeground(ACCENT_AMBER);
         lblMapStatus.setBackground(CARD_INNER);
@@ -349,12 +380,12 @@ public class TextureStudioPanel extends JPanel {
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 6));
         right.setOpaque(false);
 
-        JButton btnLoadHm = createGhostButton("Carica Heightmap", createVectorFolderIcon(12, TEXT_MAIN));
-        btnLoadHm.setToolTipText("Carica file Heightmap esterno (.png 16-bit/8-bit, .raw, .bmp)");
+        JButton btnLoadHm = createGhostButton(I18n.t("tex.36"), createVectorFolderIcon(12, TEXT_MAIN));
+        btnLoadHm.setToolTipText(I18n.t("tex.37"));
         btnLoadHm.addActionListener(e -> doLoadHeightmap());
         right.add(btnLoadHm);
 
-        JLabel resLbl = new JLabel("Risoluzione:");
+        JLabel resLbl = new JLabel(I18n.t("tex.38"));
         resLbl.setFont(BarMapStudio.font(Font.BOLD, 11));
         resLbl.setForeground(TEXT_MUTED);
         right.add(resLbl);
@@ -372,33 +403,40 @@ public class TextureStudioPanel extends JPanel {
         });
         right.add(resCombo);
 
-        JButton btnSeed = createGhostButton("Varia Rumore", createVectorDiceIcon(12, TEXT_MAIN));
-        btnSeed.setToolTipText("Varia la micro-rugosita' procedurale dei materiali");
+        JButton btnSeed = createGhostButton(I18n.t("tex.39"), createVectorDiceIcon(12, TEXT_MAIN));
+        btnSeed.setToolTipText(I18n.t("tex.40"));
         btnSeed.addActionListener(e -> {
             currentSeed = new SplittableRandom().nextLong();
             triggerAsyncGeneration();
         });
         right.add(btnSeed);
 
-        JButton btnSyncMap = createGhostButton("Sincronizza Mappa");
-        btnSyncMap.setToolTipText("Collega quote reali e pendenze della mappa aperta nell'Editor");
+        JButton btnSyncMap = createGhostButton(I18n.t("tex.41"));
+        btnSyncMap.setToolTipText(I18n.t("tex.42"));
         btnSyncMap.addActionListener(e -> {
+            // rilegge la mappa dall'editor: vale anche dopo aver caricato una heightmap esterna,
+            // che altrimenti restava al posto della mappa
+            if (syncWithEditor != null) {
+                syncWithEditor.run();
+            }
             if (activeMap != null) {
                 if (activeMap.getBiome() != null && activeMap.getBiome().waterSettings() != null) {
                     waterElevation = activeMap.getBiome().waterSettings().elevation();
+                    waterPresent = activeMap.getBiome().waterSettings().waterPresent();
                 } else {
                     waterElevation = activeMap.getWaterElevation();
+                    waterPresent = true;
                 }
                 if (lblMapStatus != null) {
                     int w = activeMap.getWidth() > 0 ? activeMap.getWidth() : activeMap.getSize();
                     int h = activeMap.getHeight() > 0 ? activeMap.getHeight() : activeMap.getSize();
-                    lblMapStatus.setText("  MAPPA ATTIVA: " + w + "x" + h + "  ");
+                    lblMapStatus.setText(I18n.t("tex.24") + w + "x" + h + "  ");
                     lblMapStatus.setForeground(ACCENT_GREEN);
                 }
-                setStatus("Sincronizzato con l'orografia della mappa: " + activeMap.getName(), ACCENT_CYAN);
+                setStatus(I18n.t("tex.43") + activeMap.getName(), ACCENT_CYAN);
                 triggerAsyncGeneration();
             } else {
-                setStatus("Mappa non ancora creata nell'Editor. Usata morfologia di test.", ACCENT_AMBER);
+                setStatus(I18n.t("tex.44"), ACCENT_AMBER);
             }
         });
         right.add(btnSyncMap);
@@ -426,131 +464,175 @@ public class TextureStudioPanel extends JPanel {
      * 3. PARAMETRI DETTAGLIO MATERIALI PBR
      */
     private JComponent buildCompactSidebar() {
-        ScrollableTrackWidthPanel panel = new ScrollableTrackWidthPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setOpaque(false);
-        panel.setAlignmentX(0f);
-        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        ScrollableTrackWidthPanel panel = newSidebarColumn();
 
         // --- SEZIONE 1: 4 ZONE & MASCHERE ---
-        JLabel sec1Title = new JLabel("1. MASCHERE 4 ZONE (METODO B)");
+        JLabel sec1Title = new JLabel(I18n.t("tex.45"));
         sec1Title.setAlignmentX(0f);
         sec1Title.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         sec1Title.setForeground(ACCENT_CYAN);
         panel.add(sec1Title);
         panel.add(vstrut(2));
 
-        JLabel sec1Desc = new JLabel("<html>Carica le maschere da file (default), o usa le regole automatiche sottostanti.</html>");
+        JLabel sec1Desc = new JLabel(I18n.t("tex.46"));
         sec1Desc.setAlignmentX(0f);
         sec1Desc.setFont(BarMapStudio.font(Font.PLAIN, 10));
         sec1Desc.setForeground(TEXT_MUTED);
         panel.add(sec1Desc);
         panel.add(vstrut(6));
 
-        panel.add(buildZoneCard(zone1, "Pianure / Valli (Erba)", "Fondo Mappa"));
+        panel.add(buildZoneCard(zone1, I18n.t("tex.47"), I18n.t("tex.48")));
         panel.add(vstrut(6));
-        panel.add(buildZoneCard(zone2, "Scarpate / Monti (Roccia)", "Pendenza > 22 deg"));
+        panel.add(buildZoneCard(zone2, I18n.t("tex.49"), I18n.t("tex.50")));
         panel.add(vstrut(6));
-        panel.add(buildZoneCard(zone3, "Costa / Spiaggia (Sabbia)", "Livello Acqua"));
+        panel.add(buildZoneCard(zone3, I18n.t("tex.51"), I18n.t("tex.52")));
         panel.add(vstrut(6));
-        panel.add(buildZoneCard(zone4, "Cime / Vette (Neve)", "Alta Quota"));
+        panel.add(buildZoneCard(zone4, I18n.t("tex.53"), I18n.t("tex.54")));
+        panel.add(vstrut(6));
+
+        JButton btnMatSpecs = createGhostButton(I18n.t("tex.55"));
+        btnMatSpecs.setAlignmentX(0f);
+        btnMatSpecs.setFont(BarMapStudio.font(Font.BOLD, 10));
+        btnMatSpecs.setToolTipText(I18n.t("tex.56"));
+        btnMatSpecs.addActionListener(e -> showMaterialSpecs());
+        panel.add(btnMatSpecs);
+        panel.add(vstrut(14));
+
+        JScrollPane leftScroll = wrapSidebarColumn(panel);
+
+        // Le sezioni 2 e 3 stanno nella colonna di destra
+        panel = newSidebarColumn();
+
+        JCheckBox matchBox = new JCheckBox(I18n.t("tex.match"), matchMapColours);
+        matchBox.setAlignmentX(0f);
+        matchBox.setOpaque(false);
+        matchBox.setFont(BarMapStudio.font(Font.BOLD, 11));
+        matchBox.setForeground(TEXT_MAIN);
+        matchBox.setToolTipText(I18n.t("tex.match.tip"));
+        matchBox.addActionListener(e -> {
+            matchMapColours = matchBox.isSelected();
+            queueRegen();
+        });
+        panel.add(matchBox);
+        JLabel matchDesc = new JLabel("<html>" + I18n.t("tex.match.desc") + "</html>");
+        matchDesc.setAlignmentX(0f);
+        matchDesc.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        matchDesc.setForeground(TEXT_MUTED);
+        panel.add(matchDesc);
         panel.add(vstrut(14));
 
         // --- SEZIONE 2: SLIDERS & REGOLE TERRENO (METODO A) ---
-        JLabel sec2Title = new JLabel("2. REGOLE AUTOMATICHE (SLIDERS)");
+        JLabel sec2Title = new JLabel(I18n.t("tex.57"));
         sec2Title.setAlignmentX(0f);
         sec2Title.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         sec2Title.setForeground(ACCENT_AMBER);
         panel.add(sec2Title);
         panel.add(vstrut(2));
 
-        JLabel sec2Desc = new JLabel("<html>Regolano dove si stendono roccia, sabbia e neve sull'Heightmap.</html>");
+        JLabel sec2Desc = new JLabel(I18n.t("tex.58"));
         sec2Desc.setAlignmentX(0f);
         sec2Desc.setFont(BarMapStudio.font(Font.PLAIN, 10));
         sec2Desc.setForeground(TEXT_MUTED);
         panel.add(sec2Desc);
         panel.add(vstrut(6));
 
-        panel.add(createCompactSliderRow("Soglia Pendenza Roccia:", (int)(slopeThreshold * 100), 10, 80, "%", val -> {
+        panel.add(createCompactSliderRow(I18n.t("tex.59"), (int)(slopeThreshold * 100), 10, 80, "%", val -> {
             slopeThreshold = val / 100.0f;
             queueRegen();
         }));
         panel.add(vstrut(6));
 
-        panel.add(createCompactSliderRow("Morbidezza Pendenza (Falloff):", (int)(slopeFalloff * 100), 2, 40, "%", val -> {
+        panel.add(createCompactSliderRow(I18n.t("tex.60"), (int)(slopeFalloff * 100), 2, 40, "%", val -> {
             slopeFalloff = val / 100.0f;
             queueRegen();
         }));
         panel.add(vstrut(6));
 
-        panel.add(createCompactSliderRow("Quota Acqua / Mare:", (int)waterElevation, 0, 150, "m", val -> {
+        panel.add(createCompactSliderRow(I18n.t("tex.61"), (int)waterElevation, 0, 150, "m", val -> {
             waterElevation = val;
+            waterPresent = true;
             queueRegen();
         }));
         panel.add(vstrut(6));
 
-        panel.add(createCompactSliderRow("Fascia Spiaggia (Offset):", (int)beachBand, 2, 40, "m", val -> {
+        panel.add(createCompactSliderRow(I18n.t("tex.62"), (int)beachBand, 2, 40, "m", val -> {
             beachBand = val;
             queueRegen();
         }));
         panel.add(vstrut(6));
 
-        panel.add(createCompactSliderRow("Quota Attivazione Picchi:", (int)(peakAltitude * 100), 40, 95, "%", val -> {
+        panel.add(createCompactSliderRow(I18n.t("tex.63"), (int)(peakAltitude * 100), 40, 95, "%", val -> {
             peakAltitude = val / 100.0f;
             queueRegen();
         }));
         panel.add(vstrut(6));
 
-        panel.add(createCompactSliderRow("Perturbazione Bordi (Noise):", (int)(noisePerturbation * 100), 0, 70, "%", val -> {
+        panel.add(createCompactSliderRow(I18n.t("tex.64"), (int)(noisePerturbation * 100), 0, 70, "%", val -> {
             noisePerturbation = val / 100.0f;
             queueRegen();
         }));
         panel.add(vstrut(14));
 
         // --- SEZIONE 3: PARAMETRI DETTAGLIO MATERIALI PBR ---
-        JLabel sec3Title = new JLabel("3. DETTAGLIO & RILIEVO PBR");
+        JLabel sec3Title = new JLabel(I18n.t("tex.65"));
         sec3Title.setAlignmentX(0f);
         sec3Title.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         sec3Title.setForeground(ACCENT_GREEN);
         panel.add(sec3Title);
         panel.add(vstrut(2));
 
-        JLabel sec3Desc = new JLabel("<html>Personalizza la grana frattale e il rilievo 3D della Normal Map.</html>");
+        JLabel sec3Desc = new JLabel(I18n.t("tex.66"));
         sec3Desc.setAlignmentX(0f);
         sec3Desc.setFont(BarMapStudio.font(Font.PLAIN, 10));
         sec3Desc.setForeground(TEXT_MUTED);
         panel.add(sec3Desc);
         panel.add(vstrut(6));
 
-        panel.add(createCompactSliderRow("Scala Frequenza Frattale:", (int)(matScale * 10), 10, 100, "", val -> {
+        panel.add(createCompactSliderRow(I18n.t("tex.67"), (int)(matScale * 10), 10, 100, "", val -> {
             matScale = val / 10.0f;
             queueRegen();
         }));
         panel.add(vstrut(6));
 
-        panel.add(createCompactSliderRow("Ottave di Dettaglio:", matOctaves, 1, 8, "", val -> {
+        panel.add(createCompactSliderRow(I18n.t("tex.68"), matOctaves, 1, 8, "", val -> {
             matOctaves = val;
             queueRegen();
         }));
         panel.add(vstrut(6));
 
-        panel.add(createCompactSliderRow("Rugosita' (Persistenza):", (int)(matPersistence * 100), 20, 80, "%", val -> {
+        panel.add(createCompactSliderRow(I18n.t("tex.69"), (int)(matPersistence * 100), 20, 80, "%", val -> {
             matPersistence = val / 100.0f;
             queueRegen();
         }));
         panel.add(vstrut(6));
 
-        panel.add(createCompactSliderRow("Contrasto Cromatico:", (int)(matContrast * 50), 25, 120, "", val -> {
+        panel.add(createCompactSliderRow(I18n.t("tex.70"), (int)(matContrast * 50), 25, 120, "", val -> {
             matContrast = val / 50.0f;
             queueRegen();
         }));
         panel.add(vstrut(6));
 
-        panel.add(createCompactSliderRow("Intensita' Normal Map (Bump):", (int)(matBump * 50), 10, 150, "", val -> {
+        panel.add(createCompactSliderRow(I18n.t("tex.71"), (int)(matBump * 50), 10, 150, "", val -> {
             matBump = val / 50.0f;
             queueRegen();
         }));
 
+        rightSidebar = wrapSidebarColumn(panel);
+        return leftScroll;
+    }
+
+    private JScrollPane rightSidebar;
+
+    private static ScrollableTrackWidthPanel newSidebarColumn() {
+        ScrollableTrackWidthPanel panel = new ScrollableTrackWidthPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setOpaque(false);
+        panel.setAlignmentX(0f);
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        return panel;
+    }
+
+    private static JScrollPane wrapSidebarColumn(JPanel panel) {
         Component glue = Box.createVerticalGlue();
         if (glue instanceof JComponent jc) {
             jc.setAlignmentX(0f);
@@ -566,6 +648,112 @@ public class TextureStudioPanel extends JPanel {
         return sp;
     }
 
+    /** Le zone di cui non si e' scelto il materiale prendono i colori della texture generata in MAPS. */
+    private boolean matchMapColours = true;
+    private float[] lastTint;
+    private int lastTintW;
+    private int lastTintH;
+
+    private static boolean followsMap(ZoneConfig z) {
+        return !z.presetChanged && z.customTexture == null && z.material == null;
+    }
+
+    /** Media a blocchi di un'immagine su una griglia w x h: 3 valori (r, g, b) per cella. */
+    private static float[] boxAverage(BufferedImage img, int w, int h) {
+        int iw = img.getWidth();
+        int ih = img.getHeight();
+        int[] px = img.getRGB(0, 0, iw, ih, null, 0, iw);
+        float[] out = new float[w * h * 3];
+        for (int cy = 0; cy < h; cy++) {
+            int y0 = (cy * ih) / h;
+            int y1 = Math.max(y0 + 1, ((cy + 1) * ih) / h);
+            for (int cx = 0; cx < w; cx++) {
+                int x0 = (cx * iw) / w;
+                int x1 = Math.max(x0 + 1, ((cx + 1) * iw) / w);
+                long r = 0, g = 0, b = 0;
+                int n = 0;
+                for (int y = y0; y < y1 && y < ih; y++) {
+                    for (int x = x0; x < x1 && x < iw; x++) {
+                        int c = px[(y * iw) + x];
+                        r += (c >> 16) & 255;
+                        g += (c >> 8) & 255;
+                        b += c & 255;
+                        n++;
+                    }
+                }
+                int o = ((cy * w) + cx) * 3;
+                if (n > 0) {
+                    out[o] = r / (float) n;
+                    out[o + 1] = g / (float) n;
+                    out[o + 2] = b / (float) n;
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Calcola la correzione che porta i colori medi della composizione a quelli del terreno di MAPS
+     * (solo dove comandano zone senza materiale scelto) e la applica all'anteprima.
+     */
+    private float[] matchToMapColours(BufferedImage composite, BufferedImage ground, float[][] masks, int resW, int resH, int tw, int th) {
+        float[] want = boxAverage(ground, tw, th);
+        float[] have = boxAverage(composite, tw, th);
+        ZoneConfig[] zones = {zone1, zone2, zone3, zone4};
+        float[] tint = new float[tw * th * 3];
+        for (int cy = 0; cy < th; cy++) {
+            for (int cx = 0; cx < tw; cx++) {
+                // quanto di questa cella appartiene a zone che seguono MAPS
+                int mx = Math.min(resW - 1, ((cx * resW) + (resW / 2)) / tw);
+                int my = Math.min(resH - 1, ((cy * resH) + (resH / 2)) / th);
+                float strength = 0.0f;
+                for (int k = 0; k < 4; k++) {
+                    if (followsMap(zones[k])) {
+                        strength += masks[k][(my * resW) + mx];
+                    }
+                }
+                strength = Math.max(0.0f, Math.min(1.0f, strength));
+                int o = ((cy * tw) + cx) * 3;
+                for (int c = 0; c < 3; c++) {
+                    float ratio = Math.max(0.25f, Math.min(4.0f, (want[o + c] + 4.0f) / (have[o + c] + 4.0f)));
+                    tint[o + c] = 1.0f + ((ratio - 1.0f) * strength);
+                }
+            }
+        }
+        int[] px = composite.getRGB(0, 0, resW, resH, null, 0, resW);
+        for (int y = 0; y < resH; y++) {
+            float fy = Math.max(0.0f, Math.min(th - 1.0f, (((y + 0.5f) / resH) * th) - 0.5f));
+            int y0 = (int) fy;
+            int y1 = Math.min(th - 1, y0 + 1);
+            float ty = fy - y0;
+            for (int x = 0; x < resW; x++) {
+                float fx = Math.max(0.0f, Math.min(tw - 1.0f, (((x + 0.5f) / resW) * tw) - 0.5f));
+                int x0 = (int) fx;
+                int x1 = Math.min(tw - 1, x0 + 1);
+                float tx = fx - x0;
+                int c = px[(y * resW) + x];
+                int out = 0xFF000000;
+                for (int ch = 0; ch < 3; ch++) {
+                    float top = (tint[(((y0 * tw) + x0) * 3) + ch] * (1.0f - tx)) + (tint[(((y0 * tw) + x1) * 3) + ch] * tx);
+                    float bottom = (tint[(((y1 * tw) + x0) * 3) + ch] * (1.0f - tx)) + (tint[(((y1 * tw) + x1) * 3) + ch] * tx);
+                    int shift = 16 - (ch * 8);
+                    int value = Math.min(255, Math.round(((c >> shift) & 255) * ((top * (1.0f - ty)) + (bottom * ty))));
+                    out |= value << shift;
+                }
+                px[(y * resW) + x] = out;
+            }
+        }
+        composite.setRGB(0, 0, resW, resH, px, 0, resW);
+        return tint;
+    }
+
+    /** Impostato dall'app: ricollega il pannello alla mappa aperta in questo momento nell'editor. */
+    private Runnable syncWithEditor;
+
+    public void setSyncWithEditor(Runnable syncWithEditor) {
+        this.syncWithEditor = syncWithEditor;
+    }
+
     /**
      * Scheda compatta per una singola Zona
      */
@@ -578,7 +766,7 @@ public class TextureStudioPanel extends JPanel {
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
             new EmptyBorder(6, 8, 6, 8)
         ));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 115));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 145));
 
         // Riga 1: Pallino + Titolo
         JPanel r1 = new JPanel(new BorderLayout(6, 0));
@@ -612,17 +800,18 @@ public class TextureStudioPanel extends JPanel {
         r2.setAlignmentX(0f);
         r2.setOpaque(false);
 
-        JLabel maskStatusBadge = new JLabel(z.maskFile != null ? z.maskFile.getName() : "Auto (" + autoRuleDesc + ")");
+        JLabel maskStatusBadge = new JLabel(z.maskFile != null ? z.maskFile.getName() : I18n.t("tex.72") + autoRuleDesc + ")");
         maskStatusBadge.setFont(BarMapStudio.font(Font.PLAIN, 10));
         maskStatusBadge.setForeground(z.maskFile != null ? ACCENT_GREEN : TEXT_MUTED);
 
-        JButton btnLoadMask = createGhostButton(z.maskFile != null ? "Cambia File" : "Carica Maschera");
+        JButton btnLoadMask = createGhostButton(z.maskFile != null ? I18n.t("tex.73") : I18n.t("tex.74"));
         btnLoadMask.setPreferredSize(new Dimension(105, 22));
         btnLoadMask.setFont(BarMapStudio.font(Font.BOLD, 9));
         btnLoadMask.addActionListener(e -> {
             JFileChooser chooser = new JFileChooser("custom_assets/textures");
-            chooser.setDialogTitle("Seleziona Maschera in Bianco e Nero per " + z.title);
-            chooser.setFileFilter(new FileNameExtensionFilter("Immagini Maschera (*.png, *.jpg, *.bmp)", "png", "jpg", "jpeg", "bmp"));
+            FileChoosers.detailed(chooser);
+            chooser.setDialogTitle(I18n.t("tex.75") + z.title);
+            chooser.setFileFilter(new FileNameExtensionFilter(I18n.t("tex.76"), "png", "jpg", "jpeg", "bmp"));
             if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
                 try {
                     File f = chooser.getSelectedFile();
@@ -633,11 +822,11 @@ public class TextureStudioPanel extends JPanel {
                         z.useFileMask = true;
                         maskStatusBadge.setText(f.getName());
                         maskStatusBadge.setForeground(ACCENT_GREEN);
-                        btnLoadMask.setText("Cambia File");
+                        btnLoadMask.setText(I18n.t("tex.73"));
                         queueRegen();
                     }
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "Errore caricamento maschera:\n" + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, I18n.t("tex.77") + ex.getMessage(), I18n.t("tex.34"), JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
@@ -658,15 +847,15 @@ public class TextureStudioPanel extends JPanel {
         btnResetAuto.setContentAreaFilled(false);
         btnResetAuto.setBorderPainted(false);
         btnResetAuto.setFocusPainted(false);
-        btnResetAuto.setToolTipText("Rimuovi file e usa la regola automatica dall'Heightmap");
+        btnResetAuto.setToolTipText(I18n.t("tex.78"));
         btnResetAuto.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnResetAuto.addActionListener(e -> {
             z.maskFile = null;
             z.loadedMask = null;
             z.useFileMask = false;
-            maskStatusBadge.setText("Auto (" + autoRuleDesc + ")");
+            maskStatusBadge.setText(I18n.t("tex.72") + autoRuleDesc + ")");
             maskStatusBadge.setForeground(TEXT_MUTED);
-            btnLoadMask.setText("Carica Maschera");
+            btnLoadMask.setText(I18n.t("tex.74"));
             queueRegen();
         });
 
@@ -685,6 +874,10 @@ public class TextureStudioPanel extends JPanel {
         r3.setAlignmentX(0f);
         r3.setOpaque(false);
 
+        JSpinner tileSpinner = new JSpinner(new SpinnerNumberModel((double) z.tileElmos, 16.0, 2048.0, 16.0));
+        JSpinner glossSpinner = new JSpinner(new SpinnerNumberModel((int) Math.round(z.gloss * 100), 0, 100, 5));
+        JLabel matBadge = new JLabel(I18n.t("tex.79"));
+
         JComboBox<MaterialPreset> combo = new JComboBox<>(MaterialPreset.values());
         combo.setFont(BarMapStudio.font(Font.PLAIN, 10));
         combo.setBackground(CARD_BG);
@@ -695,38 +888,89 @@ public class TextureStudioPanel extends JPanel {
             MaterialPreset sel = (MaterialPreset) combo.getSelectedItem();
             if (sel != null) {
                 z.preset = sel;
+                z.presetChanged = true;
                 z.customTexture = null;
                 z.customTextureFile = null;
+                z.material = null;
+                matBadge.setText(I18n.t("tex.79"));
+                matBadge.setForeground(TEXT_MUTED);
                 queueRegen();
             }
         });
         r3.add(combo, BorderLayout.CENTER);
 
-        JButton btnTexFile = createGhostButton("+ File");
+        JButton btnTexFile = createGhostButton(I18n.t("tex.80"));
         btnTexFile.setPreferredSize(new Dimension(50, 22));
         btnTexFile.setFont(BarMapStudio.font(Font.BOLD, 9));
-        btnTexFile.setToolTipText("Carica un file texture personale (PNG/JPG) per questa zona");
+        btnTexFile.setToolTipText(I18n.t("tex.81"));
         btnTexFile.addActionListener(e -> {
             JFileChooser chooser = new JFileChooser("custom_assets/textures");
-            chooser.setDialogTitle("Seleziona Texture per " + z.title);
-            chooser.setFileFilter(new FileNameExtensionFilter("Immagini Texture (*.png, *.jpg, *.bmp)", "png", "jpg", "jpeg", "bmp"));
+            FileChoosers.detailed(chooser);
+            chooser.setDialogTitle(I18n.t("tex.82") + z.title);
+            chooser.setFileFilter(new FileNameExtensionFilter(I18n.t("tex.83"), "png", "jpg", "jpeg", "bmp"));
             if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
                 try {
                     File f = chooser.getSelectedFile();
-                    BufferedImage img = ImageIO.read(f);
-                    if (img != null) {
-                        z.customTextureFile = f;
-                        z.customTexture = img;
-                        queueRegen();
+                    ZoneMaterials.LoadResult res = ZoneMaterials.load(f);
+                    ZoneMaterials.Material m = res.material;
+                    z.customTextureFile = f;
+                    z.customTexture = m.diffuse;
+                    z.material = m;
+                    z.tileElmos = m.tileElmos;
+                    z.gloss = m.gloss;
+                    tileSpinner.setValue((double) m.tileElmos);
+                    glossSpinner.setValue((int) Math.round(m.gloss * 100));
+                    matBadge.setText(m.name + (m.normal != null ? I18n.t("tex.84") : "") + (m.height != null && m.reliefElmos > 0 ? I18n.t("tex.85") : ""));
+                    matBadge.setForeground(ACCENT_GREEN);
+                    queueRegen();
+                    if (!res.warnings.isEmpty()) {
+                        JOptionPane.showMessageDialog(this,
+                            I18n.t("tex.86") + String.join("\n- ", res.warnings)
+                                + I18n.t("tex.87"),
+                            "Materiale: " + m.name, JOptionPane.WARNING_MESSAGE);
                     }
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "Errore caricamento texture:\n" + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, I18n.t("tex.88") + ex.getMessage(), I18n.t("tex.34"), JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
         r3.add(btnTexFile, BorderLayout.EAST);
 
         card.add(r3);
+        card.add(vstrut(4));
+
+        // Riga 4: scala sul terreno e lucentezza del materiale
+        JPanel r4 = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        r4.setAlignmentX(0f);
+        r4.setOpaque(false);
+        JLabel tileLbl = new JLabel(I18n.t("tex.89"));
+        tileLbl.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        tileLbl.setForeground(TEXT_MUTED);
+        tileSpinner.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        tileSpinner.setPreferredSize(new Dimension(62, 20));
+        tileSpinner.setToolTipText(I18n.t("tex.90"));
+        tileSpinner.addChangeListener(e -> {
+            z.tileElmos = ((Number) tileSpinner.getValue()).floatValue();
+            queueRegen();
+        });
+        JLabel glossLbl = new JLabel(I18n.t("tex.91"));
+        glossLbl.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        glossLbl.setForeground(TEXT_MUTED);
+        glossSpinner.setFont(BarMapStudio.font(Font.PLAIN, 10));
+        glossSpinner.setPreferredSize(new Dimension(48, 20));
+        glossSpinner.setToolTipText(I18n.t("tex.92"));
+        glossSpinner.addChangeListener(e -> z.gloss = ((Number) glossSpinner.getValue()).intValue() / 100.0f);
+        r4.add(tileLbl);
+        r4.add(tileSpinner);
+        r4.add(glossLbl);
+        r4.add(glossSpinner);
+        card.add(r4);
+        card.add(vstrut(2));
+
+        matBadge.setAlignmentX(0f);
+        matBadge.setFont(BarMapStudio.font(Font.PLAIN, 9));
+        matBadge.setForeground(TEXT_MUTED);
+        card.add(matBadge);
         return card;
     }
 
@@ -788,7 +1032,7 @@ public class TextureStudioPanel extends JPanel {
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         left.setOpaque(false);
 
-        JLabel vLbl = new JLabel("ISPEZIONE VISTA:");
+        JLabel vLbl = new JLabel(I18n.t("tex.93"));
         vLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         vLbl.setForeground(ACCENT_CYAN);
         left.add(vLbl);
@@ -839,7 +1083,7 @@ public class TextureStudioPanel extends JPanel {
         // Slope Map Toggle Button
         styleToggleButton(slopeToggleBtn);
         slopeToggleBtn.setPreferredSize(new Dimension(135, 24));
-        slopeToggleBtn.setToolTipText("Attiva/Disattiva Overlay Pendenze (Slope Map) [Tasto L]");
+        slopeToggleBtn.setToolTipText(I18n.t("tex.94"));
         slopeToggleBtn.addActionListener(e -> {
             canvas.setShowSlopeMap(slopeToggleBtn.isSelected());
             updateSlopeButtonState();
@@ -847,14 +1091,14 @@ public class TextureStudioPanel extends JPanel {
         dock.add(slopeToggleBtn);
 
         // Opacity Label & Slider
-        JLabel opacityLbl = new JLabel("Opacita':");
+        JLabel opacityLbl = new JLabel(I18n.t("tex.95"));
         opacityLbl.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
         opacityLbl.setForeground(TEXT_MUTED);
         dock.add(opacityLbl);
 
         slopeOpacitySlider.setPreferredSize(new Dimension(65, 20));
         slopeOpacitySlider.setOpaque(false);
-        slopeOpacitySlider.setToolTipText("Regola l'opacita' dello Slope Map Overlay");
+        slopeOpacitySlider.setToolTipText(I18n.t("tex.96"));
         slopeOpacitySlider.addChangeListener(e -> canvas.setSlopeOpacity(slopeOpacitySlider.getValue() / 100.0f));
         dock.add(slopeOpacitySlider);
 
@@ -868,7 +1112,7 @@ public class TextureStudioPanel extends JPanel {
         JButton zoomOut = createGhostButton("-");
         zoomOut.setFont(BarMapStudio.font(Font.BOLD, 13));
         zoomOut.setPreferredSize(new Dimension(28, 24));
-        zoomOut.setToolTipText("Zoom Indietro [-]");
+        zoomOut.setToolTipText(I18n.t("tex.97"));
         zoomOut.addActionListener(e -> canvas.zoomOut());
         dock.add(zoomOut);
 
@@ -876,15 +1120,15 @@ public class TextureStudioPanel extends JPanel {
         JButton zoomIn = createGhostButton("+");
         zoomIn.setFont(BarMapStudio.font(Font.BOLD, 13));
         zoomIn.setPreferredSize(new Dimension(28, 24));
-        zoomIn.setToolTipText("Zoom Avanti [+]");
+        zoomIn.setToolTipText(I18n.t("tex.98"));
         zoomIn.addActionListener(e -> canvas.zoomIn());
         dock.add(zoomIn);
 
         // 1:1 Scala
-        JButton zoomReset = createGhostButton("1:1 Scala");
+        JButton zoomReset = createGhostButton(I18n.t("tex.99"));
         zoomReset.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         zoomReset.setPreferredSize(new Dimension(76, 24));
-        zoomReset.setToolTipText("Ripristina Scala 1:1 [0]");
+        zoomReset.setToolTipText(I18n.t("tex.100"));
         zoomReset.addActionListener(e -> canvas.resetZoom());
         dock.add(zoomReset);
 
@@ -940,7 +1184,7 @@ public class TextureStudioPanel extends JPanel {
         if (canvas == null) return;
         boolean active = canvas.isShowSlopeMap();
         slopeToggleBtn.setSelected(active);
-        slopeToggleBtn.setText(active ? "Slope Map: ON [L]" : "Slope Map [L]");
+        slopeToggleBtn.setText(active ? I18n.t("tex.101") : I18n.t("tex.22"));
         slopeToggleBtn.setForeground(active ? ACCENT_AMBER : TEXT_MAIN);
         slopeToggleBtn.setBackground(active ? new Color(45, 34, 18) : CARD_INNER);
         slopeToggleBtn.setBorder(BorderFactory.createCompoundBorder(
@@ -964,7 +1208,7 @@ public class TextureStudioPanel extends JPanel {
         bar.setPreferredSize(new Dimension(100, 46));
         bar.setBorder(new EmptyBorder(4, 12, 4, 12));
 
-        statusLabel = new JLabel("Texture Studio pronto. Carica maschere o regola gli sliders.");
+        statusLabel = new JLabel(I18n.t("tex.102"));
         statusLabel.setFont(BarMapStudio.font(Font.PLAIN, 11));
         statusLabel.setForeground(TEXT_MUTED);
         bar.add(statusLabel, BorderLayout.WEST);
@@ -972,19 +1216,19 @@ public class TextureStudioPanel extends JPanel {
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
 
-        JButton btnOpenFolder = createGhostButton("Apri Cartella Textures");
+        JButton btnOpenFolder = createGhostButton(I18n.t("tex.103"));
         btnOpenFolder.addActionListener(e -> openCustomFolder());
         actions.add(btnOpenFolder);
 
-        JButton btnSaveDiffuse = createGhostButton("Salva Immagine Fusa");
+        JButton btnSaveDiffuse = createGhostButton(I18n.t("tex.104"));
         btnSaveDiffuse.addActionListener(e -> saveCurrentTexture(false));
         actions.add(btnSaveDiffuse);
 
-        JButton btnSaveNormal = createGhostButton("Esporta Normal Map");
+        JButton btnSaveNormal = createGhostButton(I18n.t("tex.105"));
         btnSaveNormal.addActionListener(e -> saveCurrentTexture(true));
         actions.add(btnSaveNormal);
 
-        JButton btnApplyToMap = new JButton("APPLICA AL TERRENO DELLA MAPPA") {
+        JButton btnApplyToMap = new JButton(I18n.t("tex.106")) {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -1054,16 +1298,21 @@ public class TextureStudioPanel extends JPanel {
             renderedChannelG = null;
             renderedChannelB = null;
             renderedChannelA = null;
-            setStatus("Nessun terreno attivo. Genera in [MAPS] o carica un'Heightmap con [Carica Heightmap].", TEXT_MUTED);
+            setStatus(I18n.t("tex.107"), TEXT_MUTED);
             if (canvas != null) canvas.repaint();
             return;
         }
 
-        setStatus("Generazione ed elaborazione in corso...", ACCENT_AMBER);
+        setStatus(I18n.t("tex.108"), ACCENT_AMBER);
         final Dimension targetDim = computeTargetResolution();
         final int resW = targetDim.width;
         final int resH = targetDim.height;
         final long seed = currentSeed;
+        // 1 cella della mappa = 16 elmi: lato di un pixel della composizione sul terreno
+        final int mapCellsW = (activeMap != null)
+            ? (activeMap.getWidth() > 0 ? activeMap.getWidth() : activeMap.getSize())
+            : sourceHm.getWidth();
+        final float elmosPerPx = Math.max(1, mapCellsW) * 16.0f / resW;
 
         genPool.submit(() -> {
             long t0 = System.currentTimeMillis();
@@ -1079,12 +1328,30 @@ public class TextureStudioPanel extends JPanel {
                 Raster r = sourceHm.getRaster();
                 int[] pixelH = new int[1];
 
-                for (int y = 0; y < resH; y++) {
-                    int sy = Math.min(hmH - 1, (y * hmH) / resH);
-                    for (int x = 0; x < resW; x++) {
-                        int sx = Math.min(hmW - 1, (x * hmW) / resW);
+                // heightmap a 16 bit = quote reali per la scala della mappa; a 8 bit = mezzo elmo per livello.
+                // (prima si decideva pixel per pixel, e le quote sotto 2 elmi venivano lette come 8 bit)
+                final boolean sixteenBit = r.getSampleModel().getSampleSize(0) > 8;
+                float[] hmVals = new float[hmW * hmH];
+                for (int sy = 0; sy < hmH; sy++) {
+                    for (int sx = 0; sx < hmW; sx++) {
                         r.getPixel(sx, sy, pixelH);
-                        float h = (pixelH[0] > 255) ? (pixelH[0] * scale) : (pixelH[0] * 0.5f);
+                        hmVals[sy * hmW + sx] = sixteenBit ? (pixelH[0] * scale) : (pixelH[0] * 0.5f);
+                    }
+                }
+                // campionamento bilineare: niente gradini quando la risoluzione supera quella dell'heightmap
+                for (int y = 0; y < resH; y++) {
+                    float fy = Math.max(0f, Math.min(hmH - 1, (y + 0.5f) * hmH / resH - 0.5f));
+                    int y0 = (int) fy;
+                    int y1 = Math.min(hmH - 1, y0 + 1);
+                    float ty = fy - y0;
+                    for (int x = 0; x < resW; x++) {
+                        float fx = Math.max(0f, Math.min(hmW - 1, (x + 0.5f) * hmW / resW - 0.5f));
+                        int x0 = (int) fx;
+                        int x1 = Math.min(hmW - 1, x0 + 1);
+                        float tx = fx - x0;
+                        float top = hmVals[y0 * hmW + x0] * (1f - tx) + hmVals[y0 * hmW + x1] * tx;
+                        float bottom = hmVals[y1 * hmW + x0] * (1f - tx) + hmVals[y1 * hmW + x1] * tx;
+                        float h = top * (1f - ty) + bottom * ty;
                         heightmap[y][x] = h;
                         if (h < minH) minH = h;
                         if (h > maxH) maxH = h;
@@ -1099,7 +1366,9 @@ public class TextureStudioPanel extends JPanel {
                         int xNext = Math.min(resW - 1, x + 1);
                         float dx = (heightmap[y][xNext] - heightmap[y][xPrev]) * 0.5f;
                         float dy = (heightmap[yNext][x] - heightmap[yPrev][x]) * 0.5f;
-                        slopeMap[y][x] = (float) Math.min(1.0, Math.sqrt(dx * dx + dy * dy) * 0.35);
+                        // pendenza reale in gioco (dislivello in elmi / distanza in elmi), uguale a ogni risoluzione:
+                        // 1.0 = 100% = 45 gradi. I veicoli di BAR si fermano intorno al 32%, i bot intorno al 73%.
+                        slopeMap[y][x] = (float) Math.min(1.0, Math.sqrt(dx * dx + dy * dy) * ELMOS_PER_HEIGHT_UNIT / elmosPerPx);
                     }
                 }
 
@@ -1109,7 +1378,7 @@ public class TextureStudioPanel extends JPanel {
                     for (int x = 0; x < resW; x++) {
                         float h = heightmap[y][x];
                         float slope = slopeMap[y][x];
-                        if (waterElevation > -900f && h < waterElevation) {
+                        if (waterPresent && waterElevation > -900f && h < waterElevation) {
                             float depth = Math.min(1.0f, (waterElevation - h) / 30.0f);
                             int blue = (int) (180 + 75 * depth);
                             int green = (int) (140 - 40 * depth);
@@ -1178,20 +1447,35 @@ public class TextureStudioPanel extends JPanel {
                 BufferedImage chB = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
                 BufferedImage chA = new BufferedImage(resW, resH, BufferedImage.TYPE_INT_ARGB);
 
-                float tileScale = Math.max(0.5f, matScale * 2.0f);
+                // i tile si ripetono in elmi (come in gioco), non in pixel della composizione
+                BufferedImage[] tiles = {tex1, tex2, tex3, tex4};
+                float[] tileElmos = {zone1.tileElmos, zone2.tileElmos, zone3.tileElmos, zone4.tileElmos};
+                float[][] flatMasks = new float[4][resW * resH];
                 for (int y = 0; y < resH; y++) {
-                    int ty = Math.round(y * tileScale);
+                    float ez = (y + 0.5f) * elmosPerPx;
                     for (int x = 0; x < resW; x++) {
-                        int tx = Math.round(x * tileScale);
+                        float ex = (x + 0.5f) * elmosPerPx;
                         float wR = maskR[y][x];
                         float wG = maskG[y][x];
                         float wB = maskB[y][x];
                         float wA = maskA[y][x];
+                        int mi = y * resW + x;
+                        flatMasks[0][mi] = wR;
+                        flatMasks[1][mi] = wG;
+                        flatMasks[2][mi] = wB;
+                        flatMasks[3][mi] = wA;
 
-                        int rgb1 = tex1.getRGB(Math.floorMod(tx, tex1.getWidth()), Math.floorMod(ty, tex1.getHeight()));
-                        int rgb2 = tex2.getRGB(Math.floorMod(tx, tex2.getWidth()), Math.floorMod(ty, tex2.getHeight()));
-                        int rgb3 = tex3.getRGB(Math.floorMod(tx, tex3.getWidth()), Math.floorMod(ty, tex3.getHeight()));
-                        int rgb4 = tex4.getRGB(Math.floorMod(tx, tex4.getWidth()), Math.floorMod(ty, tex4.getHeight()));
+                        int[] rgbs = new int[4];
+                        for (int k = 0; k < 4; k++) {
+                            BufferedImage tile = tiles[k];
+                            int px = Math.floorMod((int) (ex / tileElmos[k] * tile.getWidth()), tile.getWidth());
+                            int py = Math.floorMod((int) (ez / tileElmos[k] * tile.getHeight()), tile.getHeight());
+                            rgbs[k] = tile.getRGB(px, py);
+                        }
+                        int rgb1 = rgbs[0];
+                        int rgb2 = rgbs[1];
+                        int rgb3 = rgbs[2];
+                        int rgb4 = rgbs[3];
 
                         int red = (int) ((((rgb1 >> 16) & 0xFF) * wR) + (((rgb2 >> 16) & 0xFF) * wG) + (((rgb3 >> 16) & 0xFF) * wB) + (((rgb4 >> 16) & 0xFF) * wA));
                         int green = (int) ((((rgb1 >> 8) & 0xFF) * wR) + (((rgb2 >> 8) & 0xFF) * wG) + (((rgb3 >> 8) & 0xFF) * wB) + (((rgb4 >> 8) & 0xFF) * wA));
@@ -1218,7 +1502,22 @@ public class TextureStudioPanel extends JPanel {
 
                 BufferedImage normal = createNormalMap(heightmap, resW, resH, matBump);
 
+                final BufferedImage mapGround = activeGround;
+                if (matchMapColours && mapGround != null && activeMap != null) {
+                    int tw = Math.max(16, resW / 6);
+                    int th = Math.max(16, resH / 6);
+                    this.lastTint = matchToMapColours(composite, mapGround, flatMasks, resW, resH, tw, th);
+                    this.lastTintW = tw;
+                    this.lastTintH = th;
+                } else {
+                    this.lastTint = null;
+                }
+
                 this.renderedDiffuse = composite;
+                this.lastMasks = flatMasks;
+                this.lastMaskW = resW;
+                this.lastMaskH = resH;
+                this.lastTiles = tiles;
                 this.renderedNormal = normal;
                 this.renderedSplatRGBA = splatRGBA;
                 this.renderedChannelR = chR;
@@ -1227,13 +1526,13 @@ public class TextureStudioPanel extends JPanel {
                 this.renderedChannelA = chA;
 
                 long elapsed = System.currentTimeMillis() - t0;
-                String mapName = (activeMap != null) ? activeMap.getName() : "Terreno Sintetico";
-                setStatus("Composizione pronta in " + elapsed + " ms (" + resW + "x" + resH + " px) su " + mapName, ACCENT_GREEN);
+                String mapName = (activeMap != null) ? activeMap.getName() : I18n.t("tex.109");
+                setStatus(I18n.t("tex.110") + elapsed + " ms (" + resW + "x" + resH + " px) su " + mapName, ACCENT_GREEN);
                 SwingUtilities.invokeLater(() -> canvas.repaint());
 
             } catch (Throwable t) {
                 t.printStackTrace();
-                setStatus("Errore elaborazione: " + t.getMessage(), Color.RED);
+                setStatus(I18n.t("tex.111") + t.getMessage(), Color.RED);
             }
         });
     }
@@ -1262,7 +1561,7 @@ public class TextureStudioPanel extends JPanel {
         }
 
         // METODO A: Sliders e Regole Automatiche
-        float heightRange = Math.max(10.0f, maxH - minH);
+        float heightRange = Math.max(0.5f, maxH - minH);
         float peakThreshold = minH + peakAltitude * heightRange;
 
         for (int y = 0; y < resH; y++) {
@@ -1273,16 +1572,26 @@ public class TextureStudioPanel extends JPanel {
                 float s = slopeMap[y][x];
                 float nPerturb = (fbmPeriodic2D(nx * 8f, ny * 8f, 8, 3, 0.5f, seed + 50) - 0.5f) * noisePerturbation;
 
+                // Le quattro zone si spartiscono il terreno senza sovrapporsi, in ordine di precedenza:
+                // roccia sui pendii, poi costa e fondale, poi cime, e pianura su tutto il resto.
+                float rock = smoothstep(slopeThreshold - slopeFalloff, slopeThreshold + slopeFalloff, s + nPerturb);
+                float coast = 0.0f;
+                // senza nemmeno un punto sotto il livello dell'acqua la mappa e' asciutta: nessuna costa
+                if (waterPresent && minH < waterElevation) {
+                    // la fascia e' in elmi sopra il livello dell'acqua; tutto cio' che sta sotto e' fondale
+                    float aboveWater = (h - waterElevation) * ELMOS_PER_HEIGHT_UNIT + (nPerturb * beachBand);
+                    coast = 1.0f - smoothstep(0f, Math.max(1f, beachBand), aboveWater);
+                }
+                float edge = Math.max(1.0f, heightRange * 0.06f);
+                float peak = smoothstep(peakThreshold - edge, peakThreshold + edge, h + (nPerturb * heightRange * 0.15f));
                 if (zoneIndex == 2) {
-                    mask[y][x] = smoothstep(slopeThreshold - slopeFalloff, slopeThreshold + slopeFalloff, s + nPerturb);
+                    mask[y][x] = rock;
                 } else if (zoneIndex == 3) {
-                    float dist = Math.abs(h - waterElevation);
-                    float b = 1.0f - smoothstep(0f, beachBand, dist);
-                    mask[y][x] = Math.max(0f, b * (1.0f - s));
+                    mask[y][x] = coast * (1.0f - rock);
                 } else if (zoneIndex == 4) {
-                    mask[y][x] = smoothstep(peakThreshold - 15f, peakThreshold + 15f, h + nPerturb * 20f);
+                    mask[y][x] = peak * (1.0f - rock) * (1.0f - coast);
                 } else {
-                    mask[y][x] = Math.max(0.05f, 1.0f - s);
+                    mask[y][x] = (1.0f - peak) * (1.0f - rock) * (1.0f - coast);
                 }
             }
         }
@@ -1348,7 +1657,7 @@ public class TextureStudioPanel extends JPanel {
 
     private void doApplyToActiveMap() {
         if (renderedDiffuse == null) {
-            JOptionPane.showMessageDialog(this, "Nessuna texture pronta da applicare.", "Attenzione", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, I18n.t("tex.112"), I18n.t("tex.113"), JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -1375,15 +1684,55 @@ public class TextureStudioPanel extends JPanel {
                 }
             }
 
-            String name = (activeMap != null) ? activeMap.getName() : (customLoadedHeightmapName != null ? customLoadedHeightmapName : "Terreno 4 Zone");
+            String name = (activeMap != null) ? activeMap.getName() : (customLoadedHeightmapName != null ? customLoadedHeightmapName : I18n.t("tex.114"));
+            ZoneMaterials.setPending(buildZoneMaterials());
             applyCallback.applyToMap(renderedDiffuse, splatLow, splatHigh, customLoadedHeightmap, name);
         }
+    }
+
+    /** Maschere + materiali delle 4 zone per l'export BAR a piena risoluzione (null se non pronti). */
+    private ZoneMaterials buildZoneMaterials() {
+        float[][] masks = lastMasks;
+        BufferedImage[] tiles = lastTiles;
+        if (masks == null || tiles == null) return null;
+        try {
+            ZoneConfig[] zones = {zone1, zone2, zone3, zone4};
+            ZoneMaterials.Material[] mats = new ZoneMaterials.Material[4];
+            for (int i = 0; i < 4; i++) {
+                ZoneConfig z = zones[i];
+                if (z.material != null) {
+                    mats[i] = new ZoneMaterials.Material(z.material.name, z.material.diffuse, z.material.normal, z.material.height,
+                        z.tileElmos, z.gloss, z.material.reliefElmos);
+                    mats[i].normalStrength = z.material.normalStrength;
+                } else {
+                    mats[i] = new ZoneMaterials.Material(z.preset.label, tiles[i], null, null, z.tileElmos, z.gloss, 0f);
+                }
+            }
+            ZoneMaterials result = new ZoneMaterials(mats, masks, lastMaskW, lastMaskH);
+            if (lastTint != null) {
+                result.setTint(lastTint, lastTintW, lastTintH);
+            }
+            return result;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
+    }
+
+    private void showMaterialSpecs() {
+        JTextArea area = new JTextArea(ZoneMaterials.SPEC_TEXT);
+        area.setEditable(false);
+        area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        area.setCaretPosition(0);
+        JScrollPane sp = new JScrollPane(area);
+        sp.setPreferredSize(new Dimension(720, 520));
+        JOptionPane.showMessageDialog(this, sp, I18n.t("tex.55"), JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void saveCurrentTexture(boolean saveNormal) {
         BufferedImage img = saveNormal ? renderedNormal : renderedDiffuse;
         if (img == null) {
-            JOptionPane.showMessageDialog(this, "Nessuna immagine pronta per il salvataggio.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, I18n.t("tex.115"), I18n.t("tex.116"), JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -1397,11 +1746,11 @@ public class TextureStudioPanel extends JPanel {
         File f = new File(targetDir, baseName);
         try {
             ImageIO.write(img, "png", f);
-            setStatus("File salvato con successo: " + f.getName(), ACCENT_GREEN);
-            JOptionPane.showMessageDialog(this, "Texture salvata con successo in:\n" + f.getAbsolutePath(), "Salvataggio Completato", JOptionPane.INFORMATION_MESSAGE);
+            setStatus(I18n.t("tex.117") + f.getName(), ACCENT_GREEN);
+            JOptionPane.showMessageDialog(this, I18n.t("tex.118") + f.getAbsolutePath(), I18n.t("tex.119"), JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
             ex.printStackTrace();
-            setStatus("Errore salvataggio: " + ex.getMessage(), Color.RED);
+            setStatus(I18n.t("tex.120") + ex.getMessage(), Color.RED);
         }
     }
 
@@ -1643,23 +1992,23 @@ public class TextureStudioPanel extends JPanel {
 
                     g2.setColor(ACCENT_CYAN);
                     g2.setFont(BarMapStudio.fontCond(Font.BOLD, 15));
-                    g2.drawString("NESSUN TERRENO ATTIVO", bx + 24, by + 34);
+                    g2.drawString(I18n.t("tex.121"), bx + 24, by + 34);
 
                     g2.setColor(TEXT_MUTED);
                     g2.setFont(BarMapStudio.font(Font.PLAIN, 12));
-                    g2.drawString("All'avvio non e' stato generato alcun terreno.", bx + 24, by + 60);
+                    g2.drawString(I18n.t("tex.122"), bx + 24, by + 60);
 
                     g2.setColor(TEXT_MAIN);
-                    g2.drawString("1. Puoi generare una mappa procedurale nella scheda [MAPS]", bx + 24, by + 88);
-                    g2.drawString("2. Oppure carica un'Heightmap con il tasto in alto [Carica Heightmap]", bx + 24, by + 112);
+                    g2.drawString(I18n.t("tex.123"), bx + 24, by + 88);
+                    g2.drawString(I18n.t("tex.124"), bx + 24, by + 112);
                 } else {
                     g2.setColor(TEXT_MUTED);
                     g2.setFont(BarMapStudio.font(Font.PLAIN, 12));
-                    g2.drawString("Nessun terreno attivo.", getWidth() / 2 - 60, getHeight() / 2);
+                    g2.drawString(I18n.t("tex.125"), getWidth() / 2 - 60, getHeight() / 2);
                 }
 
                 // Render HUD status pill badge even when no map is active
-                String coordStr = "Pos: [0, 0] | Mappa: Nessun Terreno | Zoom: " + Math.round(zoom * 100) + "% | Vista: " + currentViewMode.label;
+                String coordStr = I18n.t("tex.126") + Math.round(zoom * 100) + "% | Vista: " + currentViewMode.label;
                 drawHudChip(g2, coordStr);
 
                 g2.dispose();
@@ -1727,16 +2076,16 @@ public class TextureStudioPanel extends JPanel {
             int sizeUnitH = Math.max(1, mh / 64);
             String coordStr;
             if (activeMap != null) {
-                coordStr = String.format("Pos: [%d, %d] | Mappa: %dx%d (%d x %d km) | Zoom: %.0f%% | Vista: %s",
+                coordStr = String.format(I18n.t("tex.127"),
                     wx, wy, sizeUnitW, sizeUnitH, sizeUnitW, sizeUnitH, zoom * 100, currentViewMode.label);
                 if (inside) {
                     float hAt = activeMap.getHeightAtWorld(wx, wy);
                     float sAt = activeMap.getSlopeAtWorld(wx, wy);
                     double deg = Math.toDegrees(Math.atan(sAt));
-                    coordStr += String.format(Locale.ROOT, " | Quota: %.1fm | Pend: %.2f (%.1f deg)", hAt, sAt, deg);
+                    coordStr += String.format(Locale.ROOT, I18n.t("tex.128"), hAt, sAt, deg);
                 }
             } else {
-                coordStr = String.format("Pos: [%d, %d] | Risoluzione: %dx%d | Zoom: %.0f%% | Vista: %s",
+                coordStr = String.format(I18n.t("tex.129"),
                     wx, wy, imgW, imgH, zoom * 100, currentViewMode.label);
             }
 

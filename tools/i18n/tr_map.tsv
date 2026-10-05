@@ -1,0 +1,213 @@
+26|Diagonal mirror (double X + Z)|Miroir diagonal (double X + Z)|Diagonale Spiegelung (doppelt X + Z)
+27|Z axis mirror only (North-South / Y1-Y2)|Miroir axe Z seul (Nord-Sud / Y1-Y2)|Nur Z-Achsen-Spiegelung (Nord-Süd / Y1-Y2)
+28|X axis mirror only (West-East / X1-X2)|Miroir axe X seul (Ouest-Est / X1-X2)|Nur X-Achsen-Spiegelung (West-Ost / X1-X2)
+29|Quad mirror (4 quadrants, both X and Z)|Miroir quadruple (4 quadrants, X et Z)|Vierfach-Spiegelung (4 Quadranten, X und Z)
+30|No symmetry (free)|Aucune symétrie (libre)|Keine Symmetrie (frei)
+31|Roll Seed|Nouveau seed|Seed würfeln
+32|GENERATE TERRAIN|GÉNÉRER LE TERRAIN|GELÄNDE ERZEUGEN
+33|Slope Map [L]|Carte des pentes [L]|Hangkarte [L]
+34|3D View [V]|Vue 3D [V]|3D-Ansicht [V]
+35|REGENERATE FROM HEIGHTMAP|RÉGÉNÉRER DEPUIS LA HEIGHTMAP|AUS HEIGHTMAP NEU ERZEUGEN
+36|Load Heightmap...|Charger une heightmap...|Heightmap laden...
+37|Load Terrain Texture...|Charger une texture de terrain...|Geländetextur laden...
+38|Smooth / Flatten Slopes [Ramps]|Lisser / Aplanir les pentes [Rampes]|Hänge glätten / ebnen [Rampen]
+39|Axis: Z [X]|Axe : Z [X]|Achse: Z [X]
+40|1.0x (Standard)|1.0x (Standard)|1.0x (Standard)
+41|Mex: 0|Mex : 0|Mex: 0
+42|Geos: 0|Géos : 0|Geos: 0
+43|Spawns: 0|Spawns : 0|Spawns: 0
+44|Reclaim: 0|Reclaim : 0|Reclaim: 0
+45|GENERATE FINAL MAP|GÉNÉRER LA CARTE FINALE|FERTIGE KARTE ERZEUGEN
+46|GENERATE AND PLAY VS AI|GÉNÉRER ET JOUER CONTRE L'IA|ERZEUGEN UND GEGEN KI SPIELEN
+47|Ready to generate the terrain.|Prêt à générer le terrain.|Bereit, das Gelände zu erzeugen.
+48|Remove all custom objects placed on the map?|Supprimer tous les objets personnalisés placés sur la carte ?|Alle auf der Karte platzierten eigenen Objekte entfernen?
+49|Clear Placed Objects|Vider les objets placés|Platzierte Objekte leeren
+50|Axis: Diag [X]|Axe : Diag [X]|Achse: Diag [X]
+51|Diagonal symmetry X+Z [X key]|Symétrie diagonale X+Z [touche X]|Diagonale Symmetrie X+Z [Taste X]
+52|Mirror symmetry on Z axis (North-South) [X key]|Symétrie miroir sur l'axe Z (Nord-Sud) [touche X]|Spiegelsymmetrie an der Z-Achse (Nord-Süd) [Taste X]
+53|Axis: X [X]|Axe : X [X]|Achse: X [X]
+54|Mirror symmetry on X axis (West-East) [X key]|Symétrie miroir sur l'axe X (Ouest-Est) [touche X]|Spiegelsymmetrie an der X-Achse (West-Ost) [Taste X]
+55|Axis: Quad [X]|Axe : Quad [X]|Achse: Quad [X]
+56|4-way quad symmetry [X key]|Symétrie quadruple à 4 voies [touche X]|Vierfach-Symmetrie [Taste X]
+57|Axis: Free [X]|Axe : Libre [X]|Achse: Frei [X]
+58|No axis symmetry [X key]|Aucune symétrie d'axe [touche X]|Keine Achsensymmetrie [Taste X]
+59|3D View: ON [V]|Vue 3D : ON [V]|3D-Ansicht: AN [V]
+60|Slope Map: ON [L]|Carte des pentes : ON [L]|Hangkarte: AN [L]
+61|TOOLS:|OUTILS :|WERKZEUGE:
+62|Sel [S]|Sél [S]|Ausw [S]
+63|Mex [M]|Mex [M]|Mex [M]
+64|Metal value for new mex spots|Valeur de métal des nouveaux points mex|Metallwert für neue Mex-Punkte
+65|Geo [G]|Géo [G]|Geo [G]
+66|Spawn [P]|Spawn [P]|Spawn [P]
+67|Rocks [R]|Rochers [R]|Felsen [R]
+68|Trees [T]|Arbres [T]|Bäume [T]
+69|Wrecks [W]|Épaves [W]|Wracks [W]
+70|Eraser [E]|Gomme [E]|Radierer [E]
+71|Symm [Space]|Sym [Espace]|Symm [Leer]
+72|Toggle symmetric mirrored drawing [Space bar]|Activer ou désactiver le dessin symétrique [barre d'espace]|Symmetrisches Spiegelzeichnen ein-/ausschalten [Leertaste]
+73|Undo [^Z]|Annuler [^Z]|Rückgängig [^Z]
+74|Undo last change [Ctrl+Z]|Annuler la dernière modification [Ctrl+Z]|Letzte Änderung rückgängig machen [Strg+Z]
+75|Redo [^Y]|Rétablir [^Y]|Wiederholen [^Y]
+76|Redo undone change [Ctrl+Y]|Rétablir la modification annulée [Ctrl+Y]|Rückgängig gemachte Änderung wiederholen [Strg+Y]
+77|Toggle slope overlay (Slope Map) [L key]|Activer/désactiver la surcouche des pentes [touche L]|Hang-Overlay ein-/ausschalten [Taste L]
+78|Show/hide the scaled 3D view [V key]|Afficher/masquer la vue 3D à l'échelle [touche V]|Maßstabsgetreue 3D-Ansicht ein-/ausblenden [Taste V]
+79|Opacity:|Opacité :|Deckkraft:
+80|Adjust the opacity of the slope overlay|Régler l'opacité de la surcouche des pentes|Deckkraft des Hang-Overlays einstellen
+81|Zoom Out [-]|Zoom arrière [-]|Herauszoomen [-]
+82|Zoom In [+]|Zoom avant [+]|Hineinzoomen [+]
+83|1:1 Scale|Échelle 1:1|Maßstab 1:1
+84|Reset to 1:1 scale [0]|Revenir à l'échelle 1:1 [0]|Auf Maßstab 1:1 zurücksetzen [0]
+85|1. PROCEDURAL GENERATOR|1. GÉNÉRATEUR PROCÉDURAL|1. PROZEDURALER GENERATOR
+86|Map Size:|Taille de la carte :|Kartengröße:
+87|Terrain Style:|Style de relief :|Geländestil:
+88|Biome / Texture:|Biome / Texture :|Biom / Textur:
+89|Symmetry:|Symétrie :|Symmetrie:
+90|Cycle Symmetry: Diag / X / Z [X]|Changer de symétrie : Diag / X / Z [X]|Symmetrie wechseln: Diag / X / Z [X]
+91|Cycle through Diagonal, Z axis, X axis and Quad [shortcut: X]|Alterner entre Diagonale, axe Z, axe X et Quad [raccourci : X]|Zwischen Diagonal, Z-Achse, X-Achse und Quad wechseln [Kürzel: X]
+92|Terrain Seed:|Seed du terrain :|Gelände-Seed:
+93|2. RELIEF & SLOPES|2. RELIEF & PENTES|2. RELIEF & HÄNGE
+94|Maximum Terrain Height:|Hauteur maximale du terrain :|Maximale Geländehöhe:
+95|Sea / Water Level:|Niveau de la mer / de l'eau :|Meeres- / Wasserspiegel:
+96|Recompute textures, slope map, gradients and water from the heightmap|Recalculer textures, carte des pentes, dégradés et eau depuis la heightmap|Texturen, Hangkarte, Verläufe und Wasser aus der Heightmap neu berechnen
+97|Flatten and smooth height differences that bots and vehicles cannot cross (Anti-Cliff / Ramps)|Aplanir et lisser les dénivelés infranchissables pour les bots et véhicules (Anti-falaise / Rampes)|Höhenunterschiede glätten, die Bots und Fahrzeuge nicht überwinden können (Anti-Klippe / Rampen)
+98|Import an image file (16-bit PNG, RAW, BMP) as heightmap|Importer un fichier image (PNG 16 bits, RAW, BMP) comme heightmap|Eine Bilddatei (16-Bit-PNG, RAW, BMP) als Heightmap importieren
+99|Apply a custom image (PNG, JPG, BMP) as surface texture|Appliquer une image personnalisée (PNG, JPG, BMP) comme texture de surface|Ein eigenes Bild (PNG, JPG, BMP) als Oberflächentextur anwenden
+100|Open Texture Studio (Splatting)...|Ouvrir Texture Studio (Splatting)...|Texture Studio öffnen (Splatting)...
+101|Switch to the Texture Studio module to generate procedural textures and splatting masks|Passer au module Texture Studio pour générer textures procédurales et masques de splatting|Zum Modul Texture Studio wechseln, um prozedurale Texturen und Splatting-Masken zu erzeugen
+102|ASSET SPECS & REQUIREMENTS|SPÉCIFICATIONS & EXIGENCES DES ASSETS|ASSET-SPEZIFIKATIONEN & ANFORDERUNGEN
+103|Guidelines and technical specs for 16-bit heightmaps, textures and 3D models|Recommandations et spécifications techniques pour heightmaps 16 bits, textures et modèles 3D|Richtlinien und technische Spezifikationen für 16-Bit-Heightmaps, Texturen und 3D-Modelle
+104|<html><b style='color:#00E5FF'>Slope Map [L key]:</b><br/>|<html><b style='color:#00E5FF'>Carte des pentes [touche L] :</b><br/>|<html><b style='color:#00E5FF'>Hangkarte [Taste L]:</b><br/>
+105|Shows Recoil/BAR slopes in real time:<br/>|Affiche en temps réel les pentes Recoil/BAR :<br/>|Zeigt die Recoil/BAR-Hänge in Echtzeit:<br/>
+106|- <span style='color:#00FF88'>Green (&lt;12 deg):</span> Vehicles & buildable<br/>|- <span style='color:#00FF88'>Vert (&lt;12 deg) :</span> Véhicules & constructible<br/>|- <span style='color:#00FF88'>Grün (&lt;12 deg):</span> Fahrzeuge & bebaubar<br/>
+107|- <span style='color:#FFFF00'>Yellow (12-20 deg):</span> Slow vehicles<br/>|- <span style='color:#FFFF00'>Jaune (12-20 deg) :</span> Véhicules lents<br/>|- <span style='color:#FFFF00'>Gelb (12-20 deg):</span> Langsame Fahrzeuge<br/>
+108|- <span style='color:#FF9F1C'>Orange (20-33 deg):</span> Kbots / bots only<br/>|- <span style='color:#FF9F1C'>Orange (20-33 deg) :</span> Kbots / bots seulement<br/>|- <span style='color:#FF9F1C'>Orange (20-33 deg):</span> Nur Kbots / Bots<br/>
+109|- <span style='color:#FF3333'>Red (&gt;33 deg):</span> Impassable cliffs</html>|- <span style='color:#FF3333'>Rouge (&gt;33 deg) :</span> Falaises infranchissables</html>|- <span style='color:#FF3333'>Rot (&gt;33 deg):</span> Unpassierbare Klippen</html>
+110|Map Details|Détails de la carte|Kartendetails
+111|Objects (|Objets (|Objekte (
+112|Custom Map Name:|Nom de carte personnalisé :|Eigener Kartenname:
+113|MEX METAL VALUE (SPOTS):|VALEUR DE MÉTAL DES MEX (POINTS) :|MEX-METALLWERT (PUNKTE):
+114|Quick Placement Helpers:|Assistants de placement rapide :|Schnellplatzierungs-Helfer:
+115|+ Auto Base Mexes (Spawn)|+ Mex de base auto (Spawn)|+ Auto-Basis-Mexe (Spawn)
+116|Automatically place 3 metal extractors around each spawn|Placer automatiquement 3 extracteurs de métal autour de chaque spawn|Automatisch 3 Metallextraktoren um jeden Spawn platzieren
+117|+ Auto Contested Mexes (Center)|+ Mex contestés auto (centre)|+ Auto umkämpfte Mexe (Mitte)
+118|Automatically place 6 contested mex spots at the map center|Placer automatiquement 6 points mex contestés au centre de la carte|Automatisch 6 umkämpfte Mex-Punkte in der Kartenmitte platzieren
+119|+ Auto Reclaim (Rocks & Trees)|+ Reclaim auto (Rochers & Arbres)|+ Auto-Reclaim (Felsen & Bäume)
+120|Scatter rocks and trees procedurally based on biome and density|Répartir rochers et arbres de façon procédurale selon le biome et la densité|Felsen und Bäume prozedural nach Biom und Dichte verteilen
+121|Clear Mexes|Vider les mex|Mexe leeren
+122|Clear Reclaim|Vider le reclaim|Reclaim leeren
+123|Base Metal:|Métal de base :|Basis-Metall:
+124|Max Metal:|Métal max :|Max. Metall:
+125|Reclaim Density:|Densité de reclaim :|Reclaim-Dichte:
+126|Mex: |Mex : |Mex:
+127|Geos: |Géos : |Geos:
+128|Spawns: |Spawns : |Spawns:
+129|Reclaim: |Reclaim : |Reclaim:
+130|Generating terrain (|Génération du terrain (|Gelände wird erzeugt (
+131|)...|)...|)...
+132|Terrain generated! Press [L] to show the Slope Map.|Terrain généré ! Appuyez sur [L] pour afficher la carte des pentes.|Gelände erzeugt! Drücke [L], um die Hangkarte anzuzeigen.
+133|Terrain generation error: |Erreur de génération du terrain : |Fehler bei der Geländeerzeugung:
+134| (details in barmap-error.log)| (détails dans barmap-error.log)| (Details in barmap-error.log)
+135|First generate an initial terrain or pick a heightmap file to import!|Générez d'abord un terrain initial ou choisissez un fichier heightmap à importer !|Erzeuge zuerst ein Gelände oder wähle eine Heightmap-Datei zum Importieren!
+136|No Terrain Available|Aucun terrain présent|Kein Gelände vorhanden
+137|Regenerating ground from heightmap (MaxH: |Régénération du sol depuis la heightmap (MaxH : |Boden wird aus Heightmap neu erzeugt (MaxH:
+138|m, Water: |m, Eau : |m, Wasser:
+139|Ground regenerated from heightmap! [L for Slope Map]|Sol régénéré depuis la heightmap ! [L pour la carte des pentes]|Boden aus Heightmap neu erzeugt! [L für Hangkarte]
+140|Regeneration error: |Erreur de régénération : |Fehler bei der Neuerzeugung:
+141|Error while regenerating from heightmap:\n|Erreur lors de la régénération depuis la heightmap :\n|Fehler bei der Neuerzeugung aus der Heightmap:\n
+142|Select Heightmap File (PNG, RAW, BMP)|Sélectionner un fichier heightmap (PNG, RAW, BMP)|Heightmap-Datei wählen (PNG, RAW, BMP)
+143|Heightmap images (*.png, *.raw, *.bmp)|Images heightmap (*.png, *.raw, *.bmp)|Heightmap-Bilder (*.png, *.raw, *.bmp)
+144|File format not supported or not recognised.|Format de fichier non pris en charge ou non reconnu.|Dateiformat nicht unterstützt oder nicht erkannt.
+145|Import Error|Erreur d'importation|Importfehler
+146|Heightmap loaded: |Heightmap chargée : |Heightmap geladen:
+147|Error while loading the file:\n|Erreur lors du chargement du fichier :\n|Fehler beim Laden der Datei:\n
+148|File Error|Erreur de fichier|Dateifehler
+149|Select Terrain Texture (PNG, JPG, BMP)|Sélectionner une texture de terrain (PNG, JPG, BMP)|Geländetextur wählen (PNG, JPG, BMP)
+150|Texture images (*.png, *.jpg, *.jpeg, *.bmp)|Images de texture (*.png, *.jpg, *.jpeg, *.bmp)|Texturbilder (*.png, *.jpg, *.jpeg, *.bmp)
+151|Image format not supported or not valid.|Format d'image non pris en charge ou non valide.|Bildformat nicht unterstützt oder ungültig.
+152|First generate a base map to apply the texture to!|Générez d'abord une carte de base sur laquelle appliquer la texture !|Erzeuge zuerst eine Basiskarte, auf die die Textur angewendet wird!
+153|Warning|Attention|Achtung
+154|Custom texture applied: |Texture personnalisée appliquée : |Eigene Textur angewendet:
+155|Error while loading the texture:\n|Erreur lors du chargement de la texture :\n|Fehler beim Laden der Textur:\n
+156|No active map found in the Editor. First generate a base map to apply the composition to!|Aucune carte active dans l'éditeur. Générez d'abord une carte de base sur laquelle appliquer la composition !|Keine aktive Karte im Editor. Erzeuge zuerst eine Basiskarte, auf die die Komposition angewendet wird!
+157|Texture & splatting composition applied: |Composition texture & splatting appliquée : |Textur- & Splatting-Komposition angewendet:
+158|Error while applying the texture:\n|Erreur lors de l'application de la texture :\n|Fehler beim Anwenden der Textur:\n
+159|Error|Erreur|Fehler
+160|There is no map whose slopes can be smoothed!|Aucune carte dont lisser les pentes !|Keine Karte vorhanden, deren Hänge geglättet werden können!
+161|Smoothing excessive slopes...|Lissage des pentes excessives...|Zu steile Hänge werden geglättet...
+162|Steep slopes smoothed! Impassable cliffs reduced. [Slope Map ON]|Pentes raides lissées ! Falaises infranchissables réduites. [Carte des pentes ON]|Steile Hänge geglättet! Unpassierbare Klippen reduziert. [Hangkarte AN]
+163|Error while smoothing: |Erreur lors du lissage : |Fehler beim Glätten:
+164|First generate the terrain by clicking 'GENERATE TERRAIN'!|Générez d'abord le terrain en cliquant sur « GÉNÉRER LE TERRAIN » !|Erzeuge zuerst das Gelände mit „GELÄNDE ERZEUGEN“!
+165|No Terrain|Aucun terrain|Kein Gelände
+166|Beyond All Reason maps folder not found in:\n|Dossier maps de Beyond All Reason introuvable dans :\n|Maps-Ordner von Beyond All Reason nicht gefunden in:\n
+167|BAR folder not found|Dossier BAR introuvable|BAR-Ordner nicht gefunden
+168|Building BAR map...|Compilation de la carte BAR...|BAR-Karte wird erstellt...
+169|Map exported successfully: |Carte exportée avec succès : |Karte erfolgreich exportiert:
+170|Permission denied on |Accès refusé sur |Zugriff verweigert auf
+171|. Close the app and restart it as administrator (right-click the launcher).|. Fermez l'application et relancez-la en tant qu'administrateur (clic droit sur le lanceur).|. Schließe die App und starte sie als Administrator neu (Rechtsklick auf den Starter).
+172|Error during export: |Erreur lors de l'exportation : |Fehler beim Export:
+173|Vehicles OK & Buildable|Véhicules OK & Constructible|Fahrzeuge OK & Bebaubar
+174|Slow Vehicles / No Build|Véhicules lents / Non constr.|Langsame Fahrzeuge / Kein Bau
+175|Kbots / Biped Bots Only|Kbots / Bots bipèdes seulement|Nur Kbots / Zweibeiner-Bots
+176|Impassable / Cliff|Infranchissable / Falaise|Unpassierbar / Klippe
+177|Pos: [%d, %d] | Height: %.1fm | Slope: %.2f (%.1f deg) | %s|Pos : [%d, %d] | Altitude : %.1fm | Pente : %.2f (%.1f deg) | %s|Pos: [%d, %d] | Höhe: %.1fm | Hang: %.2f (%.1f deg) | %s
+178|No terrain generated - Click 'GENERATE TERRAIN'|Aucun terrain généré - Cliquez sur « GÉNÉRER LE TERRAIN »|Kein Gelände erzeugt - Klicke auf „GELÄNDE ERZEUGEN“
+179|Pos: [%d, %d] | Map: %dx%d (%d x %d km) | Zoom: %.0f%% | Tool: %s | Symm: %s|Pos : [%d, %d] | Carte : %dx%d (%d x %d km) | Zoom : %.0f%% | Outil : %s | Sym : %s|Pos: [%d, %d] | Karte: %dx%d (%d x %d km) | Zoom: %.0f%% | Werkzeug: %s | Symm: %s
+180| | Height: %.1fm | Slope: %.2f (%.1f deg)| | Altitude : %.1fm | Pente : %.2f (%.1f deg)| | Höhe: %.1fm | Hang: %.2f (%.1f deg)
+181| | MEX SELECTED: %.1f M| | MEX SÉLECTIONNÉ : %.1f M| | MEX AUSGEWÄHLT: %.1f M
+182| | SPAWN SELECTED: Player %d| | SPAWN SÉLECTIONNÉ : Joueur %d| | SPAWN AUSGEWÄHLT: Spieler %d
+183|[S] Select  [M] Mex  [G] Geo  [R] Rocks  [E] Erase  [DEL] Delete  [Ctrl+Z] Undo  [L] Slope Map  [Space] Symm  [1-5] Metal  [+/-] Zoom|[S] Sélection  [M] Mex  [G] Géo  [R] Rochers  [E] Effacer  [DEL] Supprimer  [Ctrl+Z] Annuler  [L] Pentes  [Espace] Sym  [1-5] Métal  [+/-] Zoom|[S] Auswahl  [M] Mex  [G] Geo  [R] Felsen  [E] Radieren  [DEL] Löschen  [Strg+Z] Rückgängig  [L] Hangkarte  [Leer] Symm  [1-5] Metall  [+/-] Zoom
+184|SLOPE LEGEND (BAR)|LÉGENDE DES PENTES (BAR)|HANGLEGENDE (BAR)
+185|< 12 deg  Vehicles OK & Buildable|< 12 deg  Véhicules OK & Constructible|< 12 deg  Fahrzeuge OK & Bebaubar
+186|12-20 deg Slowed Vehicles|12-20 deg Véhicules ralentis|12-20 deg Verlangsamte Fahrzeuge
+187|20-33 deg Kbots / Bots Only|20-33 deg Kbots / Bots seulement|20-33 deg Nur Kbots / Bots
+188|> 33 deg  Impassable (Cliff)|> 33 deg  Infranchissable (Falaise)|> 33 deg  Unpassierbar (Klippe)
+189|Water / Underwater|Eau / Sous l'eau|Wasser / Unter Wasser
+190|3D: click select | G move | R rotate | X/Z axis | F frame|3D : clic sélection | G déplacer | R pivoter | X/Z axe | F cadrer|3D: Klick wählt | G bewegen | R drehen | X/Z Achse | F einpassen
+191|Scale of the selected type (all instances)|Échelle du type sélectionné (toutes les instances)|Skalierung des gewählten Typs (alle Instanzen)
+192|Create variant|Créer une variante|Variante erstellen
+193|Clone the type with an independent scale (new id)|Cloner le type avec une échelle indépendante (nouvel id)|Typ mit unabhängiger Skalierung klonen (neue ID)
+194|Cmd: ON|Cmd : ON|Cmd: AN
+195|Cmd: OFF|Cmd : OFF|Cmd: AUS
+196|Scale:|Échelle :|Skalierung:
+197|Move [G]|Déplacer [G]|Bewegen [G]
+198|Drag the object on the terrain (G), lock axis with X/Z|Faire glisser l'objet sur le terrain (G), verrouiller l'axe avec X/Z|Objekt über das Gelände ziehen (G), Achse mit X/Z sperren
+199|Rotate [R]|Pivoter [R]|Drehen [R]
+200|Drag to rotate yaw (R); R while still = +15 degrees|Faire glisser pour pivoter (R) ; R à l'arrêt = +15 degrés|Ziehen zum Drehen (R); R im Stand = +15 Grad
+201|Free movement on the plane|Déplacement libre sur le plan|Freie Bewegung in der Ebene
+202|Movement on X axis only [X key]|Déplacement sur l'axe X seul [touche X]|Bewegung nur auf der X-Achse [Taste X]
+203|Movement on Z axis only [Z key]|Déplacement sur l'axe Z seul [touche Z]|Bewegung nur auf der Z-Achse [Taste Z]
+204|Variant created: |Variante créée : |Variante erstellt:
+205|\nOnly this instance uses the new scale.|\nSeule cette instance utilise la nouvelle échelle.|\nNur diese Instanz nutzt die neue Skalierung.
+206|Object variant|Variante d'objet|Objektvariante
+207|Generate the terrain in MAPS to see the 3D preview|Générez le terrain dans MAPS pour voir l'aperçu 3D|Erzeuge das Gelände in MAPS, um die 3D-Vorschau zu sehen
+208|No object placed — place objects in the 2D view|Aucun objet placé — placez des objets dans la vue 2D|Kein Objekt platziert — platziere Objekte in der 2D-Ansicht
+209|BAR MAP|BAR MAP|BAR MAP
+210|  STANDALONE  |  STANDALONE  |  STANDALONE
+211|OBJECTS & UNITS|OBJETS & UNITÉS|OBJEKTE & EINHEITEN
+212|Minimize|Réduire|Minimieren
+213|Maximize / Window|Agrandir / Fenêtre|Maximieren / Fenster
+214|BAR MAP STUDIO|BAR MAP STUDIO|BAR MAP STUDIO
+215|BAR connection and engine details (click to show overlay)|Détails de la connexion BAR et du moteur (cliquer pour afficher)|BAR-Verbindungs- und Engine-Details (klicken zum Anzeigen)
+216|BEYOND ALL REASON STATUS|ÉTAT DE BEYOND ALL REASON|STATUS VON BEYOND ALL REASON
+217|Checking status...|Vérification de l'état...|Status wird geprüft...
+218|Open BAR Folder|Ouvrir le dossier BAR|BAR-Ordner öffnen
+219|Guidelines and technical specs for heightmaps, textures and 3D models (click to open)|Recommandations et spécifications techniques pour heightmaps, textures et modèles 3D (cliquer pour ouvrir)|Richtlinien und technische Spezifikationen für Heightmaps, Texturen und 3D-Modelle (klicken zum Öffnen)
+220|Help and keyboard shortcuts (click to show overlay)|Aide et raccourcis clavier (cliquer pour afficher)|Hilfe und Tastenkürzel (klicken zum Anzeigen)
+221|MAP STUDIO SHORTCUTS & CONTROLS|RACCOURCIS & COMMANDES DE MAP STUDIO|MAP STUDIO KÜRZEL & STEUERUNG
+222|Select and inspect entities|Sélectionner et inspecter les entités|Elemente auswählen und untersuchen
+223|Place Mex (metal extractor)|Placer un mex (extracteur de métal)|Mex platzieren (Metallextraktor)
+224|Quick-set mex metal value|Régler rapidement la valeur de métal du mex|Mex-Metallwert schnell setzen
+225|Place Geothermal (hydrothermal vent)|Placer un géothermique (évent hydrothermal)|Geothermie platzieren (Hydrothermalquelle)
+226|Place Player Spawn|Placer un spawn de joueur|Spieler-Spawn platzieren
+227|Place Reclaim Rocks|Placer des rochers à reclaim|Reclaim-Felsen platzieren
+228|Place Reclaim Trees|Placer des arbres à reclaim|Reclaim-Bäume platzieren
+229|Place Reclaim Wrecks|Placer des épaves à reclaim|Reclaim-Wracks platzieren
+230|Eraser: delete the entity under the cursor|Gomme : effacer l'entité sous le curseur|Radierer: Element unter dem Cursor löschen
+231|Delete the currently selected entity|Supprimer l'entité sélectionnée|Aktuell gewähltes Element löschen
+232|Toggle Symmetry mode|Activer / désactiver le mode Symétrie|Symmetriemodus ein-/ausschalten
+233|Cycle Symmetry Axis (Diag / Z / X / Quad)|Changer l'axe de symétrie (Diag / Z / X / Quad)|Symmetrieachse wechseln (Diag / Z / X / Quad)
+234|Undo and Redo|Annuler et Rétablir|Rückgängig und Wiederholen
+235|Toggle Slope Map|Activer / désactiver la carte des pentes|Hangkarte ein-/ausschalten
+236|Dynamic zoom centred on the cursor|Zoom dynamique centré sur le curseur|Dynamischer Zoom auf den Cursor zentriert
+237|[ Right Drag ]|[ Glisser droit ]|[ Rechts ziehen ]
+238|Move the map view (Pan)|Déplacer la vue de la carte (Pan)|Kartenansicht verschieben (Pan)

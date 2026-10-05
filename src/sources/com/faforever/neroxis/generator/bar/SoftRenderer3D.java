@@ -66,8 +66,15 @@ public final class SoftRenderer3D {
             this.triCount = idx.length / 3;
         }
         /** Costruisce da ObjModel3D triangolando le facce (fan). */
-        public static RenderMesh fromModel(ObjModel3D m) {
+        public static RenderMesh fromModel(ObjModel3D m) { return fromModel(m, false); }
+
+        /**
+         * grounded = true: stessa normalizzazione dell'export S3O (centrato su X/Z, base a Y=0),
+         * cosi' l'anteprima appoggia il modello al terreno come in gioco.
+         */
+        public static RenderMesh fromModel(ObjModel3D m, boolean grounded) {
             if (m == null || m.getFaceCount() == 0) return new RenderMesh(new float[0], new float[0], new float[0], new int[0]);
+            float ox = grounded ? m.getCenterX() : 0, oy = grounded ? m.getMinY() : 0, oz = grounded ? m.getCenterZ() : 0;
             float[] v = m.getVertices();
             int[][] faces = m.getFaces();
             float[][] fN = m.getFaceNormals();
@@ -87,7 +94,7 @@ public final class SoftRenderer3D {
                     float x = (vi * 3 < v.length) ? v[vi * 3] : 0;
                     float y = (vi * 3 + 1 < v.length) ? v[vi * 3 + 1] : 0;
                     float z = (vi * 3 + 2 < v.length) ? v[vi * 3 + 2] : 0;
-                    P.add(x); P.add(y); P.add(z);
+                    P.add(x - ox); P.add(y - oy); P.add(z - oz);
                     N.add(fn[0]); N.add(fn[1]); N.add(fn[2]);
                     if (uvs != null && uvs.length >= face.length * 2) {
                         U.add(uvs[k * 2]); U.add(uvs[k * 2 + 1]);
@@ -135,6 +142,13 @@ public final class SoftRenderer3D {
     }
 
     public void setBilinear(boolean b) { this.bilinear = b; }
+    /** Luce d'ambiente (0..1): quanto restano illuminate le facce che non guardano la luce. */
+    public void setAmbient(float a) { this.ambient = Math.max(0f, Math.min(1f, a)); }
+    /** Direzione da cui arriva la luce, nello spazio del mondo. */
+    public void setLightDir(double x, double y, double z) {
+        float[] n = norm(new float[]{(float) x, (float) y, (float) z});
+        lightDir[0] = n[0]; lightDir[1] = n[1]; lightDir[2] = n[2];
+    }
     public int getWidth() { return w; }
     public int getHeight() { return h; }
 
@@ -322,6 +336,48 @@ public final class SoftRenderer3D {
             }
         });
         return vcount;
+    }
+
+    /**
+     * Terreno come mesh unica indicizzata con UV 0..1 sulla colormap: si costruisce una volta
+     * e si disegna con drawMesh + texture (colore per pixel, niente celle a tinta piatta).
+     */
+    public static RenderMesh buildTerrainMesh(float[] heights, int gw, int gh, float cellElmos) {
+        if (heights == null || gw < 2 || gh < 2) return null;
+        int step = 1;
+        while ((gw / step) * (gh / step) > 256 * 256 && step < 16) step *= 2;
+        int nw = (gw - 1) / step + 1, nh = (gh - 1) / step + 1;
+        float[] pos = new float[nw * nh * 3];
+        float[] nrm = new float[nw * nh * 3];
+        float[] uv = new float[nw * nh * 2];
+        for (int j = 0; j < nh; j++) {
+            for (int i = 0; i < nw; i++) {
+                int gi = Math.min(gw - 1, i * step), gj = Math.min(gh - 1, j * step);
+                int k = j * nw + i;
+                pos[k*3] = gi * cellElmos;
+                pos[k*3+1] = heights[gj * gw + gi];
+                pos[k*3+2] = gj * cellElmos;
+                float hx0 = heights[gj * gw + Math.max(0, gi - 1)];
+                float hx1 = heights[gj * gw + Math.min(gw - 1, gi + 1)];
+                float hz0 = heights[Math.max(0, gj - 1) * gw + gi];
+                float hz1 = heights[Math.min(gh - 1, gj + 1) * gw + gi];
+                float[] nn = norm(new float[]{(hx0 - hx1) / (2 * cellElmos), 1.0f, (hz0 - hz1) / (2 * cellElmos)});
+                nrm[k*3] = nn[0]; nrm[k*3+1] = nn[1]; nrm[k*3+2] = nn[2];
+                // 0.999: il campionamento texture e' a ripetizione, u=1 tornerebbe al bordo opposto
+                uv[k*2] = 0.999f * gi / (gw - 1);
+                uv[k*2+1] = 0.999f * gj / (gh - 1);
+            }
+        }
+        int[] idx = new int[(nw - 1) * (nh - 1) * 6];
+        int o = 0;
+        for (int j = 0; j < nh - 1; j++) {
+            for (int i = 0; i < nw - 1; i++) {
+                int k00 = j * nw + i, k10 = k00 + 1, k01 = k00 + nw, k11 = k01 + 1;
+                idx[o++] = k00; idx[o++] = k10; idx[o++] = k11;
+                idx[o++] = k00; idx[o++] = k11; idx[o++] = k01;
+            }
+        }
+        return new RenderMesh(pos, nrm, uv, idx);
     }
 
     /** Terreno: griglia heights (elmos) stride w, colorMap per vertice gia mappata. Disegna come mesh a due tri per cella con LOD step. */

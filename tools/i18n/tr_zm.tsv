@@ -1,0 +1,42 @@
+1|EXTERNAL MATERIALS - SPECS|MATÉRIAUX EXTERNES - SPÉCIFICATIONS|EXTERNE MATERIALIEN - SPEZIFIKATION
+2|A material is a group of files with the same base name, in the same folder|Un matériau est un groupe de fichiers de même nom de base, dans le même dossier|Ein Material ist eine Gruppe von Dateien mit gleichem Basisnamen im selben Ordner
+3|(recommended: custom_assets/textures). Load it by picking the COLOUR file.|(conseillé : custom_assets/textures). On le charge en choisissant le fichier COULEUR.|(empfohlen: custom_assets/textures). Man lädt es über die FARB-Datei.
+4|  wool.png            COLOUR (required)|  laine.png           COULEUR (obligatoire)|  wolle.png           FARBE (Pflicht)
+5|  wool_normal.png     NORMAL MAP (optional)|  laine_normal.png    NORMAL MAP (facultatif)|  wolle_normal.png    NORMAL-MAP (optional)
+6|  wool_height.png     greyscale RELIEF (optional)|  laine_height.png    RELIEF en niveaux de gris (facultatif)|  wolle_height.png    RELIEF in Graustufen (optional)
+7|  wool.properties     PARAMETERS (optional)|  laine.properties    PARAMÈTRES (facultatif)|  wolle.properties    PARAMETER (optional)
+8|READY-MADE PBR PACKS (ambientCG, Poly Haven)|PACKS PBR PRÊTS À L'EMPLOI (ambientCG, Poly Haven)|FERTIGE PBR-PAKETE (ambientCG, Poly Haven)
+9|They load as they are, by picking the _Color file: the loader recognises|Ils se chargent tels quels, en choisissant le fichier _Color : sont reconnus|Sie werden unverändert geladen, über die _Color-Datei: erkannt werden
+10|_Color, _NormalGL (or _NormalDX, converted), _Displacement (relief) and|_Color, _NormalGL (ou _NormalDX, convertie), _Displacement (relief) et|_Color, _NormalGL (oder _NormalDX, umgerechnet), _Displacement (Relief) und
+11|_Roughness (used to estimate the gloss). Real relief stays off until|_Roughness (dont on estime la brillance). Le relief réel reste désactivé tant que|_Roughness (daraus wird der Glanz geschätzt). Echtes Relief bleibt aus, bis
+12|you set relief_elmos in <name>.properties.|vous ne réglez pas relief_elmos dans <nom>.properties.|du relief_elmos in <name>.properties setzt.
+13|IMAGE RULES|RÈGLES POUR LES IMAGES|REGELN FÜR DIE BILDER
+14|- Format: PNG, JPG or BMP.|- Format : PNG, JPG ou BMP.|- Format: PNG, JPG oder BMP.
+15|- Square, side a power of 2: 256, 512, 1024 or 2048.|- Carrées, côté en puissance de 2 : 256, 512, 1024 ou 2048.|- Quadratisch, Seitenlänge eine Zweierpotenz: 256, 512, 1024 oder 2048.
+16|- Repeatable without seams (seamless): the right edge must continue into the left one,|- Répétables sans raccord (seamless) : le bord droit doit se prolonger dans le gauche,|- Nahtlos wiederholbar (seamless): Der rechte Rand muss in den linken übergehen,
+17|  and the top edge into the bottom one.|  et le bord haut dans le bas.|  der obere in den unteren.
+18|- Colour: no shadows or directional lights, the engine adds them itself.|- Couleur : sans ombres ni lumières directionnelles, le moteur les ajoute lui-même.|- Farbe: ohne Schatten oder gerichtetes Licht, die Engine fügt sie selbst hinzu.
+19|- Normal map: tangent space, OpenGL convention (green = up), same repetition as the colour.|- Normal map : espace tangent, convention OpenGL (vert = haut), même répétition que la couleur.|- Normal-Map: Tangentenraum, OpenGL-Konvention (Grün = oben), gleiche Wiederholung wie die Farbe.
+20|  If missing it is derived from the relief or from the brightness of the colour.|  Si elle manque, elle est calculée depuis le relief ou la luminosité de la couleur.|  Fehlt sie, wird sie aus dem Relief oder der Helligkeit der Farbe abgeleitet.
+21|- Relief: mid grey = unchanged height, white = raise, black = lower.|- Relief : gris moyen = altitude inchangée, blanc = élève, noir = abaisse.|- Relief: Mittelgrau = Höhe unverändert, Weiß = hebt, Schwarz = senkt.
+22|PARAMETERS (.properties file, all optional)|PARAMÈTRES (fichier .properties, tous facultatifs)|PARAMETER (.properties-Datei, alle optional)
+23|  tile_elmos=128      side of one repetition on the terrain, in elmos (16 - 2048)|  tile_elmos=128      côté d'une répétition sur le terrain, en elmos (16 - 2048)|  tile_elmos=128      Seitenlänge einer Wiederholung auf dem Gelände, in Elmos (16 - 2048)
+24|  gloss=0.05          gloss: 0 = matte (wool), 0.6 = glossy plastic (Lego)|  gloss=0.05          brillance : 0 = mat (laine), 0.6 = plastique brillant (Lego)|  gloss=0.05          Glanz: 0 = matt (Wolle), 0.6 = glänzender Kunststoff (Lego)
+25|  relief_elmos=0      height span of the real relief in elmos, from the lowest to the highest point|  relief_elmos=0      dénivelé du relief réel en elmos, du point le plus bas au plus haut|  relief_elmos=0      Höhenspanne des echten Reliefs in Elmos, vom tiefsten zum höchsten Punkt
+26|  normal_strength=2   strength of the normal map (1 = as in the file, up to 8)|  normal_strength=2   force de la normal map (1 = comme dans le fichier, jusqu'à 8)|  normal_strength=2   Stärke der Normal-Map (1 = wie in der Datei, bis 8)
+27|GAME LIMITS|LIMITES DU JEU|GRENZEN DES SPIELS
+28|- In-game colour has 1 pixel per elmo: a 1024 px tile over 128 elmos is scaled down.|- La couleur en jeu a 1 pixel par elmo : une tuile de 1024 px sur 128 elmos est réduite.|- Die Farbe im Spiel hat 1 Pixel pro Elmo: Eine 1024-px-Kachel auf 128 Elmos wird verkleinert.
+29|- Real relief has 1 point every 8 elmos: you need tile_elmos of at least 64 and shapes at least|- Le relief réel a 1 point tous les 8 elmos : il faut tile_elmos d'au moins 64 et des formes larges d'au moins|- Echtes Relief hat alle 8 Elmos einen Punkt: nötig sind tile_elmos von mindestens 64 und Formen von mindestens
+30|  40-50 elmos wide. Units feel it: steep relief slows or blocks them.|  40-50 elmos. Les unités le ressentent : un relief raide les ralentit ou les bloque.|  40-50 Elmos Breite. Einheiten spüren es: Steiles Relief bremst oder blockiert sie.
+31|- Fine detail (fibres, edges) comes from the normal map, not from the relief.|- Le détail fin (fibres, bords) vient de la normal map, pas du relief.|- Feine Details (Fasern, Kanten) kommen aus der Normal-Map, nicht aus dem Relief.
+32| looks like the preview of the pack: using | semble être l'aperçu du pack : utilisation de | sieht nach der Vorschau des Pakets aus: verwende
+33| as colour.| comme couleur.| als Farbe.
+34|relief_elmos > 0 but missing |relief_elmos > 0 mais il manque |relief_elmos > 0, aber es fehlt
+35|_height: no relief applied.|_height : aucun relief appliqué.|_height: kein Relief angewendet.
+36|Relief with tile_elmos < 64: the terrain has one point every 8 elmos, the relief will be ignored.|Relief avec tile_elmos < 64 : le terrain a un point tous les 8 elmos, le relief sera ignoré.|Relief mit tile_elmos < 64: Das Gelände hat alle 8 Elmos einen Punkt, das Relief wird ignoriert.
+37|Unable to read |Impossible de lire |Kann nicht gelesen werden:
+38|: it is not square (| : elle n'est pas carrée (|: nicht quadratisch (
+39|), it will be distorted.|), elle sera déformée.|), wird verzerrt.
+40|: the side is not a power of 2 (| : le côté n'est pas une puissance de 2 (|: Seitenlänge ist keine Zweierpotenz (
+41|: larger than 2048 px, the extra detail is not visible in game.| : plus grande que 2048 px, le détail en excès ne se voit pas en jeu.|: größer als 2048 px, das zusätzliche Detail ist im Spiel nicht sichtbar.
+42| is not a number: "| n'est pas numérique : "| ist keine Zahl: "

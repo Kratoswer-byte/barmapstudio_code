@@ -37,7 +37,7 @@
    - (a) **Affiancata**: 2D a sinistra e 3D a destra con divisore regolabile, attivata dal pulsante `Vista 3D [V]` dopo Slope Map. *(consigliata)*
    - (b) **Alternata**: il pulsante sostituisce il 2D con il 3D a tutto schermo.
    - (c) Finestra separata, utile con due monitor.
-2. **Colore squadra sui modelli personalizzati.** Teniamo sempre i colori originali (alpha 255, come ora), oppure aggiungiamo un'opzione "zone colore squadra" che tinge le parti scure o quelle scelte?
+2. **Colore squadra sui modelli personalizzati.** Teniamo sempre i colori originali (alpha di tex1 = 0: in BAR l'alpha di tex1 è la quantità di colore squadra), oppure aggiungiamo un'opzione "zone colore squadra" che tinge le parti scure o quelle scelte?
 3. **Unità ufficiali BAR piazzate in mappa** (es. `armcom`, torrette). Le mostriamo anche loro con il modello vero dal gioco? *(consigliato: sì, costa poco grazie al lettore S3O)*
 4. **Spostare gli oggetti trascinandoli nella vista 3D**: lo vuoi già in questa fase, o bastano selezione, scala e rotazione (lo spostamento resta nel 2D)?
 
@@ -74,7 +74,7 @@ flowchart LR
 #### [NEW] `SoftRenderer3D.java`
 - Framebuffer `int[]` più z-buffer `float[]`, disegnato poi su un `BufferedImage` (`TYPE_INT_RGB`).
 - Rasterizzazione dei triangoli a baricentriche con UV corrette per prospettiva, campionamento della texture (nearest/bilineare) e luce Lambert più ambiente.
-- **Colore squadra**: `rgb = mix(teamColor, texRGB, texAlpha)`, la stessa regola di BAR per `tex1.alpha`.
+- **Colore squadra**: `rgb = mix(texRGB, teamColor, texAlpha)`, la stessa regola di BAR per `tex1.alpha` (alpha 0 = colori originali, 255 = tutto colore squadra).
 - Righe del framebuffer divise in bande, renderizzate in parallelo (`IntStream.parallel`).
 - **Risoluzione dinamica**: metà risoluzione mentre trascini la camera, piena da fermo.
 

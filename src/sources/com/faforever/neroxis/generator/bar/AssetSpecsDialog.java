@@ -33,7 +33,7 @@ public class AssetSpecsDialog extends JDialog {
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel contentCards = new JPanel(cardLayout);
     private final JButton[] tabButtons = new JButton[5];
-    private final JCheckBox doNotShowCheck = new JCheckBox("Non mostrare piu all'avvio");
+    private final JCheckBox doNotShowCheck = new JCheckBox(I18n.t("spec.1"));
     private Point dragStart;
 
     public static synchronized void toggle(JFrame parent, LobbyUi lobby) {
@@ -69,7 +69,7 @@ public class AssetSpecsDialog extends JDialog {
     }
 
     public AssetSpecsDialog(JFrame parent, LobbyUi lobby) {
-        super(parent, "SPECIFICHE & GUIDA ASSET: BEYOND ALL REASON", false);
+        super(parent, I18n.t("spec.2"), false);
         lobbyRef = lobby;
         setUndecorated(true);
         setSize(820, 640);
@@ -156,7 +156,7 @@ public class AssetSpecsDialog extends JDialog {
         vectorInfoIcon.setPreferredSize(new Dimension(20, 24));
         titlePanel.add(vectorInfoIcon);
 
-        JLabel title = new JLabel("SPECIFICHE & GUIDA ASSET: BEYOND ALL REASON (RECOIL ENGINE)");
+        JLabel title = new JLabel(I18n.t("spec.3"));
         title.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         title.setForeground(ACCENT_CYAN);
         titlePanel.add(title);
@@ -207,11 +207,11 @@ public class AssetSpecsDialog extends JDialog {
         bar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
 
         String[] titles = {
-            "HEIGHTMAP & RILIEVI",
-            "TEXTURE & TERRENO",
-            "MODELLI 3D & FLORA",
-            "METALLO & AMBIENTE",
-            "CARTELLA ASSET"
+            I18n.t("spec.4"),
+            I18n.t("spec.5"),
+            I18n.t("spec.6"),
+            I18n.t("spec.7"),
+            I18n.t("spec.8")
         };
         String[] targets = {"HEIGHTMAP", "TEXTURES", "MODELS", "METAL_ENV", "CUSTOM_DIR"};
 
@@ -329,40 +329,47 @@ public class AssetSpecsDialog extends JDialog {
     private JComponent buildHeightmapCard() {
         JPanel p = createCardPanel();
 
-        p.add(createSectionTitle("SPECIFICHE ALTIMETRIA E HEIGHTMAP (RECOIL ENGINE)"));
+        p.add(createSectionTitle(I18n.t("spec.9")));
         p.add(Box.createVerticalStrut(10));
 
         p.add(createBadgeRow(
-            new String[]{"Formato Primario", "PNG 16-bit Grayscale o RAW 16-bit"},
-            new String[]{"Profondita Colore", "65.536 Livelli di grigio (0 - 65535)"},
-            new String[]{"Risoluzione Formula", "(DimensioneInElmos / 8) + 1"},
-            new String[]{"Pendenza Max Carri", "18 - 22 gradi (Recoil: < 0.28)"},
-            new String[]{"Pendenza Max Bot", "35 - 40 gradi (Recoil: < 0.60)"}
+            new String[]{I18n.t("spec.10"), I18n.t("spec.11")},
+            new String[]{I18n.t("spec.12"), I18n.t("spec.13")},
+            new String[]{I18n.t("spec.14"), "(DimensioneInElmos / 8) + 1"},
+            new String[]{I18n.t("spec.15"), I18n.t("spec.16")},
+            new String[]{I18n.t("spec.17"), I18n.t("spec.18")}
         ));
         p.add(Box.createVerticalStrut(14));
 
-        p.add(createSubHeader("Risoluzioni Standard per BAR"));
+        p.add(createSubHeader(I18n.t("spec.19")));
         p.add(createParagraph(
-            "> Mappa 8x8 km (1v1 / 2v2): 513 x 513 pixel (o 512x512)\n" +
-            "> Mappa 16x16 km (Standard 8v8 competitivo): 1025 x 1025 pixel (o 1024x1024)\n" +
-            "> Mappa 24x24 km (Ampia scala): 1537 x 1537 pixel\n" +
-            "> Mappa 32x32 km (Guerra totale): 2049 x 2049 pixel\n\n" +
-            "Nota: Se importi immagini con risoluzione diversa (es. 2000x2000 o 1920x1080), BAR Map Studio applica automaticamente un ricampionamento bicubico con preservazione dei dislivelli."
+            I18n.t("spec.20") +
+            I18n.t("spec.21") +
+            I18n.t("spec.22") +
+            I18n.t("spec.23") +
+            I18n.t("spec.24")
         ));
         p.add(Box.createVerticalStrut(12));
 
         p.add(createTipBox(
-            "PERCHE IL FORMATO 16-BIT E FONDAMENTALE:\n" +
-            "Un'immagine 8-bit convenzionale dispone solo di 256 livelli discreti. Su un dislivello di 300 metri, ogni gradino misura oltre 1,17 metri, generando terrazzamenti a gradoni ('stepping/banding') che incastrano i veicoli di BAR.\n" +
-            "Il 16-bit offre 65.536 quote diverse (4,5 millimetri per livello), garantendo rampe perfettamente lisce ed un pathfinding fluido per tutti i veicoli."
+            I18n.t("spec.25") +
+            I18n.t("spec.26") +
+            I18n.t("spec.27")
         ));
         p.add(Box.createVerticalStrut(12));
 
         p.add(createWarningBox(
-            "ERRORI COMUNI DA EVITARE:\n" +
-            "[!] Pendenze verticali accidentali: Usa sempre lo strumento Slope Map [L] per verificare che le rampe di accesso alle basi non superino i 22 gradi per i carri.\n" +
-            "[!] Picchi isolati sotto acqua: I fondali marini devono avere un fondo piatto o degradante per consentire il passaggio di hovercraft e sottomarini."
+            I18n.t("spec.28") +
+            I18n.t("spec.29") +
+            I18n.t("spec.30")
         ));
+
+        p.add(Box.createVerticalStrut(12));
+        p.add(createSubHeader(I18n.t("specx.relief.title")));
+        p.add(createParagraph(I18n.t("specx.relief.body")));
+        p.add(Box.createVerticalStrut(12));
+        p.add(createSubHeader(I18n.t("specx.import.title")));
+        p.add(createParagraph(I18n.t("specx.import.body")));
 
         return wrapScroll(p);
     }
@@ -373,44 +380,62 @@ public class AssetSpecsDialog extends JDialog {
     private JComponent buildTextureCard() {
         JPanel p = createCardPanel();
 
-        p.add(createSectionTitle("SPECIFICHE TEXTURE DI SUPERFICIE E SPLATTING"));
+        p.add(createSectionTitle(I18n.t("spec.31")));
         p.add(Box.createVerticalStrut(10));
 
         p.add(createBadgeRow(
-            new String[]{"Risoluzione Tessere", "Potenze di 2 (1024, 2048, 4096 px)"},
-            new String[]{"Formato Diffuse Globale", "DDS compresso BC1/DXT1 o PNG 24-bit"},
-            new String[]{"Detail Normals (DNTS)", "TGA 32-bit non compresso (1024x1024)"},
-            new String[]{"Splatting Mask", "DDS BC3/DXT5 a 4 Canali RGBA"},
-            new String[]{"Tiling", "Seamless (Ripetizione continua senza cuciture)"}
+            new String[]{I18n.t("spec.32"), "Potenze di 2 (1024, 2048, 4096 px)"},
+            new String[]{I18n.t("spec.33"), I18n.t("spec.34")},
+            new String[]{I18n.t("spec.35"), I18n.t("spec.36")},
+            new String[]{I18n.t("spec.37"), I18n.t("spec.38")},
+            new String[]{"Tiling", I18n.t("spec.39")}
         ));
         p.add(Box.createVerticalStrut(14));
 
-        p.add(createSubHeader("I 4 Canali della Maschera di Splatting (_splats.dds)"));
+        p.add(createSubHeader(I18n.t("spec.40")));
         p.add(createParagraph(
-            "Lo shader del terreno di Beyond All Reason fonde 4 texture di micro-dettaglio (DNTS) attraverso i canali della mappa di splatting:\n" +
-            "> Canale R (Rosso): Materiale 1 (Terreno base, erba, pianura)\n" +
-            "> Canale G (Verde): Materiale 2 (Pareti rocciose, falesie, scarpate verticali)\n" +
-            "> Canale B (Blu): Materiale 3 (Sabbia, ghiaia, fondale marino o litorale)\n" +
-            "> Canale A (Alpha): Materiale 4 (Neve, fango, crepe o polvere d'alta quota)\n\n" +
-            "I valori variano da 0 a 255 e lo shader calcola automaticamente la transizione morbida tra i diversi strati."
+            I18n.t("spec.41") +
+            I18n.t("spec.42") +
+            I18n.t("spec.43") +
+            I18n.t("spec.44") +
+            I18n.t("spec.45") +
+            I18n.t("spec.46")
         ));
         p.add(Box.createVerticalStrut(12));
 
         p.add(createTipBox(
-            "DETAIL NORMAL & TEXTURE (File _dnts1..4.tga):\n" +
-            "Risoluzione standard: 1024x1024 pixel. I canali contengono:\n" +
-            "- R (Rosso) = Vettore normale tangenziale X (nx)\n" +
-            "- G (Verde) = Vettore normale tangenziale Y (ny)\n" +
-            "- B (Blu) = Vettore normale tangenziale Z (nz = 1.0)\n" +
-            "- Alpha (Trasparenza) = Mappa di altezza e rugosita di micro-dettaglio (High-Pass Detail Heightpass)"
+            I18n.t("spec.47") +
+            I18n.t("spec.48") +
+            I18n.t("spec.49") +
+            I18n.t("spec.50") +
+            I18n.t("spec.51") +
+            I18n.t("spec.52")
+        ));
+        p.add(Box.createVerticalStrut(12));
+
+        p.add(createSubHeader(I18n.t("spec.53")));
+        p.add(createParagraph(
+            I18n.t("spec.54") +
+            I18n.t("spec.55") +
+            I18n.t("spec.56") +
+            I18n.t("spec.57") +
+            I18n.t("spec.58") +
+            I18n.t("spec.59") +
+            I18n.t("spec.60") +
+            I18n.t("spec.61") +
+            I18n.t("spec.62")
         ));
         p.add(Box.createVerticalStrut(12));
 
         p.add(createWarningBox(
-            "ERRORI COMUNI SULLE TEXTURE:\n" +
-            "[!] Neri puri (#000000) o Bianchi puri (#FFFFFF): Sovrascrivono la luce solare dello shader di BAR rendendo le ombre piatte o bruciate.\n" +
-            "[!] Dimensioni non potenze di 2: La GPU non puo generare mipmaps per dimensioni asimmetriche (es. 1000x1000), causando artefatti visivi da lontano."
+            I18n.t("spec.63") +
+            I18n.t("spec.64") +
+            I18n.t("spec.65")
         ));
+
+        p.add(Box.createVerticalStrut(12));
+        p.add(createSubHeader(I18n.t("specx.biome.title")));
+        p.add(createParagraph(I18n.t("specx.biome.body")));
 
         return wrapScroll(p);
     }
@@ -421,44 +446,77 @@ public class AssetSpecsDialog extends JDialog {
     private JComponent buildModelsCard() {
         JPanel p = createCardPanel();
 
-        p.add(createSectionTitle("SPECIFICHE MODELLI 3D, FLORA E RELITTI (FEATURES)"));
+        p.add(createSectionTitle(I18n.t("spec.66")));
         p.add(Box.createVerticalStrut(10));
 
         p.add(createBadgeRow(
-            new String[]{"Formato 3D Nativo", "Spring .s3o (Convertibile da .OBJ)"},
-            new String[]{"Flora (Alberi/Arbusti)", "150 - 500 Triangoli (Max 800)"},
-            new String[]{"Rocce & Massi", "100 - 600 Triangoli"},
-            new String[]{"Relitti Grandi / Landmark", "1.000 - 2.500 Triangoli"},
-            new String[]{"Texture Atlas", "512x512 o 1024x1024 DDS (BC1 / BC3)"}
+            new String[]{I18n.t("spec.67"), I18n.t("spec.68")},
+            new String[]{I18n.t("spec.69"), I18n.t("spec.70")},
+            new String[]{I18n.t("spec.71"), "100 - 600 Triangoli"},
+            new String[]{I18n.t("spec.72"), "1.000 - 2.500 Triangoli"},
+            new String[]{I18n.t("spec.73"), I18n.t("spec.74")}
         ));
         p.add(Box.createVerticalStrut(14));
 
-        p.add(createSubHeader("Budget Poligonale: Perche e Cruciale in BAR"));
+        p.add(createSubHeader(I18n.t("spec.75")));
         p.add(createParagraph(
-            "Una tipica mappa competitiva di Beyond All Reason ospita tra 5.000 e 20.000 alberi e formazioni rocciose.\n" +
-            "Se un singolo albero avesse 3.000 poligoni, l'engine dovrebbe renderizzare fino a 60 MILIONI di triangoli solo per la vegetazione, provocando cali devastanti di FPS.\n" +
-            "Usa geometrie low-poly con texture atlas ben pianificate e dettagli affidati alla normal map."
+            I18n.t("spec.76") +
+            I18n.t("spec.77") +
+            I18n.t("spec.78") +
+            I18n.t("spec.79") +
+            I18n.t("spec.80")
         ));
         p.add(Box.createVerticalStrut(12));
 
         p.add(createTipBox(
-            "SCHEMA DEFINIZIONE LUA (features/<nome_feature>.lua):\n" +
-            "Ogni oggetto 3D deve avere uno script .lua di accompagnamento con i seguenti parametri chiave:\n" +
-            "- name: stringa identificativa univoca\n" +
-            "- object: percorso del file .s3o (es. 'albero_pino.s3o')\n" +
-            "- blocking: true (ostacola il moto) / false (schiacciabile dai carri)\n" +
-            "- reclaimable: true (i costruttori possono assorbire metallo/energia)\n" +
-            "- energy: valore energia estraibile (es. 40-70 per alberi)\n" +
-            "- metal: valore metallo estraibile (es. 100-300 per relitti)\n" +
-            "- damage: punti ferita prima della distruzione/incendio\n" +
-            "- footprintX / footprintZ: ingombro in caselle griglia (1 footprint = 16x16 elmos)"
+            I18n.t("spec.81") +
+            I18n.t("spec.82") +
+            I18n.t("spec.83") +
+            I18n.t("spec.84") +
+            I18n.t("spec.85") +
+            I18n.t("spec.86") +
+            I18n.t("spec.87")
+        ));
+        p.add(Box.createVerticalStrut(12));
+
+        p.add(createSubHeader(I18n.t("spec.88")));
+        p.add(createParagraph(
+            I18n.t("spec.89") +
+            I18n.t("spec.90") +
+            I18n.t("spec.91") +
+            I18n.t("spec.92") +
+            I18n.t("spec.93") +
+            I18n.t("spec.94")
+        ));
+        p.add(Box.createVerticalStrut(12));
+
+        p.add(createSubHeader(I18n.t("spec.95")));
+        p.add(createParagraph(
+            I18n.t("spec.96") +
+            I18n.t("spec.97") +
+            I18n.t("spec.98")
+        ));
+        p.add(Box.createVerticalStrut(12));
+
+        p.add(createTipBox(
+            I18n.t("spec.99") +
+            I18n.t("spec.100") +
+            I18n.t("spec.101") +
+            I18n.t("spec.102") +
+            I18n.t("spec.103") +
+            I18n.t("spec.104") +
+            I18n.t("spec.105") +
+            I18n.t("spec.106") +
+            I18n.t("spec.107") +
+            I18n.t("spec.108") +
+            I18n.t("spec.109")
         ));
         p.add(Box.createVerticalStrut(12));
 
         p.add(createWarningBox(
-            "CONSIGLI SULLE UV E I MATERIALI:\n" +
-            "[!] Piu texture separate per un solo albero: Usa un unico Texture Atlas per tronco e foglie per ridurre i draw call al minimo.\n" +
-            "[!] Normali non invertite: Recoil Engine utilizza normal maps tangent space con orientamento asse Y conforme a OpenGL."
+            I18n.t("spec.110") +
+            I18n.t("spec.111") +
+            I18n.t("spec.112")
         ));
 
         return wrapScroll(p);
@@ -470,32 +528,45 @@ public class AssetSpecsDialog extends JDialog {
     private JComponent buildMetalEnvCard() {
         JPanel p = createCardPanel();
 
-        p.add(createSectionTitle("SPECIFICHE RISORSE (METALLO) E MAPINFO.LUA"));
+        p.add(createSectionTitle(I18n.t("spec.113")));
         p.add(Box.createVerticalStrut(10));
 
         p.add(createBadgeRow(
-            new String[]{"Risoluzione Metalmap", "1 Pixel ogni 16x16 Elmos (Griglia 1:16)"},
-            new String[]{"Valore Metallo Mex", "0 - 255 (Standard BAR: ~180 - 255)"},
-            new String[]{"Distanza Minima Mex", "48 - 64 Elmos (Evita sovrapposizione cerchi)"},
-            new String[]{"Vento Standard", "Min: 4 - 6 | Max: 18 - 25"},
-            new String[]{"Gravita di Gioco", "Standard Recoil: 130"}
+            new String[]{I18n.t("spec.114"), I18n.t("spec.115")},
+            new String[]{I18n.t("spec.116"), I18n.t("spec.117")},
+            new String[]{I18n.t("spec.118"), I18n.t("spec.119")},
+            new String[]{I18n.t("spec.120"), I18n.t("spec.121")},
+            new String[]{I18n.t("spec.122"), I18n.t("spec.123")}
         ));
         p.add(Box.createVerticalStrut(14));
 
-        p.add(createSubHeader("Bilanciamento Strategico dei Punti Metallo (Mex)"));
+        p.add(createSubHeader(I18n.t("spec.124")));
         p.add(createParagraph(
-            "> Base di Partenza: In genere 3 o 4 punti Mex (valore 1.5 - 2.0 metal/sec) difendibili entro 150 elmos dal Commander spawn.\n" +
-            "> Espansione Naturale: 2 o 3 punti Mex a media distanza che incoraggiano la contesa territoriale.\n" +
-            "> Punti Strategici al Centro: Spot ad alto rendimento (valore 3.0 - 5.0 metal/sec o geovent) situati in alture o gole per premiare l'aggressivita.\n" +
-            "> Simmetria Assoluta: Nei match competitivi, le posizioni e il valore complessivo di metallo devono essere perfettamente speculari (Asse X, Z o Diagonale)."
+            I18n.t("spec.125") +
+            I18n.t("spec.126") +
+            I18n.t("spec.127") +
+            I18n.t("spec.128")
         ));
         p.add(Box.createVerticalStrut(12));
 
         p.add(createTipBox(
-            "ILLUMINAZIONE E SOLE (In mapinfo.lua):\n" +
-            "- Inclinazione solare ottimale: Tra 35 e 55 gradi sull'orizzonte. Crea ombre lunghe e suggestive che valorizzano canyon e scarpate senza rendere buie le basi.\n" +
-            "- Rapporto Luce/Ombra: Luce d'ambiente ~0.35-0.45 per garantire piena leggibilita visiva delle unita anche nelle gole profonde."
+            I18n.t("spec.129") +
+            I18n.t("spec.130") +
+            I18n.t("spec.131")
         ));
+        p.add(Box.createVerticalStrut(12));
+
+        p.add(createTipBox(
+            I18n.t("spec.132") +
+            I18n.t("spec.133") +
+            I18n.t("spec.134") +
+            I18n.t("spec.135") +
+            I18n.t("spec.136")
+        ));
+
+        p.add(Box.createVerticalStrut(12));
+        p.add(createSubHeader(I18n.t("specx.options.title")));
+        p.add(createParagraph(I18n.t("specx.options.body")));
 
         return wrapScroll(p);
     }
@@ -506,23 +577,23 @@ public class AssetSpecsDialog extends JDialog {
     private JComponent buildCustomAssetsCard() {
         JPanel p = createCardPanel();
 
-        p.add(createSectionTitle("STRUTTURA CARTELLE PER ASSET PERSONALIZZATI"));
+        p.add(createSectionTitle(I18n.t("spec.137")));
         p.add(Box.createVerticalStrut(10));
 
         p.add(createParagraph(
-            "BAR Map Studio include una cartella 'custom_assets/' predisposta nella radice dell'applicazione dove puoi depositare i tuoi file personali:\n\n" +
-            "[DIR] custom_assets/\n" +
-            "  |-- [DIR] heightmaps/  -> Deposita qui le tue immagini PNG 16-bit o RAW di rilievo\n" +
-            "  |-- [DIR] textures/    -> Deposita qui texture diffuse, normali e maschere splat\n" +
-            "  `-- [DIR] features/    -> Deposita qui modelli 3D (.s3o), script (.lua) e unittextures\n\n" +
-            "Come vengono utilizzati:\n" +
-            "1. Le heightmap possono essere caricate direttamente dal pulsante 'Carica Heightmap...' nella barra laterale sinistra.\n" +
-            "2. Le texture caricate sostituiscono in tempo reale la pavimentazione nell'anteprima e vengono impacchettate nelle tessere esportate.\n" +
-            "3. I modelli e gli oggetti 3D vengono inseriti automaticamente nell'archivio .sdz autosufficiente della mappa durante l'esportazione finale per Beyond All Reason."
+            I18n.t("spec.138") +
+            I18n.t("spec.139") +
+            I18n.t("spec.140") +
+            I18n.t("spec.141") +
+            I18n.t("spec.142") +
+            I18n.t("spec.143") +
+            I18n.t("spec.144") +
+            I18n.t("spec.145") +
+            I18n.t("spec.146")
         ));
         p.add(Box.createVerticalStrut(16));
 
-        JButton openBtn = new JButton("APRI CARTELLA 'custom_assets' IN WINDOWS EXPLORER") {
+        JButton openBtn = new JButton(I18n.t("spec.147")) {
             @Override
             protected void paintComponent(Graphics graphics) {
                 Graphics2D g = (Graphics2D) graphics.create();
@@ -557,6 +628,10 @@ public class AssetSpecsDialog extends JDialog {
         openBtn.addActionListener(e -> openCustomAssetsDirectory());
         p.add(openBtn);
 
+        p.add(Box.createVerticalStrut(12));
+        p.add(createSubHeader(I18n.t("specx.defaults.title")));
+        p.add(createParagraph(I18n.t("specx.defaults.body")));
+
         return wrapScroll(p);
     }
 
@@ -566,7 +641,7 @@ public class AssetSpecsDialog extends JDialog {
             if (!dir.exists()) dir.mkdirs();
             Desktop.getDesktop().open(dir);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Impossibile aprire la cartella custom_assets:\n" + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, I18n.t("spec.148") + ex.getMessage(), I18n.t("spec.149"), JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -599,7 +674,7 @@ public class AssetSpecsDialog extends JDialog {
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 7));
         right.setOpaque(false);
 
-        JButton openDirBtn = new JButton("Apri Cartella Custom Assets");
+        JButton openDirBtn = new JButton(I18n.t("spec.150"));
         openDirBtn.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         openDirBtn.setBackground(BG_CARD);
         openDirBtn.setForeground(ACCENT_CYAN);
@@ -612,7 +687,7 @@ public class AssetSpecsDialog extends JDialog {
         openDirBtn.addActionListener(e -> openCustomAssetsDirectory());
         right.add(openDirBtn);
 
-        JButton closeBtn = new JButton("Chiudi");
+        JButton closeBtn = new JButton(I18n.t("spec.151"));
         closeBtn.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
         closeBtn.setBackground(BG_CARD);
         closeBtn.setForeground(TEXT_WHITE);

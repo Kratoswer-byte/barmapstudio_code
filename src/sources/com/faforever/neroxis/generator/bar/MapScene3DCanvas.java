@@ -36,11 +36,16 @@ public final class MapScene3DCanvas extends JPanel {
     private float[] terrainHeights;
     private int terrainW, terrainH;
     private float waterElmos = 0;
+    private SoftRenderer3D.RenderMesh terrainMesh;
+    private SoftRenderer3D.Texture terrainTex;
 
     private final ModelTextureCache texCache;
     private final Map<String, SoftRenderer3D.RenderMesh> meshCache = new HashMap<>();
     private final Map<String, SoftRenderer3D.Texture> diffCache = new HashMap<>();
     private S3OParser.S3OModel commanderRef;
+    /** Modelli del gioco gia' letti, per costruire la mesh con le facce nel verso giusto. */
+    private final java.util.Map<String, S3OParser.S3OModel> officialSources = new java.util.concurrent.ConcurrentHashMap<>();
+    private SoftRenderer3D.RenderMesh commanderMesh;
     private boolean showCommanderRef = true;
     private boolean lowResWhileDrag = false;
 
@@ -279,21 +284,21 @@ public final class MapScene3DCanvas extends JPanel {
         row1.setOpaque(false);
         JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
         row2.setOpaque(false);
-        infoLabel = new JLabel("3D: click seleziona | G sposta | R ruota | X/Z asse | F inquadra");
+        infoLabel = new JLabel(I18n.t("map.190"));
         infoLabel.setForeground(new Color(140, 155, 180));
         infoLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
         scaleSlider = new JSlider(10, 500, 100);
         scaleSlider.setPreferredSize(new Dimension(110, 20));
-        scaleSlider.setToolTipText("Scala del tipo selezionato (tutte le istanze)");
-        scaleSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.01, 50.0, 0.05));
-        scaleSpinner.setPreferredSize(new Dimension(64, 22));
-        JButton varBtn = new JButton("Crea variante");
-        varBtn.setToolTipText("Clona il tipo con scala indipendente (nuovo id)");
+        scaleSlider.setToolTipText(I18n.t("map.191"));
+        scaleSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.01, 500.0, 0.05));
+        scaleSpinner.setPreferredSize(new Dimension(84, 22));
+        JButton varBtn = new JButton(I18n.t("map.192"));
+        varBtn.setToolTipText(I18n.t("map.193"));
         varBtn.addActionListener(ev -> createVariantFromSelection());
-        JButton cmdBtn = new JButton(showCommanderRef ? "Cmd: ON" : "Cmd: OFF");
+        JButton cmdBtn = new JButton(showCommanderRef ? I18n.t("map.194") : I18n.t("map.195"));
         cmdBtn.addActionListener(ev -> {
             showCommanderRef = !showCommanderRef;
-            cmdBtn.setText(showCommanderRef ? "Cmd: ON" : "Cmd: OFF");
+            cmdBtn.setText(showCommanderRef ? I18n.t("map.194") : I18n.t("map.195"));
             repaint();
         });
         scaleSlider.addChangeListener(ev -> {
@@ -305,21 +310,21 @@ public final class MapScene3DCanvas extends JPanel {
             applyScaleToType(selected.getEntity(), ((Number) scaleSpinner.getValue()).floatValue());
         });
         hud.add(row1); hud.add(row2);
-        row1.add(infoLabel); row1.add(new JLabel("Scala:")); row1.add(scaleSlider); row1.add(scaleSpinner); row1.add(varBtn); row1.add(cmdBtn);
-        moveBtn = new JToggleButton("Sposta [G]", false);
-        moveBtn.setToolTipText("Trascina l'oggetto sul terreno (G), vincolo asse con X/Z");
+        row1.add(infoLabel); row1.add(new JLabel(I18n.t("map.196"))); row1.add(scaleSlider); row1.add(scaleSpinner); row1.add(varBtn); row1.add(cmdBtn);
+        moveBtn = new JToggleButton(I18n.t("map.197"), false);
+        moveBtn.setToolTipText(I18n.t("map.198"));
         moveBtn.addActionListener(ev -> setManipMode(moveBtn.isSelected() ? ManipMode.MOVE : ManipMode.ORBIT));
-        rotBtn = new JToggleButton("Ruota [R]", false);
-        rotBtn.setToolTipText("Trascina per ruotare yaw (R); R a fermo = +15 gradi");
+        rotBtn = new JToggleButton(I18n.t("map.199"), false);
+        rotBtn.setToolTipText(I18n.t("map.200"));
         rotBtn.addActionListener(ev -> setManipMode(rotBtn.isSelected() ? ManipMode.ROTATE : ManipMode.ORBIT));
         axisXZBtn = new JToggleButton("XZ", true);
-        axisXZBtn.setToolTipText("Spostamento libero sul piano");
+        axisXZBtn.setToolTipText(I18n.t("map.201"));
         axisXZBtn.addActionListener(ev -> setAxisLock(AxisLock.XZ));
         axisXBtn = new JToggleButton("X", false);
-        axisXBtn.setToolTipText("Spostamento solo asse X [tasto X]");
+        axisXBtn.setToolTipText(I18n.t("map.202"));
         axisXBtn.addActionListener(ev -> setAxisLock(AxisLock.X));
         axisZBtn = new JToggleButton("Z", false);
-        axisZBtn.setToolTipText("Spostamento solo asse Z [tasto Z]");
+        axisZBtn.setToolTipText(I18n.t("map.203"));
         axisZBtn.addActionListener(ev -> setAxisLock(AxisLock.Z));
         row2.add(moveBtn); row2.add(rotBtn); row2.add(axisXZBtn); row2.add(axisXBtn); row2.add(axisZBtn);
         add(hud);
@@ -365,7 +370,7 @@ public final class MapScene3DCanvas extends JPanel {
                 scaleSlider.setValue(Math.max(10, Math.min(500, Math.round(sc * 100))));
                 scaleSpinner.setValue((double) sc);
                 infoLabel.setText(selText());
-            } else infoLabel.setText("3D: click seleziona | G sposta | R ruota | X/Z asse | F inquadra");
+            } else infoLabel.setText(I18n.t("map.190"));
         } finally { syncingScale = false; }
     }
 
@@ -379,6 +384,8 @@ public final class MapScene3DCanvas extends JPanel {
 
     private void rebuildTerrain() {
         terrainHeights = null;
+        terrainMesh = null;
+        terrainTex = groundPreview != null ? new SoftRenderer3D.Texture(groundPreview) : null;
         if (map == null || map.getHeightmap() == null) return;
         try {
             BufferedImage hm = map.getHeightmap();
@@ -392,6 +399,15 @@ public final class MapScene3DCanvas extends JPanel {
                 for (int x = 0; x < w; x++)
                     terrainHeights[y * w + x] = (r.getSample(x, y, 0) * hs - sea) * vs;
             terrainW = w; terrainH = h;
+            // mappa asciutta (nessun punto sotto il mare, es. mappe BAR importate senza acqua): il livello
+            // del mare puo' essere lontanissimo e il terreno finirebbe fuori inquadratura. Come l'export,
+            // lo appoggio a 48 elmi sopra lo zero.
+            float lowest = Float.MAX_VALUE;
+            for (float v : terrainHeights) lowest = Math.min(lowest, v);
+            if (lowest > 48f) {
+                float shift = lowest - 48f;
+                for (int i = 0; i < terrainHeights.length; i++) terrainHeights[i] -= shift;
+            }
             waterElmos = 0; // acqua a quota 0 elmi dopo normalizzazione seaLevel
         } catch (Exception ex) { terrainHeights = null; }
     }
@@ -422,7 +438,7 @@ public final class MapScene3DCanvas extends JPanel {
     // ---- scala/variante ----
     public void applyScaleToType(ObjectEntity type, float scale) {
         if (type == null) return;
-        type.setScale(Math.max(0.01f, Math.min(50f, scale)));
+        type.setScale(Math.max(0.01f, Math.min(500f, scale)));
         int fx = Math.max(1, Math.round(type.getScaledWidth() / 16f));
         int fz = Math.max(1, Math.min(50, Math.round(type.getScaledDepth() / 16f)));
         type.setFootprintX(fx); type.setFootprintZ(fz);
@@ -441,8 +457,8 @@ public final class MapScene3DCanvas extends JPanel {
         selected = rep;
         syncScaleUi(); repaint();
         if (scaleChangeListener != null) scaleChangeListener.run();
-        JOptionPane.showMessageDialog(this, "Variante creata: " + v.getId() + "\nSolo questa istanza usa la nuova scala.",
-            "Variante oggetto", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, I18n.t("map.204") + v.getId() + I18n.t("map.205"),
+            I18n.t("map.206"), JOptionPane.INFORMATION_MESSAGE);
     }
 
     // ---- picking ----
@@ -485,7 +501,12 @@ public final class MapScene3DCanvas extends JPanel {
             });
         }
         if (model == null) return null; // fallback box nel paint
-        m = SoftRenderer3D.RenderMesh.fromModel(model);
+        // OBJ importati: base a Y=0 e centrati come nell'export; gli S3O ufficiali tengono la loro origine
+        S3OParser.S3OModel source = e.hasOfficialUnit() ? officialSources.get(e.getId()) : null;
+        m = source != null ? Object3DCanvas.smoothMesh(source) : null;
+        if (m == null) {
+            m = SoftRenderer3D.RenderMesh.fromModel(model, !e.hasOfficialUnit());
+        }
         meshCache.put(key, m);
         return m.triCount == 0 ? null : m;
     }
@@ -546,6 +567,7 @@ public final class MapScene3DCanvas extends JPanel {
         if (!e.hasOfficialUnit()) return null;
         S3OParser.S3OModel sm = OfficialModels.loadFull(e.getOfficialUnitId());
         if (sm == null) return null;
+        officialSources.put(e.getId(), sm);
         try {
             if (sm.tex1 != null && !sm.tex1.isBlank()) {
                 BufferedImage img = texCache.loadGameTexture(sm.tex1);
@@ -598,7 +620,8 @@ public final class MapScene3DCanvas extends JPanel {
         if (terrainHeights != null && map != null) {
             float cellElmos = 16f * ((float) map.getWidth() / Math.max(1, terrainW - 1));
             // origine 0,0; mappa centrata su cam target gia impostato
-            renderer.drawTerrain(terrainHeights, terrainW, terrainH, cellElmos, groundPreview, cam, 0, 0);
+            if (terrainMesh == null) terrainMesh = SoftRenderer3D.buildTerrainMesh(terrainHeights, terrainW, terrainH, cellElmos);
+            renderer.drawMesh(terrainMesh, terrainTex, 0x5A7A4A, 0, 0, 0, 0, 1.0, cam);
         }
         // entita custom + unita ufficiali (con box fallback se modello non ancora pronto)
         for (PlacedCustomEntity p : entities) {
@@ -650,7 +673,11 @@ public final class MapScene3DCanvas extends JPanel {
         }
         // commander ref vicino a selezione
         if (showCommanderRef && commanderRef != null && selected != null) {
-            SoftRenderer3D.RenderMesh cm = SoftRenderer3D.RenderMesh.fromModel(commanderRef.model);
+            if (commanderMesh == null) {
+                commanderMesh = Object3DCanvas.smoothMesh(commanderRef);
+                if (commanderMesh == null) commanderMesh = SoftRenderer3D.RenderMesh.fromModel(commanderRef.model);
+            }
+            SoftRenderer3D.RenderMesh cm = commanderMesh;
             double wx = selected.getPosition().x() * 16.0 + selected.getEntity().getScaledWidth() * 0.5 + 40;
             double wz = selected.getPosition().y() * 16.0;
             renderer.drawMesh(cm, null, 0x9AA4B5, wx, getHeightElmosAt(selected.getPosition().x(), selected.getPosition().y()), wz, 0, 1.0, cam);
@@ -706,7 +733,7 @@ public final class MapScene3DCanvas extends JPanel {
         if (entities.isEmpty()) {
             g2.setColor(new Color(140, 155, 180));
             g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
-            String s = map == null ? "Genera il terreno in MAPS per vedere l'anteprima 3D" : "Nessun oggetto piazzato — posiziona oggetti nel 2D";
+            String s = map == null ? I18n.t("map.207") : I18n.t("map.208");
             g2.drawString(s, 16, 24);
         }
     }

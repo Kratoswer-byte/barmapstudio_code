@@ -1,0 +1,3758 @@
+[
+ {
+  "file": "incandescence_remake_3.3.1.sd7",
+  "mapx": 1024,
+  "mapy": 1024,
+  "minh": 137.0,
+  "maxh": 948.0,
+  "counts": {
+   "seabed": 0,
+   "sand": 0,
+   "ground": 33528,
+   "high": 2271,
+   "slope": 7422,
+   "rock": 17179
+  },
+  "palette": {
+   "seabed": null,
+   "sand": null,
+   "ground": [
+    0.693,
+    0.57,
+    0.149
+   ],
+   "high": [
+    0.587,
+    0.505,
+    0.448
+   ],
+   "slope": [
+    0.487,
+    0.407,
+    0.309
+   ],
+   "rock": [
+    0.308,
+    0.265,
+    0.232
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.31778,
+    0.6067,
+    -0.6242
+   ],
+   "groundAmbientColor": [
+    0.55,
+    0.45,
+    0.45
+   ],
+   "groundDiffuseColor": [
+    0.97,
+    0.95,
+    0.92
+   ],
+   "groundSpecularColor": null,
+   "unitAmbientColor": [
+    0.66,
+    0.66,
+    0.7
+   ],
+   "unitDiffuseColor": [
+    0.99,
+    0.99533332,
+    0.95000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 1.1
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.43,
+    0.29,
+    0.18
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.55,
+   "fogEnd": 0.88,
+   "cloudDensity": 0.5
+  },
+  "water": {
+   "absorb": [
+    0.6,
+    0.3,
+    0.3
+   ],
+   "baseColor": [
+    1.0,
+    0.7,
+    0.1
+   ],
+   "minColor": [
+    0.3,
+    0.2,
+    0.0
+   ],
+   "surfaceColor": [
+    1.0,
+    0.8,
+    0.1
+   ],
+   "planeColor": [
+    1.0,
+    0.8,
+    0.1
+   ],
+   "diffuseColor": [
+    0.9,
+    0.5,
+    0.1
+   ],
+   "specularColor": [
+    0.9,
+    0.5,
+    0.1
+   ],
+   "surfaceAlpha": 0.3,
+   "ambientFactor": 0.1,
+   "diffuseFactor": 0.8,
+   "specularFactor": 0.3,
+   "specularPower": 20.0,
+   "fresnelMin": 0.2,
+   "fresnelMax": 0.8,
+   "fresnelPower": 4.0,
+   "reflectionDistortion": 1.0,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.9,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Incandescence Remake",
+  "author": "IceXuick, original from qray, TheMooseIsLoose"
+ },
+ {
+  "file": "hyperion_shale_1.0.2.sd7",
+  "mapx": 1408,
+  "mapy": 1408,
+  "minh": -90.0,
+  "maxh": 260.0,
+  "counts": {
+   "seabed": 48107,
+   "sand": 11,
+   "ground": 40345,
+   "high": 5588,
+   "slope": 7189,
+   "rock": 12131
+  },
+  "palette": {
+   "seabed": [
+    0.362,
+    0.511,
+    0.703
+   ],
+   "sand": null,
+   "ground": [
+    0.483,
+    0.501,
+    0.85
+   ],
+   "high": [
+    0.435,
+    0.518,
+    0.774
+   ],
+   "slope": [
+    0.542,
+    0.506,
+    0.804
+   ],
+   "rock": [
+    0.473,
+    0.433,
+    0.679
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.5,
+    1.0,
+    -0.7
+   ],
+   "groundAmbientColor": [
+    0.56,
+    0.55,
+    0.55
+   ],
+   "groundDiffuseColor": [
+    0.6,
+    0.6,
+    0.65
+   ],
+   "groundSpecularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "unitAmbientColor": [
+    0.6,
+    0.6,
+    0.6
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.94,
+    0.92
+   ],
+   "unitSpecularColor": [
+    0.9,
+    0.83,
+    0.82
+   ],
+   "groundShadowDensity": 0.75
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.4,
+    0.24,
+    0.42
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.48,
+   "fogEnd": 0.89,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.06,
+    0.0038,
+    0.0015
+   ],
+   "baseColor": [
+    0.6,
+    0.82,
+    0.85
+   ],
+   "minColor": [
+    0.1,
+    0.3,
+    0.25
+   ],
+   "surfaceColor": [
+    0.22,
+    0.17,
+    0.41
+   ],
+   "planeColor": [
+    0.4,
+    0.24,
+    0.42
+   ],
+   "diffuseColor": [
+    0.22,
+    0.17,
+    0.41
+   ],
+   "specularColor": [
+    0.22,
+    0.17,
+    0.41
+   ],
+   "surfaceAlpha": 0.1,
+   "ambientFactor": 0.2,
+   "diffuseFactor": 1.0,
+   "specularFactor": 1.4,
+   "specularPower": 30.0,
+   "fresnelMin": 0.08,
+   "fresnelMax": 1.6,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 1.0,
+   "blurBase": 2.1,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.85,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Hyperion Shale",
+  "author": "Moose"
+ },
+ {
+  "file": "downs_of_destruction_v2.sd7",
+  "mapx": 1024,
+  "mapy": 1024,
+  "minh": -97.0,
+  "maxh": 903.0,
+  "counts": {
+   "seabed": 27129,
+   "sand": 261,
+   "ground": 10029,
+   "high": 3198,
+   "slope": 12830,
+   "rock": 5581
+  },
+  "palette": {
+   "seabed": [
+    0.487,
+    0.442,
+    0.332
+   ],
+   "sand": [
+    0.592,
+    0.523,
+    0.342
+   ],
+   "ground": [
+    0.176,
+    0.19,
+    0.102
+   ],
+   "high": [
+    0.223,
+    0.241,
+    0.116
+   ],
+   "slope": [
+    0.445,
+    0.442,
+    0.275
+   ],
+   "rock": [
+    0.443,
+    0.413,
+    0.324
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.8,
+    1.0,
+    -0.7
+   ],
+   "groundAmbientColor": [
+    0.6,
+    0.6,
+    0.5
+   ],
+   "groundDiffuseColor": [
+    0.99,
+    0.99,
+    0.95
+   ],
+   "groundSpecularColor": null,
+   "unitAmbientColor": [
+    0.66,
+    0.66,
+    0.7
+   ],
+   "unitDiffuseColor": [
+    0.99,
+    0.99533332,
+    0.95000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 1.1
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.80000001,
+    0.80000001,
+    0.5
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.8,
+   "fogEnd": 1.0,
+   "cloudDensity": 0.5
+  },
+  "water": {
+   "absorb": [
+    0.05,
+    0.005,
+    0.001
+   ],
+   "baseColor": [
+    0.3,
+    0.5,
+    0.5
+   ],
+   "minColor": [
+    0.0,
+    0.3,
+    0.3
+   ],
+   "surfaceColor": [
+    0.67,
+    0.8,
+    1.0
+   ],
+   "planeColor": null,
+   "diffuseColor": null,
+   "specularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.1,
+   "ambientFactor": 1.0,
+   "diffuseFactor": 1.0,
+   "specularFactor": 1.4,
+   "specularPower": 40.0,
+   "fresnelMin": 0.12,
+   "fresnelMax": 1.0,
+   "fresnelPower": 3.0,
+   "reflectionDistortion": 0.5,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 22.0,
+   "perlinLacunarity": 1.62,
+   "perlinAmplitude": 0.89,
+   "numTiles": 4.0,
+   "foamDistortion": null
+  },
+  "name": "Downs_of_Destruction_V2",
+  "author": "[teh]Beherith (mysterme@gmail.com)"
+ },
+ {
+  "file": "canis_river_v1.4.sd7",
+  "mapx": 896,
+  "mapy": 896,
+  "minh": -115.0,
+  "maxh": 885.0,
+  "counts": {
+   "seabed": 723,
+   "sand": 0,
+   "ground": 28165,
+   "high": 4367,
+   "slope": 6604,
+   "rock": 4103
+  },
+  "palette": {
+   "seabed": [
+    0.56,
+    0.485,
+    0.351
+   ],
+   "sand": null,
+   "ground": [
+    0.915,
+    0.812,
+    0.636
+   ],
+   "high": [
+    0.658,
+    0.535,
+    0.393
+   ],
+   "slope": [
+    0.803,
+    0.711,
+    0.55
+   ],
+   "rock": [
+    0.444,
+    0.376,
+    0.286
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.33,
+    0.67,
+    -0.9
+   ],
+   "groundAmbientColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "groundDiffuseColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "groundSpecularColor": [
+    0.6,
+    0.6,
+    0.6
+   ],
+   "unitAmbientColor": [
+    0.6,
+    0.6,
+    0.6
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.94,
+    0.92
+   ],
+   "unitSpecularColor": [
+    0.9,
+    0.83,
+    0.82
+   ],
+   "groundShadowDensity": 0.79
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.75000001,
+    0.75000001,
+    0.8
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    0.9,
+    0.8,
+    0.8
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.8,
+   "fogEnd": 1.5,
+   "cloudDensity": 0.35
+  },
+  "water": {
+   "absorb": [
+    0.05,
+    0.05,
+    0.01
+   ],
+   "baseColor": [
+    0.3,
+    0.6,
+    0.6
+   ],
+   "minColor": [
+    0.0,
+    0.3,
+    0.3
+   ],
+   "surfaceColor": [
+    0.67,
+    0.8,
+    1.0
+   ],
+   "planeColor": null,
+   "diffuseColor": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "specularColor": [
+    0.5,
+    0.6,
+    0.6
+   ],
+   "surfaceAlpha": 0.2,
+   "ambientFactor": 0.28,
+   "diffuseFactor": 1.5,
+   "specularFactor": 1.4,
+   "specularPower": 35.0,
+   "fresnelMin": 0.08,
+   "fresnelMax": 1.6,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 1.0,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.85,
+   "numTiles": 4.0,
+   "foamDistortion": null
+  },
+  "name": "Canis River v1.4",
+  "author": "Phalange"
+ },
+ {
+  "file": "sand_crowns_1.0.sd7",
+  "mapx": 1280,
+  "mapy": 1280,
+  "minh": 0.0,
+  "maxh": 1000.0,
+  "counts": {
+   "seabed": 0,
+   "sand": 0,
+   "ground": 56081,
+   "high": 7886,
+   "slope": 11735,
+   "rock": 6190
+  },
+  "palette": {
+   "seabed": null,
+   "sand": null,
+   "ground": [
+    0.374,
+    0.401,
+    0.451
+   ],
+   "high": [
+    0.27,
+    0.312,
+    0.401
+   ],
+   "slope": [
+    0.408,
+    0.441,
+    0.488
+   ],
+   "rock": [
+    0.186,
+    0.206,
+    0.244
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    1.1,
+    0.7,
+    -0.3
+   ],
+   "groundAmbientColor": [
+    0.5,
+    0.49000001,
+    0.49000001
+   ],
+   "groundDiffuseColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "groundSpecularColor": [
+    0.36000001,
+    0.35964,
+    0.35964599
+   ],
+   "unitAmbientColor": [
+    0.56999999,
+    0.56942999,
+    0.56942999
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.98533332,
+    0.92000002
+   ],
+   "unitSpecularColor": [
+    1.0,
+    0.80000001,
+    0.80000001
+   ],
+   "groundShadowDensity": 0.89999998
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.07,
+    0.05922,
+    0.0504
+   ],
+   "skyColor": [
+    0.63999999,
+    0.55552,
+    0.42879999
+   ],
+   "sunColor": [
+    1.0,
+    0.9083333,
+    0.75
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.83337,
+    0.78299999
+   ],
+   "fogStart": 1.0,
+   "fogEnd": 1.2,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.03,
+    0.003,
+    0.0007
+   ],
+   "baseColor": [
+    0.15,
+    0.4,
+    0.55
+   ],
+   "minColor": [
+    0.1,
+    0.07,
+    0.01
+   ],
+   "surfaceColor": [
+    0.6,
+    0.63,
+    0.7
+   ],
+   "planeColor": null,
+   "diffuseColor": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "specularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.05,
+   "ambientFactor": 1.0,
+   "diffuseFactor": 1.0,
+   "specularFactor": 1.4,
+   "specularPower": 40.0,
+   "fresnelMin": 0.08,
+   "fresnelMax": 1.6,
+   "fresnelPower": 4.0,
+   "reflectionDistortion": 0.5,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 15.0,
+   "perlinLacunarity": 1.27,
+   "perlinAmplitude": 1.0,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Sand Crowns",
+  "author": "Phalange"
+ },
+ {
+  "file": "glacier_pass_1.2.sd7",
+  "mapx": 640,
+  "mapy": 640,
+  "minh": 500.0,
+  "maxh": 1300.0,
+  "counts": {
+   "seabed": 0,
+   "sand": 0,
+   "ground": 4607,
+   "high": 1380,
+   "slope": 7949,
+   "rock": 5843
+  },
+  "palette": {
+   "seabed": null,
+   "sand": null,
+   "ground": [
+    0.647,
+    0.647,
+    0.647
+   ],
+   "high": [
+    0.735,
+    0.734,
+    0.734
+   ],
+   "slope": [
+    0.508,
+    0.502,
+    0.496
+   ],
+   "rock": [
+    0.172,
+    0.146,
+    0.126
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    -1.3,
+    0.97,
+    -0.62
+   ],
+   "groundAmbientColor": [
+    0.4675,
+    0.47025001,
+    0.55000001
+   ],
+   "groundDiffuseColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "groundSpecularColor": [
+    0.63200003,
+    0.67680001,
+    0.80000001
+   ],
+   "unitAmbientColor": [
+    0.58999999,
+    0.56942999,
+    0.54942999
+   ],
+   "unitDiffuseColor": [
+    0.98533332,
+    0.92000002,
+    1.0
+   ],
+   "unitSpecularColor": [
+    0.55,
+    0.60000001,
+    0.85000001
+   ],
+   "groundShadowDensity": 0.89999998
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.85260004,
+    0.88445002,
+    0.98000002
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    0.9066667,
+    0.84000003,
+    1.0
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.42,
+   "fogEnd": 0.79,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.004,
+    0.004,
+    0.002
+   ],
+   "baseColor": [
+    0.4,
+    0.6,
+    0.8
+   ],
+   "minColor": [
+    0.1,
+    0.1,
+    0.23
+   ],
+   "surfaceColor": [
+    0.65,
+    0.7,
+    0.75
+   ],
+   "planeColor": null,
+   "diffuseColor": null,
+   "specularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.1,
+   "ambientFactor": 1.3,
+   "diffuseFactor": null,
+   "specularFactor": 0.5,
+   "specularPower": 2.0,
+   "fresnelMin": 0.3,
+   "fresnelMax": 0.8,
+   "fresnelPower": 4.0,
+   "reflectionDistortion": 1.0,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.9,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Glacier Pass",
+  "author": "IceXuick"
+ },
+ {
+  "file": "all_that_glitters_v2.2.3.sd7",
+  "mapx": 768,
+  "mapy": 1280,
+  "minh": 100.0,
+  "maxh": 800.0,
+  "counts": {
+   "seabed": 0,
+   "sand": 0,
+   "ground": 46126,
+   "high": 779,
+   "slope": 3001,
+   "rock": 8121
+  },
+  "palette": {
+   "seabed": null,
+   "sand": null,
+   "ground": [
+    0.637,
+    0.47,
+    0.439
+   ],
+   "high": [
+    0.613,
+    0.647,
+    0.586
+   ],
+   "slope": [
+    0.637,
+    0.434,
+    0.372
+   ],
+   "rock": [
+    0.594,
+    0.412,
+    0.359
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.5,
+    0.4,
+    -0.5
+   ],
+   "groundAmbientColor": [
+    0.3,
+    0.3,
+    0.3
+   ],
+   "groundDiffuseColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "groundSpecularColor": [
+    0.95,
+    0.95,
+    0.95
+   ],
+   "unitAmbientColor": [
+    0.56999999,
+    0.56942999,
+    0.56942999
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.98533332,
+    0.92000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 0.7
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.65,
+    0.6,
+    0.5
+   ],
+   "skyColor": [
+    0.7,
+    0.6,
+    0.4
+   ],
+   "sunColor": [
+    0.6,
+    0.3,
+    0.2
+   ],
+   "cloudColor": [
+    0.7,
+    0.5,
+    0.4
+   ],
+   "fogStart": 0.5,
+   "fogEnd": 1.0,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.0075,
+    0.006,
+    0.0021
+   ],
+   "baseColor": [
+    0.2,
+    0.38,
+    0.5
+   ],
+   "minColor": [
+    0.002,
+    0.0035,
+    0.005
+   ],
+   "surfaceColor": [
+    0.25,
+    0.4,
+    0.45
+   ],
+   "planeColor": [
+    0.13,
+    0.22,
+    0.25
+   ],
+   "diffuseColor": null,
+   "specularColor": [
+    0.65,
+    0.65,
+    0.7
+   ],
+   "surfaceAlpha": 0.6,
+   "ambientFactor": 0.3,
+   "diffuseFactor": 1.0,
+   "specularFactor": 0.8,
+   "specularPower": 40.0,
+   "fresnelMin": 0.2,
+   "fresnelMax": 1.4,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 1.1,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.9,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "All That Glitters v2.2.3",
+  "author": "Nikuksis"
+ },
+ {
+  "file": "evad_river_confluence_v2.sd7",
+  "mapx": 640,
+  "mapy": 640,
+  "minh": -243.0,
+  "maxh": 1082.0,
+  "counts": {
+   "seabed": 6055,
+   "sand": 14413,
+   "ground": 146,
+   "high": 45,
+   "slope": 1706,
+   "rock": 1524
+  },
+  "palette": {
+   "seabed": [
+    0.38,
+    0.332,
+    0.241
+   ],
+   "sand": [
+    0.236,
+    0.385,
+    0.01
+   ],
+   "ground": [
+    0.397,
+    0.484,
+    0.041
+   ],
+   "high": [
+    0.491,
+    0.556,
+    0.082
+   ],
+   "slope": [
+    0.255,
+    0.276,
+    0.049
+   ],
+   "rock": [
+    0.305,
+    0.334,
+    0.032
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.8,
+    0.8,
+    -0.7
+   ],
+   "groundAmbientColor": [
+    0.4,
+    0.4,
+    0.4
+   ],
+   "groundDiffuseColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "groundSpecularColor": null,
+   "unitAmbientColor": [
+    0.56,
+    0.56,
+    0.6
+   ],
+   "unitDiffuseColor": [
+    0.95,
+    0.95533332,
+    0.90000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 0.75
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.80000001,
+    0.80000001,
+    0.5
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.93999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.8,
+   "fogEnd": 1.0,
+   "cloudDensity": 0.5
+  },
+  "water": {
+   "absorb": [
+    0.05,
+    0.005,
+    0.001
+   ],
+   "baseColor": [
+    0.3,
+    0.5,
+    0.5
+   ],
+   "minColor": [
+    0.0,
+    0.3,
+    0.3
+   ],
+   "surfaceColor": [
+    0.67,
+    0.8,
+    1.0
+   ],
+   "planeColor": [
+    0.3,
+    0.5,
+    0.5
+   ],
+   "diffuseColor": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "specularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.2,
+   "ambientFactor": 1.0,
+   "diffuseFactor": 1.0,
+   "specularFactor": 1.4,
+   "specularPower": 40.0,
+   "fresnelMin": 0.05,
+   "fresnelMax": 0.25,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 1.0,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 15.0,
+   "perlinLacunarity": 1.35,
+   "perlinAmplitude": 0.8,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Evad River Confluence_V2",
+  "author": "NOiZE"
+ },
+ {
+  "file": "melting_glacier_v1.1.2.sd7",
+  "mapx": 1280,
+  "mapy": 1280,
+  "minh": -245.0,
+  "maxh": 455.0,
+  "counts": {
+   "seabed": 52704,
+   "sand": 2737,
+   "ground": 19263,
+   "high": 5985,
+   "slope": 9039,
+   "rock": 7897
+  },
+  "palette": {
+   "seabed": [
+    0.156,
+    0.277,
+    0.355
+   ],
+   "sand": [
+    0.43,
+    0.705,
+    0.818
+   ],
+   "ground": [
+    0.691,
+    0.728,
+    0.817
+   ],
+   "high": [
+    0.74,
+    0.754,
+    0.84
+   ],
+   "slope": [
+    0.578,
+    0.679,
+    0.772
+   ],
+   "rock": [
+    0.515,
+    0.62,
+    0.697
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    -0.64,
+    0.66,
+    -0.57
+   ],
+   "groundAmbientColor": [
+    0.56,
+    0.55,
+    0.55
+   ],
+   "groundDiffuseColor": [
+    0.6,
+    0.6,
+    0.65
+   ],
+   "groundSpecularColor": [
+    0.6,
+    0.5,
+    0.5
+   ],
+   "unitAmbientColor": [
+    0.56999999,
+    0.56942999,
+    0.56942999
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.98533332,
+    0.92000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 0.7
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.63,
+    0.66,
+    0.69
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.5,
+   "fogEnd": 1.0,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.011,
+    0.011,
+    0.015
+   ],
+   "baseColor": [
+    0.5,
+    0.68,
+    0.68
+   ],
+   "minColor": [
+    0.022,
+    0.0035,
+    0.035
+   ],
+   "surfaceColor": [
+    0.5,
+    0.6,
+    0.65
+   ],
+   "planeColor": [
+    0.13,
+    0.22,
+    0.25
+   ],
+   "diffuseColor": null,
+   "specularColor": [
+    0.65,
+    0.65,
+    0.7
+   ],
+   "surfaceAlpha": 0.2,
+   "ambientFactor": 0.3,
+   "diffuseFactor": 1.0,
+   "specularFactor": 0.8,
+   "specularPower": 40.0,
+   "fresnelMin": 0.2,
+   "fresnelMax": 1.4,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 1.1,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.9,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Melting Glacier v1.1.2",
+  "author": "Nikuksis"
+ },
+ {
+  "file": "red_river_estuary_v1.1.sd7",
+  "mapx": 1280,
+  "mapy": 1280,
+  "minh": -101.0,
+  "maxh": 299.0,
+  "counts": {
+   "seabed": 31933,
+   "sand": 2676,
+   "ground": 29327,
+   "high": 1108,
+   "slope": 21527,
+   "rock": 1305
+  },
+  "palette": {
+   "seabed": [
+    0.323,
+    0.193,
+    0.155
+   ],
+   "sand": [
+    0.383,
+    0.204,
+    0.152
+   ],
+   "ground": [
+    0.424,
+    0.245,
+    0.194
+   ],
+   "high": [
+    0.422,
+    0.238,
+    0.181
+   ],
+   "slope": [
+    0.368,
+    0.19,
+    0.136
+   ],
+   "rock": [
+    0.337,
+    0.166,
+    0.117
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    -0.64,
+    0.66,
+    -0.57
+   ],
+   "groundAmbientColor": [
+    0.65,
+    0.65,
+    0.65
+   ],
+   "groundDiffuseColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "groundSpecularColor": [
+    0.6,
+    0.5,
+    0.5
+   ],
+   "unitAmbientColor": [
+    0.45,
+    0.45,
+    0.45
+   ],
+   "unitDiffuseColor": [
+    0.75,
+    0.75,
+    0.7
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.6,
+    0.6
+   ],
+   "groundShadowDensity": 0.7
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.54,
+    0.21,
+    0.14
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.25,
+   "fogEnd": 0.85,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.008,
+    0.12,
+    0.016
+   ],
+   "baseColor": [
+    0.66,
+    0.45,
+    0.92
+   ],
+   "minColor": [
+    0.012,
+    0.01,
+    0.031
+   ],
+   "surfaceColor": [
+    0.22,
+    0.17,
+    0.41
+   ],
+   "planeColor": null,
+   "diffuseColor": [
+    0.22,
+    0.17,
+    0.41
+   ],
+   "specularColor": [
+    0.22,
+    0.17,
+    0.41
+   ],
+   "surfaceAlpha": 0.1,
+   "ambientFactor": 1.0,
+   "diffuseFactor": 1.0,
+   "specularFactor": 0.2,
+   "specularPower": 30.0,
+   "fresnelMin": 0.08,
+   "fresnelMax": 1.6,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 1.0,
+   "blurBase": 2.1,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.85,
+   "numTiles": 4.0,
+   "foamDistortion": null
+  },
+  "name": "Red River Estuary v1.1",
+  "author": "Nikuksis"
+ },
+ {
+  "file": "high_noon_remake_1.0.sd7",
+  "mapx": 1024,
+  "mapy": 1024,
+  "minh": -150.0,
+  "maxh": 850.0,
+  "counts": {
+   "seabed": 27399,
+   "sand": 3479,
+   "ground": 19647,
+   "high": 2525,
+   "slope": 4196,
+   "rock": 4165
+  },
+  "palette": {
+   "seabed": [
+    0.871,
+    0.685,
+    0.538
+   ],
+   "sand": [
+    0.978,
+    0.768,
+    0.59
+   ],
+   "ground": [
+    0.87,
+    0.62,
+    0.417
+   ],
+   "high": [
+    0.843,
+    0.543,
+    0.386
+   ],
+   "slope": [
+    0.814,
+    0.592,
+    0.425
+   ],
+   "rock": [
+    0.457,
+    0.352,
+    0.303
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.48,
+    1.18,
+    -0.7
+   ],
+   "groundAmbientColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "groundDiffuseColor": [
+    0.85,
+    0.85,
+    0.85
+   ],
+   "groundSpecularColor": [
+    0.6,
+    0.6,
+    0.6
+   ],
+   "unitAmbientColor": [
+    0.6,
+    0.6,
+    0.6
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.94,
+    0.92
+   ],
+   "unitSpecularColor": [
+    0.9,
+    0.83,
+    0.82
+   ],
+   "groundShadowDensity": 0.79
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.37,
+    0.18,
+    0.01
+   ],
+   "skyColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sunColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.8,
+   "fogEnd": 1.2,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.06,
+    0.0038,
+    0.0015
+   ],
+   "baseColor": [
+    0.6,
+    0.82,
+    0.85
+   ],
+   "minColor": [
+    0.1,
+    0.3,
+    0.35
+   ],
+   "surfaceColor": [
+    0.6,
+    0.8,
+    0.9
+   ],
+   "planeColor": [
+    0.6,
+    0.8,
+    0.85
+   ],
+   "diffuseColor": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "specularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.08,
+   "ambientFactor": 0.15,
+   "diffuseFactor": 0.3,
+   "specularFactor": 1.4,
+   "specularPower": 40.0,
+   "fresnelMin": 0.08,
+   "fresnelMax": 1.6,
+   "fresnelPower": 4.0,
+   "reflectionDistortion": 0.5,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 15.0,
+   "perlinLacunarity": 1.27,
+   "perlinAmplitude": 1.0,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "High Noon Remake",
+  "author": "Phalange"
+ },
+ {
+  "file": "faster_than_light_1.1.sd7",
+  "mapx": 768,
+  "mapy": 768,
+  "minh": -50.0,
+  "maxh": 950.0,
+  "counts": {
+   "seabed": 11082,
+   "sand": 0,
+   "ground": 15921,
+   "high": 610,
+   "slope": 1485,
+   "rock": 4392
+  },
+  "palette": {
+   "seabed": [
+    0.06,
+    0.047,
+    0.109
+   ],
+   "sand": null,
+   "ground": [
+    0.176,
+    0.214,
+    0.29
+   ],
+   "high": [
+    0.353,
+    0.365,
+    0.387
+   ],
+   "slope": [
+    0.246,
+    0.257,
+    0.301
+   ],
+   "rock": [
+    0.146,
+    0.155,
+    0.19
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.8,
+    1.0,
+    -0.7
+   ],
+   "groundAmbientColor": [
+    0.6,
+    0.6,
+    0.6
+   ],
+   "groundDiffuseColor": [
+    0.9,
+    0.9,
+    0.9
+   ],
+   "groundSpecularColor": [
+    0.096,
+    0.105,
+    0.096
+   ],
+   "unitAmbientColor": [
+    0.75,
+    0.75,
+    0.75
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "unitSpecularColor": [
+    0.4,
+    0.4,
+    0.5
+   ],
+   "groundShadowDensity": 0.75
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.1,
+    0.1,
+    0.4
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    0.78,
+    0.92,
+    1.0
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.8,
+   "fogEnd": 1.0,
+   "cloudDensity": 0.0
+  },
+  "water": {
+   "absorb": [
+    0.08,
+    0.01,
+    0.0025
+   ],
+   "baseColor": [
+    0.2,
+    1.2,
+    0.7
+   ],
+   "minColor": [
+    0.0,
+    0.2,
+    0.2
+   ],
+   "surfaceColor": [
+    0.67,
+    0.99,
+    1.0
+   ],
+   "planeColor": null,
+   "diffuseColor": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "specularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.1,
+   "ambientFactor": 1.0,
+   "diffuseFactor": 1.0,
+   "specularFactor": 1.4,
+   "specularPower": 40.0,
+   "fresnelMin": 0.08,
+   "fresnelMax": 1.6,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 0.5,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 15.0,
+   "perlinLacunarity": 1.2,
+   "perlinAmplitude": 0.8,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Faster Than Light",
+  "author": "ShaunJS"
+ },
+ {
+  "file": "dsd_8_way_1.1.sd7",
+  "mapx": 1280,
+  "mapy": 1280,
+  "minh": -295.0,
+  "maxh": 565.0,
+  "counts": {
+   "seabed": 41982,
+   "sand": 0,
+   "ground": 23568,
+   "high": 3625,
+   "slope": 14844,
+   "rock": 7492
+  },
+  "palette": {
+   "seabed": [
+    0.671,
+    0.617,
+    0.499
+   ],
+   "sand": null,
+   "ground": [
+    0.468,
+    0.44,
+    0.246
+   ],
+   "high": [
+    0.516,
+    0.46,
+    0.367
+   ],
+   "slope": [
+    0.556,
+    0.516,
+    0.383
+   ],
+   "rock": [
+    0.463,
+    0.434,
+    0.372
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.4026,
+    0.5061,
+    -0.7909
+   ],
+   "groundAmbientColor": [
+    0.57,
+    0.5,
+    0.5
+   ],
+   "groundDiffuseColor": [
+    0.99,
+    0.94,
+    0.94
+   ],
+   "groundSpecularColor": null,
+   "unitAmbientColor": [
+    0.66,
+    0.66,
+    0.7
+   ],
+   "unitDiffuseColor": [
+    0.99,
+    0.99533332,
+    0.95000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 0.9
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.80000001,
+    0.62000001,
+    0.45
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.59,
+   "fogEnd": 0.95,
+   "cloudDensity": 0.5
+  },
+  "water": {
+   "absorb": [
+    0.0075,
+    0.006,
+    0.0021
+   ],
+   "baseColor": [
+    0.55,
+    0.4,
+    0.15
+   ],
+   "minColor": [
+    0.1,
+    0.07,
+    0.01
+   ],
+   "surfaceColor": [
+    0.55,
+    0.4,
+    0.15
+   ],
+   "planeColor": null,
+   "diffuseColor": null,
+   "specularColor": [
+    0.65,
+    0.65,
+    0.7
+   ],
+   "surfaceAlpha": 0.3,
+   "ambientFactor": 0.1,
+   "diffuseFactor": null,
+   "specularFactor": 1.4,
+   "specularPower": 40.0,
+   "fresnelMin": 0.1,
+   "fresnelMax": 0.80000001,
+   "fresnelPower": 4.0,
+   "reflectionDistortion": 0.5,
+   "blurBase": 1.1,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.89999998,
+   "numTiles": 4.0,
+   "foamDistortion": null
+  },
+  "name": "DSD 8 Way",
+  "author": "IceXuick"
+ },
+ {
+  "file": "ascendancy_v2.2.sd7",
+  "mapx": 1536,
+  "mapy": 1536,
+  "minh": -550.0,
+  "maxh": 4300.0,
+  "counts": {
+   "seabed": 13024,
+   "sand": 695,
+   "ground": 45020,
+   "high": 4716,
+   "slope": 34197,
+   "rock": 33414
+  },
+  "palette": {
+   "seabed": [
+    0.211,
+    0.236,
+    0.342
+   ],
+   "sand": [
+    0.196,
+    0.221,
+    0.324
+   ],
+   "ground": [
+    0.453,
+    0.476,
+    0.585
+   ],
+   "high": [
+    0.768,
+    0.79,
+    0.901
+   ],
+   "slope": [
+    0.5,
+    0.519,
+    0.621
+   ],
+   "rock": [
+    0.419,
+    0.431,
+    0.5
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    -0.64,
+    0.85,
+    -0.57
+   ],
+   "groundAmbientColor": [
+    0.56,
+    0.55,
+    0.55
+   ],
+   "groundDiffuseColor": [
+    0.6,
+    0.6,
+    0.65
+   ],
+   "groundSpecularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "unitAmbientColor": [
+    0.56999999,
+    0.56942999,
+    0.56942999
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.98533332,
+    0.92000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 0.7
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.63,
+    0.66,
+    0.69
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.5,
+   "fogEnd": 1.0,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.011,
+    0.011,
+    0.015
+   ],
+   "baseColor": [
+    0.5,
+    0.68,
+    0.68
+   ],
+   "minColor": [
+    0.022,
+    0.0035,
+    0.035
+   ],
+   "surfaceColor": [
+    0.5,
+    0.6,
+    0.65
+   ],
+   "planeColor": [
+    0.13,
+    0.22,
+    0.25
+   ],
+   "diffuseColor": null,
+   "specularColor": [
+    0.65,
+    0.65,
+    0.7
+   ],
+   "surfaceAlpha": 0.2,
+   "ambientFactor": 0.3,
+   "diffuseFactor": 1.0,
+   "specularFactor": 0.8,
+   "specularPower": 40.0,
+   "fresnelMin": 0.2,
+   "fresnelMax": 1.4,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 1.1,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.9,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Ascendancy v2.2",
+  "author": "Nikuksis"
+ },
+ {
+  "file": "esker_creek_1.3.sd7",
+  "mapx": 1536,
+  "mapy": 1024,
+  "minh": -293.0,
+  "maxh": 997.0,
+  "counts": {
+   "seabed": 0,
+   "sand": 1562,
+   "ground": 56055,
+   "high": 5500,
+   "slope": 11550,
+   "rock": 10130
+  },
+  "palette": {
+   "seabed": null,
+   "sand": [
+    0.766,
+    0.72,
+    0.56
+   ],
+   "ground": [
+    0.237,
+    0.402,
+    0.213
+   ],
+   "high": [
+    0.293,
+    0.484,
+    0.257
+   ],
+   "slope": [
+    0.305,
+    0.45,
+    0.301
+   ],
+   "rock": [
+    0.309,
+    0.337,
+    0.372
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.31778,
+    0.6067,
+    -0.6242
+   ],
+   "groundAmbientColor": [
+    0.55,
+    0.51,
+    0.51
+   ],
+   "groundDiffuseColor": [
+    0.65,
+    0.65,
+    0.65
+   ],
+   "groundSpecularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "unitAmbientColor": [
+    0.58,
+    0.56,
+    0.56
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.96533332,
+    0.94000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 0.89999998
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.15000001,
+    0.13160001,
+    0.126
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.90033332,
+    0.80999997
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 1.0,
+   "fogEnd": 1.2,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.05,
+    0.005,
+    0.001
+   ],
+   "baseColor": [
+    0.3,
+    0.5,
+    0.5
+   ],
+   "minColor": [
+    0.0,
+    0.3,
+    0.3
+   ],
+   "surfaceColor": [
+    0.67,
+    0.8,
+    1.0
+   ],
+   "planeColor": null,
+   "diffuseColor": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "specularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.1,
+   "ambientFactor": 1.0,
+   "diffuseFactor": 1.0,
+   "specularFactor": 1.4,
+   "specularPower": 30.0,
+   "fresnelMin": 0.08,
+   "fresnelMax": 1.6,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 1.0,
+   "blurBase": 2.1,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 15.0,
+   "perlinLacunarity": 1.35,
+   "perlinAmplitude": 0.8,
+   "numTiles": 4.0,
+   "foamDistortion": null
+  },
+  "name": "Esker Creek",
+  "author": "RebelNode"
+ },
+ {
+  "file": "sphagnum_bog_v1.2.1.sd7",
+  "mapx": 768,
+  "mapy": 1024,
+  "minh": -130.0,
+  "maxh": 370.0,
+  "counts": {
+   "seabed": 0,
+   "sand": 17406,
+   "ground": 14278,
+   "high": 1919,
+   "slope": 8134,
+   "rock": 786
+  },
+  "palette": {
+   "seabed": null,
+   "sand": [
+    0.258,
+    0.308,
+    0.077
+   ],
+   "ground": [
+    0.241,
+    0.323,
+    0.036
+   ],
+   "high": [
+    0.255,
+    0.318,
+    0.039
+   ],
+   "slope": [
+    0.217,
+    0.272,
+    0.065
+   ],
+   "rock": [
+    0.176,
+    0.208,
+    0.077
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    -0.64,
+    0.66,
+    -0.57
+   ],
+   "groundAmbientColor": [
+    0.56,
+    0.55,
+    0.55
+   ],
+   "groundDiffuseColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "groundSpecularColor": [
+    0.6,
+    0.5,
+    0.5
+   ],
+   "unitAmbientColor": [
+    0.56999999,
+    0.56942999,
+    0.56942999
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.98533332,
+    0.92000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 0.7
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.63,
+    0.66,
+    0.69
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.5,
+   "fogEnd": 1.0,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.09,
+    0.01,
+    0.09
+   ],
+   "baseColor": [
+    0.35,
+    0.85,
+    0.45
+   ],
+   "minColor": [
+    0.015,
+    0.045,
+    0.022
+   ],
+   "surfaceColor": [
+    0.015,
+    0.045,
+    0.022
+   ],
+   "planeColor": null,
+   "diffuseColor": [
+    0.015,
+    0.045,
+    0.022
+   ],
+   "specularColor": [
+    0.015,
+    0.045,
+    0.022
+   ],
+   "surfaceAlpha": 0.1,
+   "ambientFactor": 1.0,
+   "diffuseFactor": 1.0,
+   "specularFactor": 1.4,
+   "specularPower": 30.0,
+   "fresnelMin": 0.08,
+   "fresnelMax": 1.6,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 1.0,
+   "blurBase": 2.1,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.85,
+   "numTiles": 4.0,
+   "foamDistortion": null
+  },
+  "name": "Sphagnum Bog v1.2.1",
+  "author": "Nikuksis"
+ },
+ {
+  "file": "ring_atoll_remake_v2.0.sd7",
+  "mapx": 1152,
+  "mapy": 1152,
+  "minh": -193.0,
+  "maxh": 407.0,
+  "counts": {
+   "seabed": 40370,
+   "sand": 33066,
+   "ground": 2319,
+   "high": 540,
+   "slope": 3227,
+   "rock": 564
+  },
+  "palette": {
+   "seabed": [
+    0.579,
+    0.49,
+    0.43
+   ],
+   "sand": [
+    0.696,
+    0.522,
+    0.48
+   ],
+   "ground": [
+    0.764,
+    0.678,
+    0.615
+   ],
+   "high": [
+    0.769,
+    0.685,
+    0.622
+   ],
+   "slope": [
+    0.707,
+    0.595,
+    0.524
+   ],
+   "rock": [
+    0.633,
+    0.497,
+    0.422
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.5,
+    0.4,
+    -0.5
+   ],
+   "groundAmbientColor": [
+    0.55,
+    0.55,
+    0.55
+   ],
+   "groundDiffuseColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "groundSpecularColor": [
+    0.75,
+    0.75,
+    0.75
+   ],
+   "unitAmbientColor": [
+    0.56999999,
+    0.56942999,
+    0.56942999
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.98533332,
+    0.92000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 0.7
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.65,
+    0.6,
+    0.5
+   ],
+   "skyColor": [
+    0.7,
+    0.6,
+    0.4
+   ],
+   "sunColor": [
+    0.6,
+    0.3,
+    0.2
+   ],
+   "cloudColor": [
+    0.7,
+    0.5,
+    0.4
+   ],
+   "fogStart": 0.5,
+   "fogEnd": 1.0,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.6,
+    0.04,
+    0.02
+   ],
+   "baseColor": [
+    0.4,
+    0.85,
+    0.95
+   ],
+   "minColor": [
+    0.05,
+    0.15,
+    0.25
+   ],
+   "surfaceColor": [
+    0.1,
+    0.3,
+    0.4
+   ],
+   "planeColor": [
+    0.0,
+    0.15,
+    0.15
+   ],
+   "diffuseColor": [
+    0.1,
+    0.2,
+    0.3
+   ],
+   "specularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.2,
+   "ambientFactor": 0.2,
+   "diffuseFactor": 1.0,
+   "specularFactor": 0.8,
+   "specularPower": 40.0,
+   "fresnelMin": 0.2,
+   "fresnelMax": 1.4,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 1.1,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.9,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Ring Atoll Remake v2.0",
+  "author": "Nikuksis"
+ },
+ {
+  "file": "titan_v3.1.sd7",
+  "mapx": 1152,
+  "mapy": 768,
+  "minh": -75.0,
+  "maxh": 390.0,
+  "counts": {
+   "seabed": 221,
+   "sand": 68,
+   "ground": 29389,
+   "high": 2390,
+   "slope": 7864,
+   "rock": 6838
+  },
+  "palette": {
+   "seabed": [
+    0.483,
+    0.613,
+    0.404
+   ],
+   "sand": [
+    0.59,
+    0.432,
+    0.335
+   ],
+   "ground": [
+    0.679,
+    0.43,
+    0.322
+   ],
+   "high": [
+    0.718,
+    0.588,
+    0.487
+   ],
+   "slope": [
+    0.546,
+    0.363,
+    0.273
+   ],
+   "rock": [
+    0.313,
+    0.194,
+    0.131
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.4,
+    0.195,
+    -0.2
+   ],
+   "groundAmbientColor": [
+    0.8,
+    0.7,
+    0.7
+   ],
+   "groundDiffuseColor": [
+    1.1,
+    1.0,
+    1.0
+   ],
+   "groundSpecularColor": null,
+   "unitAmbientColor": [
+    0.8,
+    0.6,
+    0.6
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.8,
+    0.8
+   ],
+   "unitSpecularColor": null,
+   "groundShadowDensity": 0.9
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.8,
+    0.8,
+    0.5
+   ],
+   "skyColor": [
+    0.08,
+    0.13,
+    0.7
+   ],
+   "sunColor": [
+    1.0,
+    0.75,
+    0.75
+   ],
+   "cloudColor": [
+    0.9,
+    0.9,
+    0.9
+   ],
+   "fogStart": 1.0,
+   "fogEnd": 1.2,
+   "cloudDensity": 0.55
+  },
+  "water": {
+   "absorb": [
+    1.0,
+    0.5,
+    0.0
+   ],
+   "baseColor": [
+    0.4,
+    0.78,
+    0.3
+   ],
+   "minColor": [
+    0.3,
+    0.56,
+    0.43
+   ],
+   "surfaceColor": [
+    0.45,
+    0.8,
+    0.45
+   ],
+   "planeColor": [
+    0.02,
+    0.05,
+    0.01
+   ],
+   "diffuseColor": null,
+   "specularColor": null,
+   "surfaceAlpha": null,
+   "ambientFactor": null,
+   "diffuseFactor": null,
+   "specularFactor": null,
+   "specularPower": null,
+   "fresnelMin": null,
+   "fresnelMax": null,
+   "fresnelPower": null,
+   "reflectionDistortion": null,
+   "blurBase": null,
+   "blurExponent": null,
+   "perlinStartFreq": null,
+   "perlinLacunarity": null,
+   "perlinAmplitude": null,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Titan",
+  "author": "SirArtturi, DNTS Update by The_Yak"
+ },
+ {
+  "file": "tma20x_1.8.sd7",
+  "mapx": 1280,
+  "mapy": 1280,
+  "minh": -300.0,
+  "maxh": 1100.0,
+  "counts": {
+   "seabed": 33863,
+   "sand": 14,
+   "ground": 14893,
+   "high": 2789,
+   "slope": 15930,
+   "rock": 24053
+  },
+  "palette": {
+   "seabed": [
+    0.519,
+    0.502,
+    0.489
+   ],
+   "sand": [
+    0.627,
+    0.608,
+    0.589
+   ],
+   "ground": [
+    0.574,
+    0.515,
+    0.483
+   ],
+   "high": [
+    0.66,
+    0.611,
+    0.578
+   ],
+   "slope": [
+    0.403,
+    0.357,
+    0.325
+   ],
+   "rock": [
+    0.242,
+    0.227,
+    0.21
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    -0.5,
+    0.53,
+    -0.79
+   ],
+   "groundAmbientColor": [
+    0.5,
+    0.49000001,
+    0.49000001
+   ],
+   "groundDiffuseColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "groundSpecularColor": [
+    0.36000001,
+    0.35964,
+    0.35964599
+   ],
+   "unitAmbientColor": [
+    0.56999999,
+    0.56942999,
+    0.56942999
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.98533332,
+    0.92000002
+   ],
+   "unitSpecularColor": [
+    1.0,
+    0.80000001,
+    0.80000001
+   ],
+   "groundShadowDensity": 0.91
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.07,
+    0.06,
+    0.05
+   ],
+   "skyColor": [
+    0.64,
+    0.55,
+    0.43
+   ],
+   "sunColor": [
+    1.0,
+    0.91,
+    0.75
+   ],
+   "cloudColor": [
+    0.89,
+    0.83,
+    0.78
+   ],
+   "fogStart": 0.9,
+   "fogEnd": 1.0,
+   "cloudDensity": 0.5
+  },
+  "water": {
+   "absorb": [
+    10.0,
+    10.0,
+    10.0
+   ],
+   "baseColor": [
+    0.01,
+    0.01,
+    0.01
+   ],
+   "minColor": [
+    0.01,
+    0.01,
+    0.01
+   ],
+   "surfaceColor": [
+    0.75,
+    0.8,
+    0.85
+   ],
+   "planeColor": null,
+   "diffuseColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "specularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.55,
+   "ambientFactor": 1.0,
+   "diffuseFactor": 1.0,
+   "specularFactor": 1.0,
+   "specularPower": 20.0,
+   "fresnelMin": 0.2,
+   "fresnelMax": 0.8,
+   "fresnelPower": 4.0,
+   "reflectionDistortion": 1.0,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.9,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "TMA20X",
+  "author": "IceXuick"
+ },
+ {
+  "file": "lavender_bender_v2.sd7",
+  "mapx": 896,
+  "mapy": 896,
+  "minh": -356.0,
+  "maxh": 430.0,
+  "counts": {
+   "seabed": 4986,
+   "sand": 20,
+   "ground": 28698,
+   "high": 1396,
+   "slope": 6712,
+   "rock": 5481
+  },
+  "palette": {
+   "seabed": [
+    0.444,
+    0.342,
+    0.376
+   ],
+   "sand": [
+    0.647,
+    0.422,
+    0.435
+   ],
+   "ground": [
+    0.618,
+    0.543,
+    0.669
+   ],
+   "high": [
+    0.575,
+    0.495,
+    0.521
+   ],
+   "slope": [
+    0.55,
+    0.449,
+    0.515
+   ],
+   "rock": [
+    0.414,
+    0.338,
+    0.389
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    -0.3,
+    0.45,
+    -0.5
+   ],
+   "groundAmbientColor": [
+    0.7,
+    0.7,
+    0.7
+   ],
+   "groundDiffuseColor": [
+    0.68,
+    0.68,
+    0.68
+   ],
+   "groundSpecularColor": null,
+   "unitAmbientColor": [
+    0.55,
+    0.55,
+    0.7
+   ],
+   "unitDiffuseColor": [
+    0.66,
+    0.66,
+    0.75
+   ],
+   "unitSpecularColor": null,
+   "groundShadowDensity": 0.75
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.8,
+    0.6,
+    0.5
+   ],
+   "skyColor": [
+    0.2,
+    0.25,
+    0.05
+   ],
+   "sunColor": [
+    1.0,
+    0.7,
+    0.7
+   ],
+   "cloudColor": [
+    0.95,
+    0.85,
+    0.75
+   ],
+   "fogStart": 0.8,
+   "fogEnd": 1.0,
+   "cloudDensity": 0.25
+  },
+  "water": {
+   "absorb": [
+    0.0044,
+    0.003,
+    0.0017
+   ],
+   "baseColor": [
+    0.67,
+    0.73,
+    0.95
+   ],
+   "minColor": [
+    0.1,
+    0.1,
+    0.2
+   ],
+   "surfaceColor": [
+    0.85,
+    0.75,
+    1.0
+   ],
+   "planeColor": null,
+   "diffuseColor": null,
+   "specularColor": [
+    0.7,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.1,
+   "ambientFactor": 0.8,
+   "diffuseFactor": 1.3,
+   "specularFactor": 0.5,
+   "specularPower": 20.0,
+   "fresnelMin": 0.1,
+   "fresnelMax": 0.5,
+   "fresnelPower": 3.0,
+   "reflectionDistortion": 0.5,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 9.0,
+   "perlinLacunarity": 5.0,
+   "perlinAmplitude": 0.75,
+   "numTiles": 4.0,
+   "foamDistortion": null
+  },
+  "name": "Lavender Bender",
+  "author": "Johannes"
+ },
+ {
+  "file": "cape_violet_v1.sd7",
+  "mapx": 1280,
+  "mapy": 640,
+  "minh": -499.0,
+  "maxh": 501.0,
+  "counts": {
+   "seabed": 17277,
+   "sand": 2203,
+   "ground": 9643,
+   "high": 1168,
+   "slope": 8117,
+   "rock": 6882
+  },
+  "palette": {
+   "seabed": [
+    0.312,
+    0.255,
+    0.371
+   ],
+   "sand": [
+    0.363,
+    0.258,
+    0.416
+   ],
+   "ground": [
+    0.35,
+    0.235,
+    0.486
+   ],
+   "high": [
+    0.552,
+    0.531,
+    0.602
+   ],
+   "slope": [
+    0.445,
+    0.358,
+    0.564
+   ],
+   "rock": [
+    0.332,
+    0.3,
+    0.379
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.8,
+    1.0,
+    -0.7
+   ],
+   "groundAmbientColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "groundDiffuseColor": [
+    0.99,
+    0.99,
+    0.95
+   ],
+   "groundSpecularColor": null,
+   "unitAmbientColor": [
+    0.56,
+    0.56,
+    0.6
+   ],
+   "unitDiffuseColor": [
+    0.95,
+    0.95533332,
+    0.90000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 0.75
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.80000001,
+    0.80000001,
+    0.5
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.8,
+   "fogEnd": 1.0,
+   "cloudDensity": 0.5
+  },
+  "water": {
+   "absorb": [
+    0.08,
+    0.01,
+    0.0025
+   ],
+   "baseColor": [
+    0.2,
+    1.2,
+    0.7
+   ],
+   "minColor": [
+    0.0,
+    0.2,
+    0.2
+   ],
+   "surfaceColor": [
+    0.67,
+    0.99,
+    1.0
+   ],
+   "planeColor": [
+    0.0,
+    0.15,
+    0.15
+   ],
+   "diffuseColor": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "specularColor": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.1,
+   "ambientFactor": 1.0,
+   "diffuseFactor": 1.0,
+   "specularFactor": 1.4,
+   "specularPower": 40.0,
+   "fresnelMin": 0.08,
+   "fresnelMax": 1.6,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 0.5,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 15.0,
+   "perlinLacunarity": 1.2,
+   "perlinAmplitude": 0.8,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Cape_Violet_V1",
+  "author": "[teh]Beherith (mysterme@gmail.com)"
+ },
+ {
+  "file": "aurelia_v4.1.sd7",
+  "mapx": 896,
+  "mapy": 896,
+  "minh": -75.0,
+  "maxh": 261.0,
+  "counts": {
+   "seabed": 11165,
+   "sand": 145,
+   "ground": 21301,
+   "high": 3018,
+   "slope": 6633,
+   "rock": 2596
+  },
+  "palette": {
+   "seabed": [
+    0.543,
+    0.395,
+    0.391
+   ],
+   "sand": [
+    0.567,
+    0.332,
+    0.286
+   ],
+   "ground": [
+    0.633,
+    0.318,
+    0.215
+   ],
+   "high": [
+    0.519,
+    0.425,
+    0.414
+   ],
+   "slope": [
+    0.55,
+    0.35,
+    0.323
+   ],
+   "rock": [
+    0.405,
+    0.289,
+    0.286
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    -0.3,
+    0.35,
+    -0.5
+   ],
+   "groundAmbientColor": [
+    0.71,
+    0.71,
+    0.71
+   ],
+   "groundDiffuseColor": [
+    0.49,
+    0.59,
+    0.59
+   ],
+   "groundSpecularColor": null,
+   "unitAmbientColor": [
+    0.55,
+    0.55,
+    0.7
+   ],
+   "unitDiffuseColor": [
+    0.66,
+    0.66,
+    0.71
+   ],
+   "unitSpecularColor": null,
+   "groundShadowDensity": 0.77
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.8,
+    0.6,
+    0.5
+   ],
+   "skyColor": [
+    0.2,
+    0.25,
+    0.05
+   ],
+   "sunColor": [
+    1.0,
+    0.7,
+    0.7
+   ],
+   "cloudColor": [
+    0.95,
+    0.85,
+    0.75
+   ],
+   "fogStart": 0.8,
+   "fogEnd": 1.0,
+   "cloudDensity": 0.25
+  },
+  "water": {
+   "absorb": [
+    0.0044,
+    0.003,
+    0.0017
+   ],
+   "baseColor": [
+    0.67,
+    0.73,
+    0.95
+   ],
+   "minColor": [
+    0.1,
+    0.1,
+    0.2
+   ],
+   "surfaceColor": [
+    0.85,
+    0.75,
+    1.0
+   ],
+   "planeColor": null,
+   "diffuseColor": null,
+   "specularColor": [
+    0.7,
+    0.5,
+    0.5
+   ],
+   "surfaceAlpha": 0.1,
+   "ambientFactor": 0.8,
+   "diffuseFactor": 1.3,
+   "specularFactor": 0.5,
+   "specularPower": 20.0,
+   "fresnelMin": 0.1,
+   "fresnelMax": 0.5,
+   "fresnelPower": 3.0,
+   "reflectionDistortion": 0.5,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 9.0,
+   "perlinLacunarity": 5.0,
+   "perlinAmplitude": 0.75,
+   "numTiles": 4.0,
+   "foamDistortion": null
+  },
+  "name": "Aurelia",
+  "author": "Johannes"
+ },
+ {
+  "file": "devil_s_postpiles_1.1.1.sd7",
+  "mapx": 768,
+  "mapy": 768,
+  "minh": -199.0,
+  "maxh": 646.0,
+  "counts": {
+   "seabed": 0,
+   "sand": 13201,
+   "ground": 10363,
+   "high": 466,
+   "slope": 3023,
+   "rock": 4259
+  },
+  "palette": {
+   "seabed": null,
+   "sand": [
+    0.39,
+    0.357,
+    0.209
+   ],
+   "ground": [
+    0.332,
+    0.365,
+    0.06
+   ],
+   "high": [
+    0.409,
+    0.384,
+    0.088
+   ],
+   "slope": [
+    0.376,
+    0.366,
+    0.24
+   ],
+   "rock": [
+    0.381,
+    0.377,
+    0.358
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    -0.64,
+    0.66,
+    -0.57
+   ],
+   "groundAmbientColor": [
+    0.35,
+    0.35,
+    0.35
+   ],
+   "groundDiffuseColor": [
+    1.2,
+    1.2,
+    1.2
+   ],
+   "groundSpecularColor": [
+    0.6,
+    0.5,
+    0.5
+   ],
+   "unitAmbientColor": [
+    0.56999999,
+    0.56942999,
+    0.56942999
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.98533332,
+    0.92000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.6,
+    0.61
+   ],
+   "groundShadowDensity": 0.7
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.5,
+    0.85,
+    0.99
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.8,
+   "fogEnd": 1.0,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.03,
+    0.02,
+    0.009
+   ],
+   "baseColor": [
+    0.05,
+    0.7,
+    0.6
+   ],
+   "minColor": [
+    0.0,
+    0.01,
+    0.01
+   ],
+   "surfaceColor": [
+    0.67,
+    0.8,
+    1.0
+   ],
+   "planeColor": [
+    0.0,
+    0.15,
+    0.15
+   ],
+   "diffuseColor": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "specularColor": [
+    0.5,
+    0.6,
+    0.6
+   ],
+   "surfaceAlpha": 0.1,
+   "ambientFactor": 0.28,
+   "diffuseFactor": 1.6,
+   "specularFactor": 0.8,
+   "specularPower": 90.0,
+   "fresnelMin": 0.08,
+   "fresnelMax": 1.6,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 0.5,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 15.0,
+   "perlinLacunarity": 1.27,
+   "perlinAmplitude": 1.0,
+   "numTiles": 4.0,
+   "foamDistortion": null
+  },
+  "name": "Devil",
+  "author": "AidanNaut"
+ },
+ {
+  "file": "baryon_tar_lake_v1.1.sd7",
+  "mapx": 1280,
+  "mapy": 768,
+  "minh": 200.0,
+  "maxh": 800.0,
+  "counts": {
+   "seabed": 0,
+   "sand": 0,
+   "ground": 35229,
+   "high": 6239,
+   "slope": 7079,
+   "rock": 3781
+  },
+  "palette": {
+   "seabed": null,
+   "sand": null,
+   "ground": [
+    0.23,
+    0.154,
+    0.059
+   ],
+   "high": [
+    0.289,
+    0.215,
+    0.058
+   ],
+   "slope": [
+    0.437,
+    0.241,
+    0.092
+   ],
+   "rock": [
+    0.313,
+    0.169,
+    0.08
+   ]
+  },
+  "lighting": {
+   "sunDir": [
+    0.7,
+    0.6,
+    -0.5
+   ],
+   "groundAmbientColor": [
+    0.75,
+    0.75,
+    0.75
+   ],
+   "groundDiffuseColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "groundSpecularColor": [
+    0.7,
+    0.7,
+    0.7
+   ],
+   "unitAmbientColor": [
+    0.7,
+    0.7,
+    0.7
+   ],
+   "unitDiffuseColor": [
+    1.0,
+    0.98533332,
+    0.92000002
+   ],
+   "unitSpecularColor": [
+    0.8,
+    0.60000001,
+    0.60000001
+   ],
+   "groundShadowDensity": 0.7
+  },
+  "atmosphere": {
+   "fogColor": [
+    0.63,
+    0.66,
+    0.69
+   ],
+   "skyColor": [
+    0.42879999,
+    0.58016002,
+    0.63999999
+   ],
+   "sunColor": [
+    1.0,
+    0.92,
+    0.78
+   ],
+   "cloudColor": [
+    0.89999998,
+    0.89999998,
+    0.89999998
+   ],
+   "fogStart": 0.5,
+   "fogEnd": 1.0,
+   "cloudDensity": null
+  },
+  "water": {
+   "absorb": [
+    0.001,
+    0.001,
+    0.001
+   ],
+   "baseColor": [
+    0.1,
+    0.1,
+    0.1
+   ],
+   "minColor": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "surfaceColor": [
+    0.01,
+    0.01,
+    0.01
+   ],
+   "planeColor": [
+    0.01,
+    0.01,
+    0.01
+   ],
+   "diffuseColor": null,
+   "specularColor": [
+    0.7,
+    0.7,
+    0.7
+   ],
+   "surfaceAlpha": 0.3,
+   "ambientFactor": 0.3,
+   "diffuseFactor": 1.0,
+   "specularFactor": 0.4,
+   "specularPower": 20.0,
+   "fresnelMin": 0.2,
+   "fresnelMax": 1.4,
+   "fresnelPower": 8.0,
+   "reflectionDistortion": 1.1,
+   "blurBase": 2.0,
+   "blurExponent": 1.5,
+   "perlinStartFreq": 8.0,
+   "perlinLacunarity": 3.0,
+   "perlinAmplitude": 0.9,
+   "numTiles": null,
+   "foamDistortion": null
+  },
+  "name": "Baryon Tar Lake v1.1",
+  "author": "Nikuksis"
+ }
+]

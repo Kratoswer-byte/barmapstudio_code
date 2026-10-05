@@ -68,6 +68,10 @@ public final class BarMapExporter {
     private static final float RECLAIM_METAL_PER_PLAYER = 600.0f;
     private final SCMap map;
     private final BufferedImage customTexture;
+    /** Materiali delle 4 zone del pannello Texture (null = texturizzazione automatica o immagine unica). */
+    private final ZoneMaterials zoneMaterials;
+    /** Bioma ricavato da una mappa BAR (null = bioma Neroxis): tavolozza, luce, atmosfera e acqua. */
+    private final BarBiomes.BarBiome barBiome;
     private BarExportOptions options;
     private final int faSize;
     private final int faWidth;
@@ -117,6 +121,8 @@ public final class BarMapExporter {
     private BarMapExporter(SCMap map, BarExportOptions options) {
         this.map = map;
         this.customTexture = map.getCustomTexture();
+        this.zoneMaterials = ZoneMaterials.get(map);
+        this.barBiome = BarBiomes.get(map);
         this.options = options;
         this.faSize = map.getSize();
         int fW = map.getWidth();
@@ -147,6 +153,57 @@ public final class BarMapExporter {
         this.sunDirection[2] = -Math.max(0.45f, Math.abs(this.sunDirection[2]));
         this.sunDirection[1] = Math.max(0.55f, Math.min(0.8f, this.sunDirection[1]));
         normalize(this.sunDirection);
+        if (this.barBiome != null) {
+            applyBarBiomePalette();
+        }
+    }
+
+    /** Sostituisce i colori degli strati Neroxis con la tavolozza della mappa BAR, e il sole con il suo. */
+    private void applyBarBiomePalette() {
+        boolean alternate = false;
+        for (int i = 0; i < this.layerColors.length; i++) {
+            if (this.layerColors[i] == null) {
+                continue;
+            }
+            int kind = i == 0 ? 0 : this.layerKinds[i - 1];
+            float[] color;
+            if (kind == 2) {
+                color = this.barBiome.rock;
+            } else if (kind == 1) {
+                color = this.barBiome.slope;
+            } else {
+                color = i == 0 || !alternate ? this.barBiome.ground : this.barBiome.high;
+                if (i > 0) {
+                    alternate = !alternate;
+                }
+            }
+            this.layerColors[i] = color.clone();
+        }
+        if (this.barBiome.sunDir != null) {
+            float[] sun = this.barBiome.sunDir;
+            float length = (float) StrictMath.sqrt((sun[0] * sun[0]) + (sun[1] * sun[1]) + (sun[2] * sun[2]));
+            if (length > 0.01f) {
+                this.sunDirection[0] = sun[0] / length;
+                this.sunDirection[1] = Math.max(0.35f, sun[1] / length);
+                this.sunDirection[2] = sun[2] / length;
+                normalize(this.sunDirection);
+            }
+        }
+    }
+
+    /** Roccia, terra e sabbia dalla tavolozza BAR al posto di quelle stimate. */
+    private void applyBarBiomeAccents() {
+        if (this.barBiome == null) {
+            return;
+        }
+        System.arraycopy(this.barBiome.rock, 0, this.rockColor, 0, 3);
+        float[] dirt = BarBiomes.mix(this.barBiome.ground, this.barBiome.slope, 0.6f);
+        for (int c = 0; c < 3; c++) {
+            this.dirtColor[c] = dirt[c] * 0.9f;
+        }
+        if (this.barBiome.sand != null) {
+            System.arraycopy(this.barBiome.sand, 0, this.sandColor, 0, 3);
+        }
     }
 
     public static Path exportMap(Path folderPath, SCMap map, BarExportOptions options) throws IOException {
@@ -221,7 +278,11 @@ public final class BarMapExporter {
         objArr[2] = Integer.valueOf(hosted ? HOST_PORT : 0);
         objArr[3] = players.getFirst();
         objArr[4] = Integer.valueOf(players.size());
-        script.append("[game]\n{\n\tgametype=rapid://byar:test;\n\tmapname=%s;\n\tishost=1;\n\thostip=%s;\n\thostport=%d;\n\tmyplayername=%s;\n\tstartpostype=2;\n\tnumplayers=%d;\n\t[modoptions]\n\t{\n\t\tdraft_mode=disabled;\n\t}\n".formatted(objArr));
+        script.append("[game]\n{\n\tgametype=rapid://byar:test;\n\tmapname=%s;\n\tishost=1;\n\thostip=%s;\n\thostport=%d;\n\tmyplayername=%s;\n\tstartpostype=@SPT@;\n\tnumplayers=%d;\n\t[modoptions]\n\t{\n\t\tdraft_mode=disabled;\n@STARTPOS@\t}\n".formatted(objArr).replace("@STARTPOS@", startPosModoption() + extraUnitsModoptions())
+            // Opzione della mappa "Start positions": posizioni statiche (3 = decise prima della partita, scritte
+            // qui sotto squadra per squadra: ognuno parte sulla sua base dell'editor) oppure zona di partenza
+            // (2 = ogni giocatore sceglie il punto dentro la zona della sua squadra).
+            .replace("@SPT@", MapExtraOptions.get().startZones ? "2" : "3"));
         int player2 = 0;
         while (player2 < players.size()) {
             int slot2 = 0;
@@ -249,13 +310,15 @@ public final class BarMapExporter {
             objArr3[1] = Integer.valueOf(Math.max(0, playerOfSlot[i5]));
             objArr3[2] = Integer.valueOf(allyTeams[i5]);
             objArr3[3] = i5 % 2 == 0 ? "Armada" : "Cortex";
-            script.append("\t[team%d]\n\t{\n\t\tteamleader=%d;\n\t\tallyteam=%d;\n\t\tside=%s;\n\t\thandicap=0;\n\t}\n".formatted(objArr3));
+            script.append("\t[team%d]\n\t{\n\t\tteamleader=%d;\n\t\tallyteam=%d;\n\t\tside=%s;\n\t\thandicap=0;\n@STARTXZ@\t}\n".formatted(objArr3).replace("@STARTXZ@", String.format(Locale.ROOT,
+                "\t\tstartposx=%.0f;\n\t\tstartposz=%.0f;\n", spawns.get(i5).getPosition().x() * this.elmosPerCell, spawns.get(i5).getPosition().z() * this.elmosPerCell)));
         }
         for (int allyTeam = 0; allyTeam < teamIds.size(); allyTeam++) {
             float left = 1.0f;
             float top = 1.0f;
             float right = 0.0f;
             float bottom = 0.0f;
+            float zoneMargin = Math.max(0, Math.min(40, MapExtraOptions.get().startZoneMargin)) / 100.0f;
             for (int i6 = 0; i6 < spawns.size(); i6++) {
                 if (allyTeams[i6] == allyTeam) {
                     float x = spawns.get(i6).getPosition().x() / this.faWidth;
@@ -266,10 +329,76 @@ public final class BarMapExporter {
                     bottom = Math.max(bottom, z);
                 }
             }
-            script.append(String.format(Locale.ROOT, "\t[allyteam%d]\n\t{\n\t\tnumallies=0;\n\t\tstartrectleft=%.3f;\n\t\tstartrecttop=%.3f;\n\t\tstartrectright=%.3f;\n\t\tstartrectbottom=%.3f;\n\t}\n", Integer.valueOf(allyTeam), Float.valueOf(Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, left - 0.09f)), Float.valueOf(Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, top - 0.09f)), Float.valueOf(Math.min(1.0f, right + 0.09f)), Float.valueOf(Math.min(1.0f, bottom + 0.09f))));
+            script.append(String.format(Locale.ROOT, "\t[allyteam%d]\n\t{\n\t\tnumallies=0;\n\t\tstartrectleft=%.3f;\n\t\tstartrecttop=%.3f;\n\t\tstartrectright=%.3f;\n\t\tstartrectbottom=%.3f;\n\t}\n", Integer.valueOf(allyTeam), Float.valueOf(Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, left - zoneMargin)), Float.valueOf(Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, top - zoneMargin)), Float.valueOf(Math.min(1.0f, right + zoneMargin)), Float.valueOf(Math.min(1.0f, bottom + zoneMargin))));
         }
         script.append("}\n");
         return script.toString();
+    }
+
+    /** Punti di partenza in elmi, per squadra alleata, con il ruolo consigliato di ognuno (null se non applicabile). */
+    private SpawnRoles.Guide buildStartGuide() {
+        List<Spawn> spawns = new ArrayList<>(this.map.getSpawns());
+        Map<Spawn, Integer> spawnTeams = resolveTeams(spawns);
+        boolean anyRole = spawns.stream().anyMatch(spawn -> SpawnRoles.get(this.map, spawn) != null);
+        if (!anyRole) {
+            SpawnRoles.assignAllFront(this.map);
+        }
+        List<Integer> teamIds = spawns.stream().map(spawn -> spawnTeams.getOrDefault(spawn, 0)).distinct().sorted().toList();
+        SpawnRoles.Guide guide = new SpawnRoles.Guide();
+        for (int teamId : teamIds) {
+            List<int[]> side = new ArrayList<>();
+            for (Spawn spawn : spawns) {
+                if (spawnTeams.getOrDefault(spawn, 0) == teamId) {
+                    float[] elmos = toElmos(spawn);
+                    side.add(new int[]{guide.positions.size()});
+                    guide.positions.add(new float[]{elmos[0], elmos[1]});
+                    String role = SpawnRoles.get(this.map, spawn);
+                    guide.roleOfPosition.add(role != null ? role : "front");
+                }
+            }
+            guide.sides.add(side);
+        }
+        return guide.usable() ? guide : null;
+    }
+
+    /**
+     * BAR carica le unita' Legion, Scavenger e Raptor solo se la partita lo chiede con una modoption.
+     * Se sulla mappa ne sono state piazzate, la partita avviata dallo Studio le abilita da sola.
+     */
+    private String extraUnitsModoptions() {
+        boolean legion = false;
+        boolean others = false;
+        try {
+            for (Object obj : this.map.getCustomEntities()) {
+                if (!(obj instanceof com.faforever.neroxis.generator.bar.PlacedCustomEntity placed)) {
+                    continue;
+                }
+                com.faforever.neroxis.generator.bar.ObjectEntity ent = placed.getEntity();
+                if (ent == null || !ent.hasOfficialUnit()) {
+                    continue;
+                }
+                String faction = ent.getFaction() == null ? "" : ent.getFaction();
+                String id = ent.getOfficialUnitId() == null ? "" : ent.getOfficialUnitId().toLowerCase(Locale.ROOT);
+                if (faction.equalsIgnoreCase("Legion") || id.startsWith("leg")) {
+                    legion = true;
+                } else if (faction.equalsIgnoreCase("Other")) {
+                    others = true;
+                }
+            }
+        } catch (RuntimeException ex) {
+            return "";
+        }
+        return (legion ? "\t\texperimentallegionfaction=1;\n" : "") + (others ? "\t\tforceallunits=1;\n" : "");
+    }
+
+    /** Riga della modoption che fa comparire in BAR i cerchi con i ruoli (vuota se non servono). */
+    private String startPosModoption() {
+        try {
+            SpawnRoles.Guide guide = buildStartGuide();
+            return guide == null ? "" : "\t\tmapmetadata_startpos=" + guide.toModoption() + ";\n";
+        } catch (RuntimeException ex) {
+            return "";
+        }
     }
 
     private Path export(Path folderPath) throws IOException {
@@ -334,7 +463,11 @@ public final class BarMapExporter {
             DetailTextures.Material[] materials = getSplatMaterials();
             for (int i2 = 0; i2 < materials.length; i2++) {
                 zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_dnts" + (i2 + 1) + ".tga"));
-                zip.write(DetailTextures.createTexture(materials[i2], this.map.getName().hashCode() + (i2 * 7919)));
+                if (this.zoneMaterials != null) {
+                    zip.write(this.zoneMaterials.layers[i2].createDetailTexture());
+                } else {
+                    zip.write(DetailTextures.createTexture(materials[i2], this.map.getName().hashCode() + (i2 * 7919)));
+                }
                 zip.closeEntry();
             }
             zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_splats.dds"));
@@ -352,6 +485,23 @@ public final class BarMapExporter {
             }
             // Scrittura oggetti ed entità custom, script di animazione e gadget spawner
             writeCustomEntities(zip);
+            SpawnRoles.Guide startGuide = buildStartGuide();
+            if (startGuide != null) {
+                zip.putNextEntry(new ZipEntry("mapconfig/maps-metadata_startPos.yaml"));
+                zip.write(startGuide.toYaml().getBytes(StandardCharsets.UTF_8));
+                zip.closeEntry();
+            }
+            MapExtraOptions extra = MapExtraOptions.get();
+            if (extra.lavaMode > 0) {
+                zip.putNextEntry(new ZipEntry("mapconfig/lava.lua"));
+                zip.write(extra.buildLavaConfig().getBytes(StandardCharsets.UTF_8));
+                zip.closeEntry();
+            }
+            if (extra.needsGadget()) {
+                zip.putNextEntry(new ZipEntry("luarules/gadgets/map_options.lua"));
+                zip.write(extra.buildGadget().getBytes(StandardCharsets.UTF_8));
+                zip.closeEntry();
+            }
 
             zip.putNextEntry(new ZipEntry("maps/" + archiveName + "_normals.tga"));
             zip.write(buildNormalsTexture());
@@ -383,6 +533,9 @@ public final class BarMapExporter {
             saveLobbyMinimaps(folderPath, archiveName, getDisplayName(), previewImage, previewPngBytes);
             System.out.printf(Locale.ROOT, "BAR map: %dx%d, heights %.0f to %.0f, %d metal spots, %d geo vents, %d features%n", Integer.valueOf(this.mapX / 64), Integer.valueOf(this.mapY / 64), Float.valueOf(this.minHeight), Float.valueOf(this.maxHeight), Integer.valueOf(this.mexPositions.size()), Integer.valueOf(this.geoPositions.size()), Integer.valueOf(features.size()));
             System.out.println("Metal spot incomes: " + describeMetal());
+            if (this.zoneMaterials != null) {
+                System.out.println("Zone materials: " + this.zoneMaterials.describe());
+            }
             return archivePath;
         } catch (Throwable th) {
             try {
@@ -428,9 +581,11 @@ public final class BarMapExporter {
         sharpenCliffs();
         addRidges();
         ensureVehiclePaths();
+        applyMaterialRelief();
         gradeColors();
         buildShoreDistance();
         pickRockAndSandColors();
+        applyBarBiomeAccents();
         this.minHeight = Float.MAX_VALUE;
         this.maxHeight = -3.4028235E38f;
         for (float height : this.heights) {
@@ -449,6 +604,29 @@ public final class BarMapExporter {
         }
         this.minHeight = (float) Math.floor(this.minHeight);
         this.maxHeight = (float) Math.ceil(this.maxHeight);
+    }
+
+    /** Rilievo vero dei materiali di zona (es. bottoncini): sposta le quote, 1 punto ogni 8 elmi. */
+    private void applyMaterialRelief() {
+        if (this.zoneMaterials == null || !this.zoneMaterials.hasRelief()) {
+            return;
+        }
+        IntStream.rangeClosed(0, this.mapY).parallel().forEach(y -> {
+            float[] weights = new float[4];
+            float z = y * 8.0f;
+            for (int x = 0; x <= this.mapX; x++) {
+                float wx = x * 8.0f;
+                this.zoneMaterials.weights(wx / this.textureWidth, z / this.textureHeight, 0.0f, weights);
+                float offset = 0.0f;
+                for (int i = 0; i < 4; i++) {
+                    ZoneMaterials.Layer layer = this.zoneMaterials.layers[i];
+                    if (weights[i] > 0.0f && layer.hasRelief()) {
+                        offset += weights[i] * layer.reliefAt(wx, z);
+                    }
+                }
+                this.heights[(y * (this.mapX + 1)) + x] += offset;
+            }
+        });
     }
 
     private static float[] cleanHeights(float[] heights, int width, int height) {
@@ -972,6 +1150,24 @@ public final class BarMapExporter {
             String entId = ent.getId();
 
             // Modelli 3D personalizzati (unita ufficiali pure saltate; varianti _v2 esportate come nuovi tipi)
+            if (ent.isClone()) {
+                // copia personalizzata di un'unita' di BAR: basta la definizione, modello e script sono quelli del gioco
+                String cloneEntry = "units/" + entId + ".lua";
+                if (writtenEntries.add(cloneEntry)) {
+                    // texture e modello colorati vanno scritti prima di aprire la voce della definizione
+                    boolean ownModel = writeCloneModel(zip, ent, writtenEntries);
+                    zip.putNextEntry(new ZipEntry(cloneEntry));
+                    zip.write(buildCloneUnitDefLua(ent, ownModel).getBytes(StandardCharsets.UTF_8));
+                    zip.closeEntry();
+                }
+                // script Lua scritto nello Studio: sostituisce quello dell'originale solo per questa copia
+                if (ent.isCustomScriptEnabled() && hasLuaCode(ent.getLuaScript()) && writtenEntries.add("scripts/" + entId.toLowerCase(Locale.ROOT) + ".lua")) {
+                    zip.putNextEntry(new ZipEntry("scripts/" + entId.toLowerCase(Locale.ROOT) + ".lua"));
+                    zip.write(ent.getLuaScript().getBytes(StandardCharsets.UTF_8));
+                    zip.closeEntry();
+                }
+                continue;
+            }
             boolean isPureOfficial = ent.getCategory() == com.faforever.neroxis.generator.bar.ObjectEntity.Category.OFFICIAL_UNIT
                 && !entId.endsWith("_v2");
             if (!isPureOfficial) {
@@ -1010,7 +1206,7 @@ public final class BarMapExporter {
                             String texEntry = "unittextures/" + tex1Name;
                             if (writtenEntries.add(texEntry)) {
                                 zip.putNextEntry(new ZipEntry(texEntry));
-                                zip.write(com.faforever.neroxis.generator.bar.ObjModel3D.imageToTgaBytes(atlas.image));
+                                zip.write(com.faforever.neroxis.generator.bar.ObjModel3D.imageToTgaBytes(com.faforever.neroxis.generator.bar.ObjectEntity.tinted(atlas.image, ent.getTintRgb()), 0));
                                 zip.closeEntry();
                             }
                             if (atlas.remapped != null) exportModel = atlas.remapped;
@@ -1022,7 +1218,7 @@ public final class BarMapExporter {
                             String texEntry = "unittextures/" + tex1Name;
                             if (writtenEntries.add(texEntry)) {
                                 zip.putNextEntry(new ZipEntry(texEntry));
-                                zip.write(com.faforever.neroxis.generator.bar.ObjModel3D.imageToTgaBytes(model.getBakedTexture()));
+                                zip.write(com.faforever.neroxis.generator.bar.ObjModel3D.imageToTgaBytes(com.faforever.neroxis.generator.bar.ObjectEntity.tinted(model.getBakedTexture(), ent.getTintRgb()), 0));
                                 zip.closeEntry();
                             }
                         } else if (!defaultMatWritten) {
@@ -1087,6 +1283,30 @@ public final class BarMapExporter {
             }
         }
 
+        // Nomi e descrizioni: BAR mostra il nome di un'unita' leggendolo dai file di lingua, non dalla sua
+        // definizione. Senza questo file le unita' create dallo Studio comparirebbero senza il loro nome.
+        StringBuilder unitNames = new StringBuilder();
+        StringBuilder unitDescriptions = new StringBuilder();
+        StringBuilder featureNames = new StringBuilder();
+        for (com.faforever.neroxis.generator.bar.ObjectEntity ent : uniqueEntities.values()) {
+            boolean pureOfficial = ent.getCategory() == com.faforever.neroxis.generator.bar.ObjectEntity.Category.OFFICIAL_UNIT
+                && !ent.getId().endsWith("_v2");
+            if (pureOfficial && !ent.isClone()) {
+                continue;
+            }
+            String key = jsonString(ent.getId().toLowerCase(Locale.ROOT));
+            String shown = ent.getName() != null && !ent.getName().isBlank() ? ent.getName() : ent.getId();
+            unitNames.append(unitNames.length() > 0 ? "," : "").append(key).append(":").append(jsonString(shown));
+            unitDescriptions.append(unitDescriptions.length() > 0 ? "," : "").append(key).append(":").append(jsonString(ent.getTooltip() != null ? ent.getTooltip() : ""));
+            featureNames.append(featureNames.length() > 0 ? "," : "").append(key).append(":").append(jsonString(shown));
+        }
+        if (unitNames.length() > 0 && writtenEntries.add("language/en/mapstudio_units.json")) {
+            zip.putNextEntry(new ZipEntry("language/en/mapstudio_units.json"));
+            zip.write(("{\"units\":{\"names\":{" + unitNames + "},\"descriptions\":{" + unitDescriptions + "}},\"features\":{\"names\":{" + featureNames + "}}}")
+                .getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+        }
+
         // 2. Generazione del Map Gadget per spawnare le entita' in-game
         if (!toSpawn.isEmpty()) {
             StringBuilder sb = new StringBuilder();
@@ -1113,16 +1333,39 @@ public final class BarMapExporter {
                 String cat = ent.getCategory().name();
 
                 sb.append(String.format(Locale.ROOT,
-                    "    { id = \"%s\", x = %.1f, z = %.1f, rot = %.4f, faction = \"%s\", cat = \"%s\" },\n",
-                    ent.getId(), wx, wz, rot, faction, cat
+                    "    { id = \"%s\", x = %.1f, z = %.1f, rot = %.4f, faction = \"%s\", cat = \"%s\", owner = \"%s\"%s },\n",
+                    ent.getId(), wx, wz, rot, faction, cat, ent.getOwner().name(), officialOverrides(ent)
                 ));
             }
             sb.append("}\n\n");
 
+            sb.append("-- unita' indistruttibili (script con --@invulnerable): nessuna arma fa loro danno\n");
+            sb.append("local invulnerableNames = {");
+            for (com.faforever.neroxis.generator.bar.ObjectEntity ent : uniqueEntities.values()) {
+                if (isInvulnerable(ent)) {
+                    sb.append(" [\"").append(ent.getId().toLowerCase(Locale.ROOT)).append("\"] = true,");
+                }
+            }
+            sb.append(" }\n");
+            sb.append("local invulnerableDefs = {}\n");
+            sb.append("for unitDefID, unitDef in pairs(UnitDefs) do\n");
+            sb.append("    if invulnerableNames[unitDef.name] then invulnerableDefs[unitDefID] = true end\n");
+            sb.append("end\n\n");
+            sb.append("function gadget:UnitPreDamaged(unitID, unitDefID)\n");
+            sb.append("    if invulnerableDefs[unitDefID] then\n");
+            sb.append("        return 0, 0\n");
+            sb.append("    end\n");
+            sb.append("end\n\n");
+            sb.append("function gadget:AllowUnitTransfer(unitID, unitDefID)\n");
+            sb.append("    return not invulnerableDefs[unitDefID]\n");
+            sb.append("end\n\n");
             sb.append("function gadget:GameStart()\n");
             sb.append("    local gaiaTeamID = Spring.GetGaiaTeamID()\n");
             sb.append("    local teamList = Spring.GetTeamList()\n");
             sb.append("    local armadaTeam = nil\n");
+            sb.append("    local legionTeam = nil\n");
+            sb.append("    local raptorTeam = nil\n");
+            sb.append("    local scavTeam = nil\n");
             sb.append("    local cortexTeam = nil\n");
             sb.append("    local firstPlayerTeam = 0\n");
             sb.append("    for _, tId in ipairs(teamList) do\n");
@@ -1131,6 +1374,22 @@ public final class BarMapExporter {
             sb.append("            local _, _, _, _, side = Spring.GetTeamInfo(tId)\n");
             sb.append("            if side and string.lower(side) == \"armada\" and not armadaTeam then armadaTeam = tId end\n");
             sb.append("            if side and string.lower(side) == \"cortex\" and not cortexTeam then cortexTeam = tId end\n");
+            sb.append("            if side and string.lower(side) == \"legion\" and not legionTeam then legionTeam = tId end\n");
+            sb.append("            local luaAI = string.lower(Spring.GetTeamLuaAI(tId) or \"\")\n");
+            sb.append("            if string.find(luaAI, \"raptor\", 1, true) and not raptorTeam then raptorTeam = tId end\n");
+            sb.append("            if string.find(luaAI, \"scav\", 1, true) and not scavTeam then scavTeam = tId end\n");
+            sb.append("        end\n");
+            sb.append("    end\n");
+            sb.append("    -- prima squadra di ogni schieramento (alleanza), in ordine: serve per 'Squadra 1' e 'Squadra 2'\n");
+            sb.append("    local sideTeams = {}\n");
+            sb.append("    local seenAlly = {}\n");
+            sb.append("    for _, tId in ipairs(teamList) do\n");
+            sb.append("        if tId ~= gaiaTeamID then\n");
+            sb.append("            local allyTeam = select(6, Spring.GetTeamInfo(tId, false))\n");
+            sb.append("            if allyTeam and not seenAlly[allyTeam] then\n");
+            sb.append("                seenAlly[allyTeam] = true\n");
+            sb.append("                sideTeams[table.getn(sideTeams) + 1] = tId\n");
+            sb.append("            end\n");
             sb.append("        end\n");
             sb.append("    end\n");
             sb.append("    if not armadaTeam then armadaTeam = firstPlayerTeam end\n");
@@ -1149,6 +1408,27 @@ public final class BarMapExporter {
             sb.append("            teamID = 1\n");
             sb.append("        else\n");
             sb.append("            teamID = gaiaTeamID\n");
+            sb.append("        end\n");
+            sb.append("        -- schieramento scelto nello Studio: prevale su quello dedotto dalla fazione\n");
+            sb.append("        if e.owner == \"NEUTRAL\" or e.owner == \"HOSTILE\" then\n");
+            sb.append("            teamID = gaiaTeamID\n");
+            sb.append("        elseif e.owner == \"ARMADA\" then\n");
+            sb.append("            teamID = armadaTeam\n");
+            sb.append("        elseif e.owner == \"CORTEX\" then\n");
+            sb.append("            teamID = cortexTeam\n");
+            sb.append("        elseif e.owner == \"LEGION\" then\n");
+            sb.append("            teamID = legionTeam or firstPlayerTeam\n");
+            sb.append("        elseif e.owner == \"RAPTORS\" then\n");
+            sb.append("            -- senza una squadra Raptor in partita l'unita' resta nemica di tutti\n");
+            sb.append("            teamID = raptorTeam or gaiaTeamID\n");
+            sb.append("            if not raptorTeam then e.owner = \"HOSTILE\" end\n");
+            sb.append("        elseif e.owner == \"SCAVENGERS\" then\n");
+            sb.append("            teamID = scavTeam or gaiaTeamID\n");
+            sb.append("            if not scavTeam then e.owner = \"HOSTILE\" end\n");
+            sb.append("        elseif e.owner == \"TEAM_A\" and sideTeams[1] then\n");
+            sb.append("            teamID = sideTeams[1]\n");
+            sb.append("        elseif e.owner == \"TEAM_B\" and sideTeams[2] then\n");
+            sb.append("            teamID = sideTeams[2]\n");
             sb.append("        end\n\n");
 
             sb.append("        local y = Spring.GetGroundHeight(e.x, e.z)\n");
@@ -1180,12 +1460,34 @@ public final class BarMapExporter {
             sb.append("        end\n\n");
 
             sb.append("        if not unitID then\n");
-            sb.append("            local featOk, featID = pcall(Spring.CreateFeature, e.id, e.x, y, e.z, heading, teamID)\n");
-            sb.append("            if not featOk or not featID then\n");
-            sb.append("                pcall(Spring.CreateFeature, nameLower, e.x, y, e.z, heading, teamID)\n");
+            sb.append("            -- si prova come oggetto solo se esiste davvero: chiedere un FeatureDef che non c'e' stampa un errore a schermo\n");
+            sb.append("            local featName = (FeatureDefNames[e.id] and e.id) or (FeatureDefNames[nameLower] and nameLower)\n");
+            sb.append("            if featName then\n");
+            sb.append("                pcall(Spring.CreateFeature, featName, e.x, y, e.z, heading, teamID)\n");
+            sb.append("            elseif e.cat == \"OFFICIAL_UNIT\" then\n");
+            sb.append("                Spring.Echo(\"[BAR Map Studio] Unit '\" .. e.id .. \"' is not loaded in this match. Legion, Scavenger and Raptor units need their game option enabled (for Legion: the Legion faction option in the lobby).\")\n");
+            sb.append("            else\n");
+            sb.append("                Spring.Echo(\"[BAR Map Studio] Object '\" .. e.id .. \"' was not found in the map.\")\n");
             sb.append("            end\n");
             sb.append("        else\n");
-            sb.append("            if teamID == gaiaTeamID then\n");
+            sb.append("            -- unita' di BAR con valori cambiati nello Studio: si applicano a questa singola unita'\n");
+            sb.append("            if e.hp then\n");
+            sb.append("                pcall(Spring.SetUnitMaxHealth, unitID, e.hp)\n");
+            sb.append("                pcall(Spring.SetUnitHealth, unitID, e.hp)\n");
+            sb.append("            end\n");
+            sb.append("            if e.metal or e.energy then\n");
+            sb.append("                pcall(Spring.SetUnitCosts, unitID, { metalCost = e.metal, energyCost = e.energy })\n");
+            sb.append("            end\n");
+            sb.append("            if e.owner == \"HOSTILE\" then\n");
+            sb.append("                -- nemica di tutti: resta della squadra Gaia (nemica di ogni alleanza) ma non e' neutrale,\n");
+            sb.append("                -- quindi viene presa di mira; fuoco a volonta' e libera di inseguire\n");
+            sb.append("                pcall(Spring.SetUnitNeutral, unitID, false)\n");
+            sb.append("                pcall(Spring.GiveOrderToUnit, unitID, CMD.FIRE_STATE, { 2 }, 0)\n");
+            sb.append("                pcall(Spring.GiveOrderToUnit, unitID, CMD.MOVE_STATE, { 2 }, 0)\n");
+            sb.append("            elseif e.owner == \"NEUTRAL\" then\n");
+            sb.append("                pcall(Spring.SetUnitNeutral, unitID, true)\n");
+            sb.append("                pcall(Spring.GiveOrderToUnit, unitID, CMD.FIRE_STATE, { 0 }, 0)\n");
+            sb.append("            elseif teamID == gaiaTeamID then\n");
             sb.append("                pcall(Spring.SetUnitNeutral, unitID, true)\n");
             sb.append("            end\n");
             sb.append("        end\n");
@@ -1213,7 +1515,7 @@ public final class BarMapExporter {
             tga[offset++] = (byte) 160; // B
             tga[offset++] = (byte) 160; // G
             tga[offset++] = (byte) 160; // R
-            tga[offset++] = (byte) 255; // A
+            tga[offset++] = (byte) 0;   // A = maschera colore squadra (0 = nessuno)
         }
         return tga;
     }
@@ -1315,8 +1617,15 @@ public final class BarMapExporter {
                 continue;
             }
             float[] dst = new float[src.length];
+            // UV traslate di tile interi (texture ripetute): riporta la faccia in 0..1 prima del clamp
+            float minU = Float.MAX_VALUE, minV = Float.MAX_VALUE;
             for (int k = 0; k < src.length / 2; k++) {
-                float u = src[k * 2], v = src[k * 2 + 1];
+                minU = Math.min(minU, src[k * 2]);
+                minV = Math.min(minV, src[k * 2 + 1]);
+            }
+            float offU = (float) Math.floor(minU), offV = (float) Math.floor(minV);
+            for (int k = 0; k < src.length / 2; k++) {
+                float u = src[k * 2] - offU, v = src[k * 2 + 1] - offV;
                 dst[k * 2] = (r.x + Math.min(0.9999f, Math.max(0, u)) * r.width) / aw;
                 dst[k * 2 + 1] = (r.y + Math.min(0.9999f, Math.max(0, v)) * r.height) / ah;
             }
@@ -1324,9 +1633,451 @@ public final class BarMapExporter {
         }
         // IMPORTANTE: materialColors vuoto -> il costruttore non ri-applica le celle palette
         // e le UV dell'atlante (newUVs) restano intatte.
-        return new AtlasResult(atlas, new com.faforever.neroxis.generator.bar.ObjModel3D(
+        com.faforever.neroxis.generator.bar.ObjModel3D remapped = new com.faforever.neroxis.generator.bar.ObjModel3D(
             model.getVertices(), faces, model.getFaceNormals(), model.getFaceColors(), newUVs,
-            new java.util.LinkedHashMap<>(), faceMats));
+            new java.util.LinkedHashMap<>(), faceMats);
+        remapped.setFacePieces(model.getFacePieces());
+        return new AtlasResult(atlas, remapped);
+    }
+
+    /**
+     * Definizione di una copia personalizzata: carica il file dell'unita' originale dal gioco, ne fa una copia
+     * e cambia solo nome e valori scelti nello Studio. Armi, movimento, modello e script restano gli stessi.
+     */
+    /**
+     * Modello proprio per una copia di unita' BAR, scritto solo quando serve: se la copia ha una scala diversa
+     * da 1 (il modello del gioco viene ingrandito o rimpicciolito) o un colore suo (vedi writeCloneTexture).
+     * Ritorna false se la copia puo' usare il modello originale cosi' com'e'.
+     */
+    private static boolean writeCloneModel(ZipOutputStream zip, com.faforever.neroxis.generator.bar.ObjectEntity ent, Set<String> written) {
+        boolean recolour = ent.getTintRgb() != null && ent.isColourFree();
+        boolean rescale = Math.abs(ent.getScale() - 1.0f) > 0.001f;
+        if (!recolour && !rescale) {
+            return false;
+        }
+        try {
+            byte[] s3o = com.faforever.neroxis.generator.bar.OfficialModels.modelBytes(ent.getCloneOf());
+            if (s3o == null || s3o.length < 52) {
+                return false;
+            }
+            byte[] model = s3o.clone();
+            if (rescale) {
+                scaleS3o(model, ent.getScale());
+            }
+            if (recolour) {
+                String texName = writeCloneTexture(zip, ent, s3o, written);
+                if (texName != null) {
+                    // la nuova stringa va in fondo al file e l'intestazione punta a quella
+                    byte[] nameBytes = (texName + "\0").getBytes(StandardCharsets.US_ASCII);
+                    byte[] patched = java.util.Arrays.copyOf(model, model.length + nameBytes.length);
+                    System.arraycopy(nameBytes, 0, patched, model.length, nameBytes.length);
+                    java.nio.ByteBuffer.wrap(patched).order(java.nio.ByteOrder.LITTLE_ENDIAN).putInt(44, model.length);
+                    model = patched;
+                } else if (!rescale) {
+                    return false;
+                }
+            }
+            String s3oEntry = "objects3d/" + ent.getId().toLowerCase(Locale.ROOT) + ".s3o";
+            if (written.add(s3oEntry)) {
+                zip.putNextEntry(new ZipEntry(s3oEntry));
+                zip.write(model);
+                zip.closeEntry();
+            }
+            return true;
+        } catch (IOException | RuntimeException ex) {
+            System.err.println("Modello della copia non scritto per " + ent.getId() + ": " + ex.getMessage());
+            return false;
+        }
+    }
+
+    /** Scala sul posto un modello S3O: vertici, posizione di ogni pezzo e misure dell'intestazione. */
+    private static void scaleS3o(byte[] data, float scale) {
+        java.nio.ByteBuffer b = java.nio.ByteBuffer.wrap(data).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        for (int off = 16; off <= 32; off += 4) {
+            b.putFloat(off, b.getFloat(off) * scale);
+        }
+        scaleS3oPiece(data, b, b.getInt(36), scale, 0, new HashSet<>());
+    }
+
+    private static void scaleS3oPiece(byte[] data, java.nio.ByteBuffer b, int off, float scale, int depth, Set<Integer> doneVertexBlocks) {
+        if (off < 0 || off + 52 > data.length || depth > 64) {
+            return;
+        }
+        int numChildren = b.getInt(off + 4);
+        int childrenOff = b.getInt(off + 8);
+        int numVerts = b.getInt(off + 12);
+        int vertsOff = b.getInt(off + 16);
+        for (int k = 40; k <= 48; k += 4) {
+            b.putFloat(off + k, b.getFloat(off + k) * scale);
+        }
+        // un blocco di vertici condiviso da piu' pezzi va scalato una volta sola
+        if (numVerts > 0 && doneVertexBlocks.add(vertsOff)) {
+            for (int i = 0; i < numVerts; i++) {
+                int p = vertsOff + (i * 32);
+                if (p + 12 > data.length) {
+                    break;
+                }
+                b.putFloat(p, b.getFloat(p) * scale);
+                b.putFloat(p + 4, b.getFloat(p + 4) * scale);
+                b.putFloat(p + 8, b.getFloat(p + 8) * scale);
+            }
+        }
+        for (int i = 0; i < numChildren; i++) {
+            int p = childrenOff + (i * 4);
+            if (p + 4 > data.length) {
+                break;
+            }
+            scaleS3oPiece(data, b, b.getInt(p), scale, depth + 1, doneVertexBlocks);
+        }
+    }
+
+    /**
+     * Colore proprio per una copia di unita' BAR: il gioco colora le unita' con il colore della squadra usando
+     * l'alpha della loro texture, quindi qui si scrive una copia della texture con il colore scelto gia' dipinto
+     * (alpha a zero). Ritorna il nome della texture scritta, o null se non riesce.
+     */
+    private static String writeCloneTexture(ZipOutputStream zip, com.faforever.neroxis.generator.bar.ObjectEntity ent, byte[] s3o, Set<String> written) throws IOException {
+        java.nio.ByteBuffer header = java.nio.ByteBuffer.wrap(s3o).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        int nameOff = header.getInt(44);
+        int end = nameOff;
+        while (end < s3o.length && s3o[end] != 0) {
+            end++;
+        }
+        String tex1 = new String(s3o, nameOff, end - nameOff, StandardCharsets.US_ASCII);
+        int tint = ent.getTintRgb();
+        String base = tex1.toLowerCase(Locale.ROOT).replaceAll("\\.[a-z0-9]+$", "").replaceAll("[^a-z0-9_]", "_");
+        String texName = "studio_" + base + String.format("_%06x.tga", tint);
+        if (!written.add("unittextures/" + texName)) {
+            return texName;
+        }
+        // meta' lato dell'originale: abbastanza dettaglio in gioco senza appesantire troppo la mappa
+        java.awt.image.BufferedImage src = com.faforever.neroxis.generator.bar.OfficialModels.unitTexture(tex1, 1);
+        if (src == null) {
+            written.remove("unittextures/" + texName);
+            return null;
+        }
+        int w = src.getWidth();
+        int h = src.getHeight();
+        int[] px = src.getRGB(0, 0, w, h, null, 0, w);
+        // le DDS del gioco sono salvate capovolte rispetto a come il motore legge una TGA: si ribalta in verticale
+        boolean dds = tex1.toLowerCase(Locale.ROOT).endsWith(".dds");
+        int[] out = new int[px.length];
+        int tr = (tint >> 16) & 255, tg = (tint >> 8) & 255, tb = tint & 255;
+        for (int y = 0; y < h; y++) {
+            int sy = dds ? h - 1 - y : y;
+            for (int x = 0; x < w; x++) {
+                int c = px[(sy * w) + x];
+                int a = c >>> 24;
+                int r = (c >> 16) & 255, g = (c >> 8) & 255, bl = c & 255;
+                r += ((tr - r) * a) / 255;
+                g += ((tg - g) * a) / 255;
+                bl += ((tb - bl) * a) / 255;
+                out[(y * w) + x] = 0xFF000000 | (r << 16) | (g << 8) | bl;
+            }
+        }
+        java.awt.image.BufferedImage painted = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        painted.setRGB(0, 0, w, h, out, 0, w);
+        zip.putNextEntry(new ZipEntry("unittextures/" + texName));
+        zip.write(com.faforever.neroxis.generator.bar.ObjModel3D.imageToTgaBytes(painted, 0));
+        zip.closeEntry();
+        return texName;
+    }
+
+    private static String buildCloneUnitDefLua(com.faforever.neroxis.generator.bar.ObjectEntity ent, boolean ownModel) {
+        String id = ent.getId().toLowerCase(Locale.ROOT);
+        String source = ent.getCloneOf().toLowerCase(Locale.ROOT);
+        StringBuilder sb = new StringBuilder();
+        sb.append("-- Copia personalizzata dell'unita' BAR \"").append(source).append("\" creata con BAR Map Studio\n");
+        sb.append("local source = \"").append(source).append("\"\n");
+        sb.append("local unitName = \"").append(id).append("\"\n\n");
+        sb.append("local function copy(value)\n");
+        sb.append("    if type(value) ~= \"table\" then return value end\n");
+        sb.append("    local result = {}\n");
+        sb.append("    for k, v in pairs(value) do result[k] = copy(v) end\n");
+        sb.append("    return result\n");
+        sb.append("end\n\n");
+        sb.append("local path = nil\n");
+        sb.append("for _, file in ipairs(VFS.DirList(\"units/\", \"*.lua\", nil, true)) do\n");
+        sb.append("    if string.match(string.lower(file), \"([^/]+)%.lua$\") == source then\n");
+        sb.append("        path = file\n");
+        sb.append("        break\n");
+        sb.append("    end\n");
+        sb.append("end\n");
+        sb.append("if not path then return {} end\n");
+        sb.append("local ok, defs = pcall(VFS.Include, path)\n");
+        sb.append("if not ok or type(defs) ~= \"table\" then return {} end\n");
+        sb.append("local original = nil\n");
+        sb.append("for k, v in pairs(defs) do\n");
+        sb.append("    if string.lower(k) == source then original = v end\n");
+        sb.append("end\n");
+        sb.append("if type(original) ~= \"table\" then return {} end\n\n");
+        sb.append("local unitDef = copy(original)\n");
+        sb.append("-- le chiavi dei file di BAR possono avere maiuscole diverse: si toglie la vecchia e si scrive la nuova\n");
+        sb.append("local function set(key, value)\n");
+        sb.append("    for k in pairs(unitDef) do\n");
+        sb.append("        if type(k) == \"string\" and string.lower(k) == key then unitDef[k] = nil end\n");
+        sb.append("    end\n");
+        sb.append("    unitDef[key] = value\n");
+        sb.append("end\n\n");
+        sb.append("set(\"name\", ").append(jsonString(ent.getName() != null ? ent.getName() : id)).append(")\n");
+        if (ent.getTooltip() != null && !ent.getTooltip().isBlank()) {
+            sb.append("set(\"description\", ").append(jsonString(ent.getTooltip())).append(")\n");
+        }
+        if (ent.getHealth() != ent.getOfficialHealth()) {
+            sb.append("set(\"maxdamage\", nil)\n");
+            sb.append("set(\"health\", ").append(Math.max(1, ent.getHealth())).append(")\n");
+        }
+        if (ent.getMetal() != ent.getOfficialMetal()) {
+            sb.append("set(\"buildcostmetal\", nil)\n");
+            sb.append("set(\"metalcost\", ").append(Math.max(0, ent.getMetal())).append(")\n");
+        }
+        if (ent.getEnergy() != ent.getOfficialEnergy()) {
+            sb.append("set(\"buildcostenergy\", nil)\n");
+            sb.append("set(\"energycost\", ").append(Math.max(0, ent.getEnergy())).append(")\n");
+        }
+        if (ent.getSightRange() > 0) {
+            sb.append("set(\"sightdistance\", ").append(ent.getSightRange()).append(")\n");
+        }
+        if (ownModel) {
+            sb.append("set(\"objectname\", \"").append(id).append(".s3o\")\n");
+        }
+        if (Math.abs(ent.getScale() - 1.0f) > 0.001f) {
+            // il volume di collisione segue la nuova grandezza del modello
+            sb.append("local modelScale = ").append(String.format(Locale.ROOT, "%.4f", ent.getScale())).append("\n");
+            sb.append("for k, v in pairs(unitDef) do\n");
+            sb.append("    local key = type(k) == \"string\" and string.lower(k) or \"\"\n");
+            sb.append("    if (key == \"collisionvolumescales\" or key == \"collisionvolumeoffsets\") and type(v) == \"string\" then\n");
+            sb.append("        local parts = {}\n");
+            sb.append("        for number in string.gmatch(v, \"[^%s]+\") do\n");
+            sb.append("            parts[table.getn(parts) + 1] = tostring((tonumber(number) or 0) * modelScale)\n");
+            sb.append("        end\n");
+            sb.append("        unitDef[k] = table.concat(parts, \" \")\n");
+            sb.append("    end\n");
+            sb.append("end\n");
+        }
+        float cloneRadius = 30.0f;
+        float cloneHeight = 30.0f;
+        try {
+            com.faforever.neroxis.generator.bar.S3OParser.S3OModel sm = com.faforever.neroxis.generator.bar.OfficialModels.loadFull(ent.getCloneOf());
+            if (sm != null) {
+                cloneRadius = sm.radius > 0 ? sm.radius : cloneRadius;
+                cloneHeight = sm.height > 0 ? sm.height : cloneHeight;
+            }
+        } catch (RuntimeException ignored) {
+        }
+        appendStudioDef(sb, ent, cloneRadius * ent.getScale(), cloneHeight * ent.getScale(), ent.isCustomScriptEnabled());
+        if (ent.isCustomScriptEnabled() && hasLuaCode(ent.getLuaScript())) {
+            sb.append("set(\"script\", \"").append(id).append(".lua\")\n");
+        }
+        sb.append("\nreturn { [unitName] = unitDef }\n");
+        return sb.toString();
+    }
+
+    /**
+     * Strumenti messi a disposizione del codice di definizione scritto nello Studio (scheda "Definition").
+     * Sono funzioni Lua che girano quando il gioco carica le unita': permettono di prendere pezzi di altre
+     * unita' di BAR (armi, scudi, movimento) senza dover cambiare il programma.
+     */
+    private static final String STUDIO_DEF_HELPERS = String.join("\n",
+        "function Studio.copy(value)",
+        "    if type(value) ~= \"table\" then return value end",
+        "    local result = {}",
+        "    for k, v in pairs(value) do result[k] = Studio.copy(v) end",
+        "    return result",
+        "end",
+        "-- legge un campo senza badare a maiuscole e minuscole: ritorna valore e nome vero della chiave",
+        "function Studio.field(tbl, key)",
+        "    if type(tbl) ~= \"table\" then return nil, nil end",
+        "    key = string.lower(key)",
+        "    for k, v in pairs(tbl) do",
+        "        if type(k) == \"string\" and string.lower(k) == key then return v, k end",
+        "    end",
+        "    return nil, nil",
+        "end",
+        "function Studio.get(tbl, key)",
+        "    local value = Studio.field(tbl, key)",
+        "    return value",
+        "end",
+        "function Studio.set(tbl, key, value)",
+        "    local _, existing = Studio.field(tbl, key)",
+        "    tbl[existing or key] = value",
+        "end",
+        "-- sotto-tabella (es. weapondefs, customparams), creata se manca",
+        "function Studio.section(tbl, key)",
+        "    local value, existing = Studio.field(tbl, key)",
+        "    if type(value) ~= \"table\" then",
+        "        value = {}",
+        "        tbl[existing or key] = value",
+        "    end",
+        "    return value",
+        "end",
+        "-- definizione di un'unita' di BAR, come copia modificabile (nil se non esiste)",
+        "function Studio.unit(name)",
+        "    name = string.lower(tostring(name))",
+        "    for _, file in ipairs(VFS.DirList(\"units/\", \"*.lua\", nil, true)) do",
+        "        if string.match(string.lower(file), \"([^/]+)%.lua$\") == name then",
+        "            local ok, defs = pcall(VFS.Include, file)",
+        "            if ok and type(defs) == \"table\" then",
+        "                for k, v in pairs(defs) do",
+        "                    if type(k) == \"string\" and string.lower(k) == name then return Studio.copy(v) end",
+        "                end",
+        "            end",
+        "        end",
+        "    end",
+        "    return nil",
+        "end",
+        "-- aggiunge a def un'arma presa da un'unita' di BAR; ritorna il numero dell'arma nell'unita'",
+        "function Studio.addWeapon(def, fromUnit, weaponName, overrides)",
+        "    local source = Studio.unit(fromUnit)",
+        "    if not source then error(\"unit not found: \" .. tostring(fromUnit)) end",
+        "    local weapon = Studio.field(Studio.field(source, \"weapondefs\"), tostring(weaponName))",
+        "    if type(weapon) ~= \"table\" then error(\"weapon '\" .. tostring(weaponName) .. \"' not found in \" .. tostring(fromUnit)) end",
+        "    if type(overrides) == \"table\" then",
+        "        for k, v in pairs(overrides) do Studio.set(weapon, k, v) end",
+        "    end",
+        "    local newName = string.lower(tostring(fromUnit) .. \"_\" .. tostring(weaponName))",
+        "    Studio.section(def, \"weapondefs\")[newName] = weapon",
+        "    local weapons = Studio.section(def, \"weapons\")",
+        "    local count = 0",
+        "    for _ in pairs(weapons) do count = count + 1 end",
+        "    weapons[count + 1] = { def = string.upper(newName), onlytargetcategory = \"NOTSUB\" }",
+        "    return count + 1",
+        "end",
+        "-- scudo al plasma con raggio e potenza scelti: BAR ne disegna la bolla. Se non si indica da quale unita'",
+        "-- prenderlo, e' quello del Plasma Deflector (armgate, repulsor)",
+        "function Studio.addShield(def, radius, power, fromUnit, weaponName)",
+        "    radius = radius or (Studio.modelRadius * 2)",
+        "    power = power or 20000",
+        "    fromUnit = fromUnit or \"armgate\"",
+        "    weaponName = weaponName or \"repulsor\"",
+        "    local number = Studio.addWeapon(def, fromUnit, weaponName)",
+        "    local shield = Studio.field(Studio.field(Studio.field(def, \"weapondefs\"), string.lower(fromUnit .. \"_\" .. weaponName)), \"shield\")",
+        "    if type(shield) == \"table\" then",
+        "        Studio.set(shield, \"radius\", radius)",
+        "        Studio.set(shield, \"power\", power)",
+        "        Studio.set(shield, \"startingpower\", power)",
+        "        Studio.set(shield, \"powerregen\", power)",
+        "        Studio.set(shield, \"powerregenenergy\", 0)",
+        "        Studio.set(shield, \"energyupkeep\", 0)",
+        "    end",
+        "    local params = Studio.section(def, \"customparams\")",
+        "    Studio.set(params, \"shield_radius\", radius)",
+        "    Studio.set(params, \"shield_power\", power)",
+        "    Studio.set(params, \"shield_color_mult\", 0.8)",
+        "    -- BAR tiene carico e disegna lo scudo solo se l'unita' e' \"accesa\" (come il Plasma Deflector, che nasce",
+        "    -- acceso): senza questi due valori lo scudo resterebbe sempre a zero e la bolla non comparirebbe mai",
+        "    Studio.set(def, \"activatewhenbuilt\", true)",
+        "    Studio.set(def, \"onoffable\", true)",
+        "    return number",
+        "end",
+        "-- fa muovere def come un'altra unita' di BAR: velocita', sterzata, classe di movimento",
+        "function Studio.moveLike(def, fromUnit)",
+        "    local source = Studio.unit(fromUnit)",
+        "    if not source then error(\"unit not found: \" .. tostring(fromUnit)) end",
+        "    local keys = { \"movementclass\", \"speed\", \"maxvelocity\", \"maxacc\", \"acceleration\", \"maxdec\", \"brakerate\",",
+        "        \"turnrate\", \"turninplace\", \"turninplaceanglelimit\", \"turninplacespeedlimit\", \"maxslope\", \"maxwaterdepth\",",
+        "        \"minwaterdepth\", \"canfly\", \"cruisealtitude\", \"upright\", \"mass\", \"category\", \"footprintx\", \"footprintz\" }",
+        "    for _, key in ipairs(keys) do",
+        "        local value = Studio.field(source, key)",
+        "        if value ~= nil then Studio.set(def, key, value) end",
+        "    end",
+        "    Studio.set(def, \"canmove\", true)",
+        "    Studio.set(def, \"yardmap\", nil)",
+        "    Studio.set(def, \"levelground\", nil)",
+        "end",
+        "");
+
+    /**
+     * Blocco finale di una definizione: gli strumenti Studio.*, lo scudo chiesto con "--@shield" nello script e
+     * il codice scritto nella scheda "Definition". Un errore in quel codice non impedisce all'unita' di caricarsi:
+     * viene scritto nel registro del gioco e la definizione resta com'era fino a quel punto.
+     */
+    private static void appendStudioDef(StringBuilder sb, com.faforever.neroxis.generator.bar.ObjectEntity ent, float modelRadius, float modelHeight, boolean scriptActive) {
+        List<String> code = new ArrayList<>();
+        String script = ent.getLuaScript();
+        if (script != null && scriptActive) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^\\s*--\\s*@shield\\b(.*)$").matcher(script);
+            if (m.find()) {
+                String radius = "nil";
+                String power = "nil";
+                java.util.regex.Matcher kv = java.util.regex.Pattern.compile("(\\w+)\\s*=\\s*([0-9.]+)").matcher(m.group(1));
+                while (kv.find()) {
+                    if (kv.group(1).equalsIgnoreCase("radius")) radius = kv.group(2);
+                    if (kv.group(1).equalsIgnoreCase("power")) power = kv.group(2);
+                }
+                code.add("Studio.addShield(unitDef, " + radius + ", " + power + ")");
+            }
+        }
+        if (hasLuaCode(ent.getDefLua())) {
+            code.add(ent.getDefLua());
+        }
+        if (code.isEmpty()) {
+            return;
+        }
+        sb.append("\n-- ===== BAR Map Studio: strumenti per il codice di definizione =====\n");
+        sb.append(String.format(Locale.ROOT, "local Studio = { scale = %.4f, modelRadius = %.1f, modelHeight = %.1f, unitName = \"%s\" }\n",
+            ent.getScale(), modelRadius, modelHeight, ent.getId().toLowerCase(Locale.ROOT)));
+        sb.append(STUDIO_DEF_HELPERS);
+        sb.append("-- ===== codice scritto nello Studio =====\n");
+        sb.append("do\n");
+        sb.append("    local ok, problem = pcall(function()\n");
+        for (String block : code) {
+            sb.append(block.replace("\r", "")).append("\n");
+        }
+        sb.append("    end)\n");
+        sb.append("    if not ok then\n");
+        sb.append("        Spring.Echo(\"[BAR Map Studio] definition code of '").append(ent.getId().toLowerCase(Locale.ROOT)).append("' failed: \" .. tostring(problem))\n");
+        sb.append("    end\n");
+        sb.append("end\n");
+    }
+
+    /** true se lo script contiene almeno una riga che non sia vuota o di solo commento. */
+    private static boolean hasLuaCode(String script) {
+        if (script == null) {
+            return false;
+        }
+        for (String line : script.split("\n")) {
+            String trimmed = line.trim();
+            if (!trimmed.isEmpty() && !trimmed.startsWith("--")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String jsonString(String text) {
+        StringBuilder sb = new StringBuilder("\"");
+        for (char c : text.toCharArray()) {
+            switch (c) {
+                case '"' -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\n' -> sb.append("\\n");
+                case '\r', '\t' -> sb.append(' ');
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(' ');
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.append("\"").toString();
+    }
+
+    /** Campi Lua (hp, metal, energy) per un'unita' di BAR i cui valori sono stati cambiati nello Studio. */
+    private static String officialOverrides(com.faforever.neroxis.generator.bar.ObjectEntity ent) {
+        if (!ent.hasOfficialUnit() || ent.getId().endsWith("_v2") || ent.isClone()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        if (ent.getHealth() != ent.getOfficialHealth()) {
+            sb.append(", hp = ").append(Math.max(1, ent.getHealth()));
+        }
+        if (ent.getMetal() != ent.getOfficialMetal() || ent.getEnergy() != ent.getOfficialEnergy()) {
+            sb.append(", metal = ").append(Math.max(0, ent.getMetal())).append(", energy = ").append(Math.max(0, ent.getEnergy()));
+        }
+        return sb.toString();
     }
 
     private String buildCustomUnitDefLua(com.faforever.neroxis.generator.bar.ObjectEntity ent) {
@@ -1342,13 +2093,21 @@ public final class BarMapExporter {
         sb.append("    name = \"").append(ent.getName() != null ? ent.getName().replace("\"", "'") : id).append("\",\n");
         sb.append("    description = \"").append(ent.getTooltip() != null ? ent.getTooltip().replace("\"", "'") : "").append("\",\n");
         sb.append("    objectName = \"").append(id).append(".s3o\",\n");
-        sb.append("    maxDamage = ").append(Math.max(10, ent.getHealth())).append(",\n");
+        boolean invulnerable = isInvulnerable(ent);
+        sb.append("    maxDamage = ").append(invulnerable ? 100000000 : Math.max(10, ent.getHealth())).append(",\n");
+        // il motore attuale legge "health"; "maxDamage" resta per le versioni che usano ancora il vecchio nome
+        sb.append("    health = ").append(invulnerable ? 100000000 : Math.max(10, ent.getHealth())).append(",\n");
+        if (invulnerable) {
+            sb.append("    capturable = false,\n");
+            sb.append("    autoHeal = 1000000,\n");
+            sb.append("    idleAutoHeal = 1000000,\n");
+        }
         sb.append("    footprintX = ").append(fx).append(",\n");
         sb.append("    footprintZ = ").append(fz).append(",\n");
         sb.append("    metalCost = ").append(Math.max(0, ent.getMetal())).append(",\n");
         sb.append("    energyCost = ").append(Math.max(0, ent.getEnergy())).append(",\n");
-        sb.append("    reclaimable = true,\n");
-        sb.append("    sightDistance = 350,\n");
+        sb.append("    reclaimable = ").append(!invulnerable).append(",\n");
+        sb.append("    sightDistance = ").append(ent.getSightRange()).append(",\n");
         sb.append("    category = \"BUILDING NOTAIR\",\n");
         sb.append("    yardMap = \"").append(yard).append("\",\n");
         sb.append("    levelGround = false,\n");
@@ -1356,9 +2115,99 @@ public final class BarMapExporter {
         if (!"nil".equals(script)) {
             sb.append("    script = ").append(script).append(",\n");
         }
+        appendWeapon(sb, ent.getLuaScript());
         sb.append("}\n");
+        appendStudioDef(sb, ent, Math.max(ent.getScaledWidth(), ent.getScaledDepth()) * 0.5f, ent.getScaledHeight(), true);
         sb.append("return lowerkeys({ [unitName] = unitDef })\n");
         return sb.toString();
+    }
+
+    /**
+     * Arma dell'unita', dichiarata nello script con una riga di commento:
+     *   --@weapon missile range=900 reload=2.5 damage=120
+     * Tipi: "rocket" (razzo dritto di armrock) e "missile" (stesso razzo, ma insegue il bersaglio).
+     * Il weapondef ricalca quello di armrock in BAR, quindi modello, scia, esplosione e suoni esistono gia' nel gioco.
+     */
+    private static void appendWeapon(StringBuilder sb, String luaScript) {
+        if (luaScript == null) {
+            return;
+        }
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^\\s*--\\s*@weapon\\s+(\\w+)(.*)$").matcher(luaScript);
+        if (!m.find()) {
+            return;
+        }
+        boolean homing = m.group(1).equalsIgnoreCase("missile");
+        float range = 475.0f;
+        float reload = 3.8f;
+        float damage = 157.0f;
+        java.util.regex.Matcher kv = java.util.regex.Pattern.compile("(\\w+)\\s*=\\s*([0-9.]+)").matcher(m.group(2));
+        while (kv.find()) {
+            try {
+                float value = Float.parseFloat(kv.group(2));
+                switch (kv.group(1).toLowerCase(Locale.ROOT)) {
+                    case "range" -> range = Math.max(100.0f, Math.min(3000.0f, value));
+                    case "reload" -> reload = Math.max(0.2f, Math.min(60.0f, value));
+                    case "damage" -> damage = Math.max(1.0f, Math.min(10000.0f, value));
+                    default -> { }
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        sb.append("    canAttack = true,\n");
+        sb.append("    weapondefs = {\n");
+        sb.append("        map_missile = {\n");
+        sb.append("            areaofeffect = 48,\n");
+        sb.append("            avoidfeature = false,\n");
+        sb.append("            avoidfriendly = false,\n");
+        sb.append("            castshadow = true,\n");
+        sb.append("            cegtag = \"missiletrailsmall-simple\",\n");
+        sb.append("            craterareaofeffect = 0,\n");
+        sb.append("            craterboost = 0,\n");
+        sb.append("            cratermult = 0,\n");
+        sb.append("            edgeeffectiveness = 0.15,\n");
+        sb.append("            explosiongenerator = \"custom:genericshellexplosion-small\",\n");
+        sb.append("            firestarter = 70,\n");
+        sb.append(String.format(Locale.ROOT, "            flighttime = %.1f,\n", (range / 190.0f) + 3.0f));
+        sb.append("            impulsefactor = 0.123,\n");
+        sb.append("            metalpershot = 0,\n");
+        sb.append("            model = \"cormissile2.s3o\",\n");
+        sb.append("            name = \"Map missile\",\n");
+        sb.append("            noselfdamage = true,\n");
+        sb.append(String.format(Locale.ROOT, "            range = %.0f,\n", range));
+        sb.append(String.format(Locale.ROOT, "            reloadtime = %.2f,\n", reload));
+        sb.append("            smokecolor = 1,\n");
+        sb.append("            smokeperiod = 11,\n");
+        sb.append("            smokesize = 3.3,\n");
+        sb.append("            smoketime = 28,\n");
+        sb.append("            smoketrail = true,\n");
+        sb.append("            smoketrailcastshadow = false,\n");
+        sb.append("            soundhit = \"xplosml2\",\n");
+        sb.append("            soundhitwet = \"splshbig\",\n");
+        sb.append("            soundstart = \"rocklit1\",\n");
+        sb.append("            startvelocity = 190,\n");
+        sb.append("            texture1 = \"null\",\n");
+        sb.append("            texture2 = \"smoketraildark\",\n");
+        sb.append("            tolerance = 60000,\n");
+        if (homing) {
+            sb.append("            tracks = true,\n");
+            sb.append("            turnrate = 24000,\n");
+        }
+        sb.append("            turret = true,\n");
+        sb.append("            weaponacceleration = 120,\n");
+        sb.append("            weapontype = \"MissileLauncher\",\n");
+        sb.append("            weaponvelocity = 190,\n");
+        sb.append(String.format(Locale.ROOT, "            damage = { default = %.0f },\n", damage));
+        sb.append("        },\n");
+        sb.append("    },\n");
+        sb.append("    weapons = {\n");
+        sb.append("        [1] = { def = \"MAP_MISSILE\", onlytargetcategory = \"NOTSUB\" },\n");
+        sb.append("    },\n");
+    }
+
+    /** Unita' indistruttibile: lo script contiene la riga di commento "--@invulnerable". */
+    private static boolean isInvulnerable(com.faforever.neroxis.generator.bar.ObjectEntity ent) {
+        String script = ent.getLuaScript();
+        return script != null && java.util.regex.Pattern.compile("(?m)^\\s*--\\s*@invulnerable\\b").matcher(script).find();
     }
 
     private String buildCustomFeatureDefLua(com.faforever.neroxis.generator.bar.ObjectEntity ent) {
@@ -1889,6 +2738,10 @@ public final class BarMapExporter {
     }
 
     private void gradeColors() {
+        if (this.barBiome != null) {
+            // i colori vengono da una mappa BAR gia' tarata per il gioco: nessuna correzione
+            return;
+        }
         double luminanceSum = 0.0d;
         double saturationSum = 0.0d;
         int samples = 0;
@@ -1997,7 +2850,24 @@ public final class BarMapExporter {
         float r;
         float g;
         float b;
-        if (this.customTexture != null) {
+        if (this.zoneMaterials != null) {
+            // colore composto a piena risoluzione: maschere di zona x tile ripetuti in elmi
+            float[] weights = new float[4];
+            float[] rgb = new float[3];
+            this.zoneMaterials.weights(x / this.textureWidth, z / this.textureHeight, medium, weights);
+            for (int i = 0; i < 4; i++) {
+                if (weights[i] > 0.0f) {
+                    this.zoneMaterials.layers[i].addColor(x, z, weights[i], rgb);
+                }
+            }
+            this.zoneMaterials.applyTint(x / this.textureWidth, z / this.textureHeight, rgb);
+            // il motore moltiplica il colore per la luce del terreno: compenso quella del terreno piano,
+            // cosi' in gioco il materiale ha il colore del file (niente arancione che vira al giallo)
+            float[] flat = flatGroundLight();
+            r = rgb[0] / flat[0];
+            g = rgb[1] / flat[1];
+            b = rgb[2] / flat[2];
+        } else if (this.customTexture != null) {
             float u = Math.max(0.0f, Math.min(1.0f, x / (float) this.textureWidth));
             float v = Math.max(0.0f, Math.min(1.0f, z / (float) this.textureHeight));
             int tw = this.customTexture.getWidth();
@@ -2047,6 +2917,14 @@ public final class BarMapExporter {
             r = (r + (((groundLuminance * 1.06f) - r) * dry)) * (1.0f + (altitude * 0.07f));
             g = (g + (((groundLuminance * 1.0f) - g) * dry)) * (1.0f + (altitude * 0.07f));
             b = (b + (((groundLuminance * 0.9f) - b) * dry)) * (1.0f + (altitude * 0.07f));
+            if (this.barBiome != null && this.barBiome.seabed != null) {
+                float depth = smoothStep(0.0f, -60.0f, heightAt(x, z));
+                if (depth > 0.0f) {
+                    r += (this.barBiome.seabed[0] - r) * depth;
+                    g += (this.barBiome.seabed[1] - g) * depth;
+                    b += (this.barBiome.seabed[2] - b) * depth;
+                }
+            }
             float beach = beachAt(x, z, medium);
             if (beach > SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
                 float grain2 = 1.0f + (fine * 0.06f);
@@ -2070,7 +2948,7 @@ public final class BarMapExporter {
         float r4;
         float g4;
         float b4;
-        if (this.customTexture != null) {
+        if (this.zoneMaterials != null || this.customTexture != null) {
             r4 = r * shading3;
             g4 = g * shading3;
             b4 = b * shading3;
@@ -2107,8 +2985,11 @@ public final class BarMapExporter {
             b4 = b3 * brightness;
         }
         if (height < 12.0f) {
-            float wet = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(1.0f, (5.0f - height) / 14.0f));
+            float wet = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(1.0f, ((this.zoneMaterials != null ? -2.0f : 5.0f) - height) / 14.0f));
             float depth = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, Math.min(1.0f, (-height) / 220.0f));
+            if (this.barBiome != null && this.barBiome.seabed != null) {
+                depth *= 0.25f;
+            }
             float wetDarken = 1.0f - (wet * 0.22f);
             r4 *= wetDarken * (1.0f - (depth * 0.55f));
             g4 *= wetDarken * (1.0f - (depth * 0.4f));
@@ -2146,6 +3027,25 @@ public final class BarMapExporter {
         int gi = Math.max(0, Math.min(255, Math.round(g4 * 255.0f)));
         int bi = Math.max(0, Math.min(255, Math.round(b4 * 255.0f)));
         return (ri << 16) | (gi << 8) | bi;
+    }
+
+    private float[] flatGroundLight;
+
+    /** Luce che il motore applica al terreno piano: groundAmbientColor + groundDiffuseColor * sole (vedi buildMapInfo). */
+    private float[] flatGroundLight() {
+        float[] cached = this.flatGroundLight;
+        if (cached != null) {
+            return cached;
+        }
+        Vector3 sunColor = this.map.getBiome().lightingSettings().sunColor();
+        float sunMax = Math.max(sunColor.x(), Math.max(sunColor.y(), Math.max(sunColor.z(), EXTRACTS_METAL)));
+        float cos = this.sunDirection[1];
+        float[] result = {
+            Math.max(1.0f, 0.52f + ((sunColor.x() / sunMax) * 0.95f * cos)),
+            Math.max(1.0f, 0.52f + ((sunColor.y() / sunMax) * 0.95f * cos)),
+            Math.max(1.0f, 0.55f + ((sunColor.z() / sunMax) * 0.95f * cos))};
+        this.flatGroundLight = result;
+        return result;
     }
 
     private DetailTextures.Material[] getSplatMaterials() {
@@ -2194,8 +3094,15 @@ public final class BarMapExporter {
         int[] argb = new int[width * height];
         IntStream.range(0, height).parallel().forEach(y -> {
             float z = (y + 0.5f) * texelSize;
+            float[] weights = new float[4];
             for (int px = 0; px < width; px++) {
                 float x = (px + 0.5f) * texelSize;
+                if (this.zoneMaterials != null) {
+                    // zone 1..4 del pannello Texture = canali R, G, B, A
+                    this.zoneMaterials.weights(x / this.textureWidth, z / this.textureHeight, 0.0f, weights);
+                    argb[(y * width) + px] = (Math.round(weights[3] * 255.0f) << 24) | (Math.round(weights[0] * 255.0f) << 16) | (Math.round(weights[1] * 255.0f) << 8) | Math.round(weights[2] * 255.0f);
+                    continue;
+                }
                 float slope = slopeAt(x, z);
                 float terrainHeight = heightAt(x, z);
                 float patches = earthPatches(x, z);
@@ -2418,6 +3325,7 @@ public final class BarMapExporter {
         int[] argb = new int[sizeX * sizeY];
         IntStream.range(0, sizeY).parallel().forEach(py -> {
             float z = (py + 0.5f) * texelSize;
+            float[] weights = new float[4];
             for (int px = 0; px < sizeX; px++) {
                 float x = (px + 0.5f) * texelSize;
                 float height = heightAt(x, z);
@@ -2425,6 +3333,16 @@ public final class BarMapExporter {
                 float wet = smoothStep(16.0f, -4.0f, height);
                 float variation = noiseAt((x * 0.11f) + 3.0f, (z * 0.11f) + 29.0f) * 0.02f;
                 float specular = (snow ? 0.13f : 0.05f) + (rock * 0.05f) + (wet * TARGET_SATURATION) + variation;
+                if (this.zoneMaterials != null) {
+                    // lucentezza del materiale di zona al posto della stima roccia/neve
+                    this.zoneMaterials.weights(x / this.textureWidth, z / this.textureHeight, 0.0f, weights);
+                    float gloss = 0.0f;
+                    for (int i = 0; i < 4; i++) {
+                        gloss += weights[i] * this.zoneMaterials.layers[i].material.gloss;
+                    }
+                    specular = gloss + (wet * TARGET_SATURATION) + variation;
+                    rock = 0.0f;
+                }
                 int red = toByte(specular * (1.0f - (wet * 0.15f)));
                 int green = toByte(specular);
                 int blue = toByte(specular * (1.0f + (wet * 0.2f)));
@@ -2522,7 +3440,78 @@ public final class BarMapExporter {
         objArr[22] = this.minHeight < SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT ? "true" : "false";
         objArr[23] = teams;
         String info = String.format(locale, "-- Generated by the Neroxis Map Generator (BAR export)\nlocal mapinfo = {\n\tname = \"%s\",\n\tshortname = \"%s\",\n\tdescription = \"%s\",\n\tauthor = \"@AUTHOR@\",\n\tversion = \"@VERSION@\",\n\tmapfile = \"maps/%s.smf\",\n\tmodtype = 3,\n\tdepend = {\"Map Helper v1\"},\n\n\tmaphardness = 300,\n\tnotDeformable = false,\n\tgravity = 100,\n\ttidalStrength = @TIDAL@,\n\tmaxMetal = %.4f,\n\textractorRadius = 100,\n\tvoidWater = false,\n\tvoidGround = false,\n\tautoShowMetal = true,\n\n\tsmf = {\n\t\tminheight = %.1f,\n\t\tmaxheight = %.1f,\n\t\tsmtFileName0 = \"maps/@BASE@.smt\",\n\t\tminimapTex = \"maps/@BASE@_preview.png\",\n\t},\n\n\tresources = {\n\t\tgrassShadingTex = \"@BASE@_edge.dds\",\n\t\tdetailNormalTex = \"@BASE@_normals.tga\",\n\t\tspecularTex = \"@BASE@_specular.dds\",\n\t\tsplatDetailNormalDiffuseAlpha = 1,\n\t\tsplatDetailNormalTex1 = \"@BASE@_dnts1.tga\",\n\t\tsplatDetailNormalTex2 = \"@BASE@_dnts2.tga\",\n\t\tsplatDetailNormalTex3 = \"@BASE@_dnts3.tga\",\n\t\tsplatDetailNormalTex4 = \"@BASE@_dnts4.tga\",\n\t\tsplatDistrTex = \"@BASE@_splats.dds\",\n\t},\n\n\tsplats = {\n\t\ttexScales = {0.0045, 0.0071, 0.0062, 0.0058},\n\t\ttexMults = {0.6, 0.7, 0.65, 0.6},\n\t},\n\n\tatmosphere = {\n\t\tminWind = @MINWIND@,\n\t\tmaxWind = @MAXWIND@,\n\t\tfogStart = 0.6,\n\t\tfogEnd = 1.0,\n\t\tfogColor = {%.3f, %.3f, %.3f},\n\t\tskyColor = {0.42, 0.55, 0.72},\n\t\tsunColor = {%.3f, %.3f, %.3f},\n\t\tcloudColor = {0.9, 0.9, 0.9},\n\t\tcloudDensity = 0.4,\n\t},\n\n\tlighting = {\n\t\tsunDir = {%.3f, %.3f, %.3f},\n\t\tgroundAmbientColor = {0.52, 0.52, 0.55},\n\t\tgroundDiffuseColor = {%.3f, %.3f, %.3f},\n\t\tgroundSpecularColor = {0.05, 0.05, 0.05},\n\t\tgroundShadowDensity = 0.75,\n\t\tunitAmbientColor = {0.6, 0.6, 0.6},\n\t\tunitDiffuseColor = {%.3f, %.3f, %.3f},\n\t\tunitSpecularColor = {0.8, 0.8, 0.8},\n\t\tunitShadowDensity = 0.75,\n\t\tspecularExponent = 100.0,\n\t},\n\n\twater = {\n\t\tdamage = 0,\n\t\tabsorb = {0.06, 0.025, 0.012},\n\t\tbaseColor = {0.75, 0.9, 0.95},\n\t\tminColor = {0.05, 0.12, 0.2},\n\t\tsurfaceColor = {0.6, 0.75, 0.85},\n\t\tsurfaceAlpha = 0.25,\n\t\tplaneColor = {0.02, 0.1, 0.16},\n\t\tfresnelMin = 0.2,\n\t\tfresnelMax = 0.8,\n\t\tfresnelPower = 4.0,\n\t\tshoreWaves = true,\n\t\tforceRendering = false,\n\t\thasWaterPlane = %s,\n\t},\n\n\tteams = {\n%s\t},\n\n\tterrainTypes = {\n\t\t[0] = {\n\t\t\tname = \"Default\",\n\t\t\thardness = 1.0,\n\t\t\treceiveTracks = true,\n\t\t\tmoveSpeeds = {\n\t\t\t\ttank = 1.0,\n\t\t\t\tkbot = 1.0,\n\t\t\t\thover = 1.0,\n\t\t\t\tship = 1.0,\n\t\t\t},\n\t\t},\n\t},\n\n\tgrass = {\n\t\tbladeWaveScale = 1.0,\n\t\tbladeWidth = 0.4,\n\t\tbladeHeight = 4.0,\n\t\tbladeAngle = 1.57,\n\t\tbladeColor = {0.55, 0.6, 0.3},\n\t},\n\n\tcustom = {\n\t\tgenerator = \"neroxis\",\n\t\t-- the grass shading texture is used to darken the map edge extension, the grass\n\t\t-- takes its colour from the minimap instead\n\t\tgrassconfig = {\n\t\t\tmapGrassColorModTex = \"$minimap\",\n\t\t\tgrassMinSize = 0.6,\n\t\t\tgrassMaxSize = 1.2,\n\t\t\tgrassShaderParams = {\n\t\t\t\tMAPCOLORFACTOR = 0.5,\n\t\t\t\tMAPCOLORBASE = 0.9,\n\t\t\t},\n\t\t},\n\t},\n}\n\nreturn mapinfo\n", objArr).replace("@BASE@", toFileName(getDisplayName())).replace("@AUTHOR@", this.options.author()).replace("@VERSION@", this.options.mapName() != null ? this.options.mapVersion() : "") + "\n--[[skirmish\n" + buildGameScript(List.of("Player"), true, false, null) + "]]\n";
+        if (this.zoneMaterials != null) {
+            // una ripetizione del dettaglio ogni tile_elmos, allineata al colore della mappa
+            StringBuilder scales = new StringBuilder();
+            for (int i = 0; i < 4; i++) {
+                scales.append(i > 0 ? ", " : "").append(String.format(Locale.ROOT, "%.6f", 1.0f / this.zoneMaterials.layers[i].material.tileElmos));
+            }
+            info = info.replace("texScales = {0.0045, 0.0071, 0.0062, 0.0058}", "texScales = {" + scales + "}")
+                .replace("texMults = {0.6, 0.7, 0.65, 0.6}", "texMults = {1.0, 1.0, 1.0, 1.0}");
+        }
+        if (this.barBiome != null) {
+            BarBiomes.BarBiome bb = this.barBiome;
+            info = setLua(info, "fogColor", bb.fogColor);
+            info = setLua(info, "skyColor", bb.skyColor);
+            info = setLua(info, "sunColor", bb.sunColor);
+            info = setLua(info, "cloudColor", bb.cloudColor);
+            info = setLua(info, "fogStart", bb.fogStart);
+            info = setLua(info, "fogEnd", bb.fogEnd);
+            info = setLua(info, "groundAmbientColor", bb.groundAmbient);
+            info = setLua(info, "groundDiffuseColor", bb.groundDiffuse);
+            info = setLua(info, "groundSpecularColor", bb.groundSpecular);
+            info = setLua(info, "groundShadowDensity", bb.shadowDensity);
+            info = setLua(info, "unitAmbientColor", bb.unitAmbient);
+            info = setLua(info, "unitDiffuseColor", bb.unitDiffuse);
+            info = setLua(info, "unitSpecularColor", bb.unitSpecular);
+            info = setLua(info, "absorb", bb.waterAbsorb);
+            info = setLua(info, "baseColor", bb.waterBase);
+            info = setLua(info, "minColor", bb.waterMin);
+            info = setLua(info, "surfaceColor", bb.waterSurface);
+            info = setLua(info, "surfaceAlpha", bb.waterSurfaceAlpha);
+            info = setLua(info, "planeColor", bb.waterPlane);
+            info = info.replace("generator = \"neroxis\",", "generator = \"neroxis\",\n\t\tbiomeSource = \"" + bb.source.replace("\"", "'") + "\",");
+        }
+        MapExtraOptions extra = MapExtraOptions.get();
+        info = setLua(info, "gravity", (float) extra.gravity);
+        info = setLua(info, "extractorRadius", (float) extra.extractorRadius);
+        info = setLua(info, "damage", (float) extra.waterDamage);
+        if (extra.notDeformable) {
+            info = info.replace("notDeformable = false", "notDeformable = true");
+        }
+        if (extra.voidWater) {
+            info = info.replace("voidWater = false", "voidWater = true");
+        }
+        if (extra.night) {
+            // notte: poca luce bluastra su terreno e unita', cielo e nebbia scuri
+            info = setLua(info, "groundAmbientColor", new float[]{0.22f, 0.24f, 0.34f});
+            info = setLua(info, "groundDiffuseColor", new float[]{0.30f, 0.34f, 0.48f});
+            info = setLua(info, "groundSpecularColor", new float[]{0.10f, 0.12f, 0.18f});
+            info = setLua(info, "unitAmbientColor", new float[]{0.30f, 0.32f, 0.42f});
+            info = setLua(info, "unitDiffuseColor", new float[]{0.45f, 0.50f, 0.65f});
+            info = setLua(info, "sunColor", new float[]{0.55f, 0.62f, 0.85f});
+            info = setLua(info, "skyColor", new float[]{0.03f, 0.04f, 0.09f});
+            info = setLua(info, "fogColor", new float[]{0.04f, 0.05f, 0.10f});
+            info = setLua(info, "cloudColor", new float[]{0.20f, 0.22f, 0.30f});
+        }
         return info.replace("@TIDAL@", String.valueOf(this.options.tidal())).replace("@MINWIND@", String.valueOf(this.options.minWind())).replace("@MAXWIND@", String.valueOf(this.options.maxWind()));
+    }
+
+    /** Sostituisce nel mapinfo il valore di "key = {...}" (null = lascia il valore generato). */
+    private static String setLua(String info, String key, float[] value) {
+        if (value == null) {
+            return info;
+        }
+        String text = String.format(Locale.ROOT, "{%.3f, %.3f, %.3f}", value[0], value[1], value[2]);
+        return info.replaceFirst("(\\b" + key + " = )\\{[^}]*\\}", "$1" + java.util.regex.Matcher.quoteReplacement(text));
+    }
+
+    /** Sostituisce nel mapinfo il valore numerico di "key = n" (NaN = lascia il valore generato). */
+    private static String setLua(String info, String key, float value) {
+        if (Float.isNaN(value)) {
+            return info;
+        }
+        return info.replaceFirst("(\\b" + key + " = )[-0-9.]+", "$1" + String.format(Locale.ROOT, "%.3f", value));
     }
 
     private Map<Spawn, Integer> resolveTeams(List<Spawn> spawns) {

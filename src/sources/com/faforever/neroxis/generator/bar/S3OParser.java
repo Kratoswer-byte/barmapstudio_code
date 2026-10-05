@@ -19,6 +19,8 @@ public final class S3OParser {
         public final ObjModel3D model;
         public final String tex1, tex2;
         public final float radius, height;
+        /** Normali e UV per vertice, allineate a model.getVertices(): servono per l'ombreggiatura liscia. */
+        public float[] vertexNormals, vertexUVs;
         S3OModel(ObjModel3D m, String t1, String t2, float r, float h) {
             model = m; tex1 = t1; tex2 = t2; radius = r; height = h;
         }
@@ -137,6 +139,32 @@ public final class S3OParser {
         }
     }
 
+    /** Nomi dei pezzi del modello, visitando l'albero dalla radice. */
+    public static List<String> pieceNames(byte[] data) {
+        List<String> names = new ArrayList<>();
+        if (data == null || data.length < 52) return names;
+        try {
+            ByteBuffer b = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
+            collectPieceNames(data, b.getInt(36), names, 0);
+        } catch (RuntimeException ignored) {
+        }
+        return names;
+    }
+
+    private static void collectPieceNames(byte[] d, int off, List<String> names, int depth) {
+        if (off < 0 || off + 52 > d.length || depth > 64 || names.size() > 2000) return;
+        ByteBuffer b = ByteBuffer.wrap(d).order(ByteOrder.LITTLE_ENDIAN);
+        int nameOff = b.getInt(off);
+        int numChildren = b.getInt(off + 4);
+        int childrenOff = b.getInt(off + 8);
+        if (nameOff > 0 && nameOff < d.length) names.add(cstr(d, nameOff));
+        for (int i = 0; i < numChildren; i++) {
+            int p = childrenOff + i * 4;
+            if (p + 4 > d.length) break;
+            collectPieceNames(d, b.getInt(p), names, depth + 1);
+        }
+    }
+
     private static float[] getUV(List<float[]> U, int i) {
         if (i >= 0 && i < U.size() && U.get(i) != null) return U.get(i);
         return new float[]{0.5f, 0.5f};
@@ -159,16 +187,23 @@ public final class S3OParser {
             List<int[]> Fall = new ArrayList<>(2048);
             List<float[]> Fuv = new ArrayList<>(2048);
             List<float[]> Fn = new ArrayList<>(2048);
-            walkPiece2(data, rootOff, 0, 0, 0, V, Fall, Fuv, Fn);
+            List<Float> VN = new ArrayList<>(8192);
+            List<Float> VU = new ArrayList<>(8192);
+            walkPiece2(data, rootOff, 0, 0, 0, V, Fall, Fuv, Fn, VN, VU);
             float[] va = new float[V.size()]; for (int i = 0; i < va.length; i++) va[i] = V.get(i);
             ObjModel3D m = new ObjModel3D(va, Fall.toArray(new int[0][]), Fn.toArray(new float[0][]),
                 null, Fuv.toArray(new float[0][]), null, null);
-            return new S3OModel(m, t1, t2, radius, height);
+            S3OModel result = new S3OModel(m, t1, t2, radius, height);
+            float[] na = new float[VN.size()]; for (int i = 0; i < na.length; i++) na[i] = VN.get(i);
+            float[] ua = new float[VU.size()]; for (int i = 0; i < ua.length; i++) ua[i] = VU.get(i);
+            if (na.length == va.length) { result.vertexNormals = na; result.vertexUVs = ua; }
+            return result;
         } catch (Exception ex) { return null; }
     }
 
     private static void walkPiece2(byte[] d, int off, float px, float py, float pz,
-                                   List<Float> V, List<int[]> Fall, List<float[]> Fuv, List<float[]> Fn) {
+                                   List<Float> V, List<int[]> Fall, List<float[]> Fuv, List<float[]> Fn,
+                                   List<Float> VN, List<Float> VU) {
         if (off < 0 || off + 52 > d.length) return;
         ByteBuffer b = ByteBuffer.wrap(d).order(ByteOrder.LITTLE_ENDIAN);
         b.position(off);
@@ -196,6 +231,8 @@ public final class S3OParser {
             vn[i*3] = vb.getFloat(); vn[i*3+1] = vb.getFloat(); vn[i*3+2] = vb.getFloat();
             vu[i*2] = vb.getFloat(); vu[i*2+1] = vb.getFloat();
             V.add(vx[i*3]); V.add(vx[i*3+1]); V.add(vx[i*3+2]);
+            VN.add(vn[i*3]); VN.add(vn[i*3+1]); VN.add(vn[i*3+2]);
+            VU.add(vu[i*2]); VU.add(vu[i*2+1]);
         }
         int[] indices = new int[Math.max(0, numIdx)];
         int ic = 0;
@@ -224,7 +261,7 @@ public final class S3OParser {
         for (int i = 0; i < numChildren; i++) {
             int p = childrenOff + i * 4;
             if (p + 4 > d.length) break;
-            walkPiece2(d, ByteBuffer.wrap(d, p, 4).order(ByteOrder.LITTLE_ENDIAN).getInt(), gx, gy, gz, V, Fall, Fuv, Fn);
+            walkPiece2(d, ByteBuffer.wrap(d, p, 4).order(ByteOrder.LITTLE_ENDIAN).getInt(), gx, gy, gz, V, Fall, Fuv, Fn, VN, VU);
         }
     }
 }

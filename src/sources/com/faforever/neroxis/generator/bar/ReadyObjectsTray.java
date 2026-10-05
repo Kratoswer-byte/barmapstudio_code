@@ -16,16 +16,16 @@ import java.util.function.Consumer;
 public final class ReadyObjectsTray extends JPanel {
 
     private final JPanel cardsPanel = new JPanel();
-    private final JLabel headerTitle = new JLabel("OGGETTI & UNITA' PRONTI (0)");
-    private final JButton openStudioBtn = new JButton("+ Studio 3D");
-    private final JButton importObjBtn = new JButton("+ Importa .OBJ");
-    private final JLabel activeStatusLabel = new JLabel("Clicca un oggetto per piazzarlo sulla mappa.");
+    private final JLabel headerTitle = new JLabel(I18n.t("obj.37"));
+    private final JButton openStudioBtn = new JButton(I18n.t("obj.38"));
+    private final JButton importObjBtn = new JButton(I18n.t("obj.39"));
+    private final JLabel activeStatusLabel = new JLabel(I18n.t("obj.40"));
     private final JPanel quickScaleBox = new JPanel(new BorderLayout(0, 3));
     private final JSpinner quickScaleSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.01, 500.0, 0.5));
-    private final JLabel quickDimLabel = new JLabel("Alt: --");
+    private final JLabel quickDimLabel = new JLabel(I18n.t("obj.41"));
     private final JScrollPane scrollPane;
-    private final JLabel placedCountLabel = new JLabel("Piazzati: 0 oggetti");
-    private final JButton clearPlacedBtn = new JButton("Svuota Piazzati");
+    private final JLabel placedCountLabel = new JLabel(I18n.t("obj.42"));
+    private final JButton clearPlacedBtn = new JButton(I18n.t("obj.43"));
     private final JPanel footerPanel = new JPanel(new BorderLayout(6, 0));
 
     private ObjectEntity activeSelectedEntity = null;
@@ -75,7 +75,7 @@ public final class ReadyObjectsTray extends JPanel {
         ));
         importObjBtn.setFocusPainted(false);
         importObjBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        importObjBtn.setToolTipText("Importa un file .obj 3D Wavefront direttamente nella palette");
+        importObjBtn.setToolTipText(I18n.t("obj.44"));
         importObjBtn.addActionListener(e -> importCustomObj());
         headerActions.add(importObjBtn);
 
@@ -88,7 +88,7 @@ public final class ReadyObjectsTray extends JPanel {
         ));
         openStudioBtn.setFocusPainted(false);
         openStudioBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        openStudioBtn.setToolTipText("Apri Objects & Units Studio per gestire tutti i parametri e script");
+        openStudioBtn.setToolTipText(I18n.t("obj.45"));
         openStudioBtn.addActionListener(e -> {
             if (onOpenStudioCallback != null) onOpenStudioCallback.run();
         });
@@ -126,7 +126,7 @@ public final class ReadyObjectsTray extends JPanel {
         row1.setOpaque(false);
         JPanel spinWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
         spinWrap.setOpaque(false);
-        JLabel lblSc = new JLabel("Scala:");
+        JLabel lblSc = new JLabel(I18n.t("obj.46"));
         lblSc.setFont(BarMapStudio.font(Font.PLAIN, 10));
         lblSc.setForeground(BarMapStudio.TEXT_MUTED);
         spinWrap.add(lblSc);
@@ -195,7 +195,7 @@ public final class ReadyObjectsTray extends JPanel {
         ));
         clearPlacedBtn.setFocusPainted(false);
         clearPlacedBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        clearPlacedBtn.setToolTipText("Rimuove tutti gli oggetti personalizzati piazzati sulla mappa");
+        clearPlacedBtn.setToolTipText(I18n.t("obj.47"));
         clearPlacedBtn.addActionListener(e -> {
             if (onClearPlacedCallback != null) onClearPlacedCallback.run();
         });
@@ -210,8 +210,9 @@ public final class ReadyObjectsTray extends JPanel {
 
     private void importCustomObj() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Seleziona File Modello 3D Wavefront (.obj)");
-        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Modelli Wavefront (.obj)", "obj"));
+        FileChoosers.detailed(chooser);
+        chooser.setDialogTitle(I18n.t("obj.32"));
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(I18n.t("obj.33"), "obj"));
 
         int res = chooser.showOpenDialog(this);
         if (res == JFileChooser.APPROVE_OPTION) {
@@ -228,11 +229,16 @@ public final class ReadyObjectsTray extends JPanel {
                     "Custom",
                     3, 3,
                     1000, 200, 0,
-                    "Mesh 3D importata da " + file.getName(),
+                    I18n.t("obj.48") + file.getName(),
                     parsed,
                     ""
                 );
                 custom.setObjFilePath(file.toPath());
+                // script di animazione: se accanto all'OBJ c'e' <nome>.lua viene caricato da solo
+                File luaFile = new File(file.getParentFile(), baseName + ".lua");
+                if (luaFile.isFile()) {
+                    custom.setLuaScript(java.nio.file.Files.readString(luaFile.toPath()));
+                }
 
                 ReadyObjectsManager.getInstance().addReadyObject(custom);
                 activeSelectedEntity = custom;
@@ -242,8 +248,8 @@ public final class ReadyObjectsTray extends JPanel {
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this,
-                    "Errore durante l'importazione del file .obj:\n" + ex.getMessage(),
-                    "Errore Importazione Mesh",
+                    I18n.t("obj.35") + ex.getMessage(),
+                    I18n.t("obj.36"),
                     JOptionPane.ERROR_MESSAGE);
             }
         }
@@ -268,14 +274,14 @@ public final class ReadyObjectsTray extends JPanel {
     public void clearSelection() {
         this.activeSelectedEntity = null;
         if (activeStatusLabel != null) {
-            activeStatusLabel.setText("Clicca un oggetto per piazzarlo sulla mappa.");
+            activeStatusLabel.setText(I18n.t("obj.40"));
             activeStatusLabel.setForeground(BarMapStudio.TEXT_MUTED);
         }
         refreshCards(ReadyObjectsManager.getInstance().getReadyObjects());
     }
 
     public void updatePlacedCount(int count) {
-        placedCountLabel.setText("Piazzati: " + count + (count == 1 ? " oggetto" : " oggetti"));
+        placedCountLabel.setText(I18n.t("obj.49") + count + (count == 1 ? I18n.t("obj.50") : I18n.t("obj.51")));
         clearPlacedBtn.setEnabled(count > 0);
         clearPlacedBtn.setVisible(count > 0);
     }
@@ -299,12 +305,12 @@ public final class ReadyObjectsTray extends JPanel {
         int fz = Math.max(1, Math.round(e.getScaledDepth() / 16.0f));
         e.setFootprintX(fx);
         e.setFootprintZ(fz);
-        quickDimLabel.setText(String.format(Locale.ROOT, "Alt %.1fm | Largh %.1fm", e.getScaledHeight(), e.getScaledWidth()));
+        quickDimLabel.setText(String.format(Locale.ROOT, I18n.t("obj.52"), e.getScaledHeight(), e.getScaledWidth()));
         Color c = e.getScaledHeight() < 8f ? new Color(255, 110, 110) : new Color(255, 205, 50);
         quickDimLabel.setForeground(c);
         quickDimLabel.setToolTipText(e.getScaledHeight() < 8f
-            ? "Attenzione: oggetto molto piccolo in gioco (Comandante = 45m)"
-            : "Dimensioni reali in gioco (1 elmo ~ 1m)");
+            ? I18n.t("obj.53")
+            : I18n.t("obj.54"));
     }
 
     private JButton createMiniPresetBtn(String label, float targetHeight) {
@@ -315,7 +321,7 @@ public final class ReadyObjectsTray extends JPanel {
         b.setBorder(BorderFactory.createLineBorder(new Color(40, 56, 75), 1, true));
         b.setFocusPainted(false);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.setToolTipText("Scala automaticamente l'oggetto a un'altezza di " + (int) targetHeight + "m");
+        b.setToolTipText(I18n.t("obj.55") + (int) targetHeight + "m");
         b.addActionListener(ev -> {
             if (activeSelectedEntity != null) {
                 activeSelectedEntity.autoScaleToHeight(targetHeight);
@@ -327,13 +333,13 @@ public final class ReadyObjectsTray extends JPanel {
 
     private void refreshCards(List<ObjectEntity> list) {
         cardsPanel.removeAll();
-        headerTitle.setText("OGGETTI & UNITA' PRONTI (" + list.size() + ")");
+        headerTitle.setText(I18n.t("obj.56") + list.size() + ")");
 
         if (activeSelectedEntity != null) {
-            activeStatusLabel.setText("▶ ATTIVO: " + activeSelectedEntity.getName() + " (Piazza con Click)");
+            activeStatusLabel.setText(I18n.t("obj.57") + activeSelectedEntity.getName() + I18n.t("obj.58"));
             activeStatusLabel.setForeground(BarMapStudio.ACCENT_CYAN);
         } else {
-            activeStatusLabel.setText("Clicca un oggetto per piazzarlo sulla mappa.");
+            activeStatusLabel.setText(I18n.t("obj.40"));
             activeStatusLabel.setForeground(BarMapStudio.TEXT_MUTED);
         }
         updateQuickScaleUI();
@@ -345,14 +351,14 @@ public final class ReadyObjectsTray extends JPanel {
             emptyBox.setBorder(BorderFactory.createEmptyBorder(16, 8, 16, 8));
             emptyBox.setAlignmentX(0f);
 
-            JLabel emptyLbl = new JLabel("Nessun oggetto pronto nella palette.");
+            JLabel emptyLbl = new JLabel(I18n.t("obj.59"));
             emptyLbl.setFont(BarMapStudio.font(Font.PLAIN, 11));
             emptyLbl.setForeground(BarMapStudio.TEXT_MUTED);
             emptyLbl.setAlignmentX(0.5f);
             emptyBox.add(emptyLbl);
             emptyBox.add(Box.createVerticalStrut(8));
 
-            JButton gotoStudioBtn = new JButton("+ Apri Studio Oggetti");
+            JButton gotoStudioBtn = new JButton(I18n.t("obj.60"));
             gotoStudioBtn.setFont(BarMapStudio.font(Font.BOLD, 10));
             gotoStudioBtn.setForeground(BarMapStudio.ACCENT_CYAN);
             gotoStudioBtn.setBackground(new Color(20, 32, 48));

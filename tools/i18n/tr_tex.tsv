@@ -1,0 +1,129 @@
+1|1. Map Terrain (Blended Colours)|1. Terrain de la carte (couleurs fusionnées)|1. Kartengelände (gemischte Farben)
+2|2. Original Biome Texture (MAPS)|2. Texture d'origine du biome (MAPS)|2. Ursprüngliche Biom-Textur (MAPS)
+3|3. RGBA Splatting Map|3. Carte de splatting RGBA|3. RGBA-Splatting-Karte
+4|4. Zone 1: Plains (R channel)|4. Zone 1 : Plaine (canal R)|4. Zone 1: Ebene (R-Kanal)
+5|5. Zone 2: Rock (G channel)|5. Zone 2 : Roche (canal G)|5. Zone 2: Fels (G-Kanal)
+6|6. Zone 3: Beach (B channel)|6. Zone 3 : Plage (canal B)|6. Zone 3: Strand (B-Kanal)
+7|7. Zone 4: Peaks (A channel)|7. Zone 4 : Sommets (canal A)|7. Zone 4: Gipfel (A-Kanal)
+8|8. 3D Normal Map (Sunlight)|8. Normal map 3D (lumière du soleil)|8. 3D-Normal-Map (Sonnenlicht)
+9|9. Material Tile (2x2 grid)|9. Tuile de matériau (grille 2x2)|9. Materialkachel (2x2-Raster)
+10|Grass & Meadow|Herbe & Prairie|Gras & Wiese
+11|Rock & Cliff|Roche & Falaise|Fels & Klippe
+12|Sand & Coast|Sable & Côte|Sand & Küste
+13|Snow & Peaks|Neige & Sommets|Schnee & Gipfel
+14|Cracked Clay|Argile craquelée|Rissiger Lehm
+15|Magma Basalt|Basalte magmatique|Magma-Basalt
+16|Gravel & Stones|Gravier & Cailloux|Kies & Steine
+17|Alien Crystals|Cristaux extraterrestres|Alien-Kristalle
+18|ZONE 1 - Plains & Valleys|ZONE 1 - Plaines & Vallées|ZONE 1 - Ebenen & Täler
+19|ZONE 2 - Walls & Rocks|ZONE 2 - Parois & Roches|ZONE 2 - Wände & Felsen
+20|ZONE 3 - Coastline|ZONE 3 - Ligne de côte|ZONE 3 - Küstenlinie
+21|ZONE 4 - Summits & Peaks|ZONE 4 - Cimes & Sommets|ZONE 4 - Kuppen & Gipfel
+22|Slope Map [L]|Carte des pentes [L]|Hangkarte [L]
+23|Waiting for an active terrain. Generate one in [MAPS] or load a heightmap with [Load Heightmap].|En attente d'un terrain actif. Générez-en un dans [MAPS] ou chargez une heightmap avec [Charger une heightmap].|Warte auf aktives Gelände. Erzeuge eines in [MAPS] oder lade eine Heightmap mit [Heightmap laden].
+24|  ACTIVE MAP: |  CARTE ACTIVE : |  AKTIVE KARTE:
+25|  NO ACTIVE TERRAIN  |  AUCUN TERRAIN ACTIF  |  KEIN AKTIVES GELÄNDE
+26|Waiting for an active terrain. Generate one in [MAPS] or load a heightmap.|En attente d'un terrain actif. Générez-en un dans [MAPS] ou chargez une heightmap.|Warte auf aktives Gelände. Erzeuge eines in [MAPS] oder lade eine Heightmap.
+27|Select Heightmap File (PNG, RAW, BMP)|Sélectionner un fichier heightmap (PNG, RAW, BMP)|Heightmap-Datei wählen (PNG, RAW, BMP)
+28|Heightmap images (*.png, *.raw, *.bmp)|Images heightmap (*.png, *.raw, *.bmp)|Heightmap-Bilder (*.png, *.raw, *.bmp)
+29|File format not supported or not recognised.|Format de fichier non pris en charge ou non reconnu.|Dateiformat nicht unterstützt oder nicht erkannt.
+30|Import Error|Erreur d'importation|Importfehler
+31|  HEIGHTMAP: |  HEIGHTMAP : |  HEIGHTMAP:
+32|Heightmap loaded: |Heightmap chargée : |Heightmap geladen:
+33|Error loading heightmap:\n|Erreur de chargement de la heightmap :\n|Fehler beim Laden der Heightmap:\n
+34|Error|Erreur|Fehler
+35|TEXTURE STUDIO|TEXTURE STUDIO|TEXTURE STUDIO
+36|Load Heightmap|Charger une heightmap|Heightmap laden
+37|Load an external heightmap file (.png 16-bit/8-bit, .raw, .bmp)|Charger un fichier heightmap externe (.png 16/8 bits, .raw, .bmp)|Externe Heightmap-Datei laden (.png 16/8 Bit, .raw, .bmp)
+38|Resolution:|Résolution :|Auflösung:
+39|Vary Noise|Varier le bruit|Rauschen variieren
+40|Vary the procedural micro-roughness of the materials|Varier la micro-rugosité procédurale des matériaux|Prozedurale Mikro-Rauheit der Materialien variieren
+41|Sync Map|Synchroniser la carte|Karte synchronisieren
+42|Link the real heights and slopes of the map open in the Editor|Relier les altitudes et pentes réelles de la carte ouverte dans l'éditeur|Echte Höhen und Hänge der im Editor geöffneten Karte übernehmen
+43|Synced with the terrain of map: |Synchronisé avec le relief de la carte : |Mit dem Gelände der Karte synchronisiert:
+44|No map created in the Editor yet. Using a test terrain.|Aucune carte créée dans l'éditeur. Relief de test utilisé.|Noch keine Karte im Editor erstellt. Testgelände wird verwendet.
+45|1. 4-ZONE MASKS (METHOD B)|1. MASQUES 4 ZONES (MÉTHODE B)|1. 4-ZONEN-MASKEN (METHODE B)
+46|<html>Load the masks from files (default), or use the automatic rules below.</html>|<html>Chargez les masques depuis des fichiers (par défaut), ou utilisez les règles automatiques ci-dessous.</html>|<html>Lade die Masken aus Dateien (Standard) oder nutze die automatischen Regeln unten.</html>
+47|Plains / Valleys (Grass)|Plaines / Vallées (Herbe)|Ebenen / Täler (Gras)
+48|Map Base|Fond de carte|Kartengrund
+49|Escarpments / Mountains (Rock)|Escarpements / Montagnes (Roche)|Steilhänge / Berge (Fels)
+50|Steep slopes|Pentes raides|Steile Hänge
+51|Coast / Beach (Sand)|Côte / Plage (Sable)|Küste / Strand (Sand)
+52|Water Level|Niveau de l'eau|Wasserspiegel
+53|Summits / Peaks (Snow)|Cimes / Sommets (Neige)|Kuppen / Gipfel (Schnee)
+54|High Altitude|Haute altitude|Hochlage
+55|External material specs|Spécifications des matériaux externes|Spezifikation externer Materialien
+56|How to prepare the colour, normal map, relief and parameters of a material|Comment préparer la couleur, la normal map, le relief et les paramètres d'un matériau|Wie man Farbe, Normal-Map, Relief und Parameter eines Materials vorbereitet
+57|2. AUTOMATIC RULES (SLIDERS)|2. RÈGLES AUTOMATIQUES (CURSEURS)|2. AUTOMATISCHE REGELN (REGLER)
+58|<html>They control where rock, sand and snow are laid on the heightmap.</html>|<html>Elles règlent où s'étendent roche, sable et neige sur la heightmap.</html>|<html>Sie steuern, wo Fels, Sand und Schnee auf der Heightmap liegen.</html>
+59|Rock Slope Threshold:|Seuil de pente pour la roche :|Hang-Schwelle für Fels:
+60|Slope Softness (Falloff):|Douceur de la pente (falloff) :|Hang-Weichheit (Falloff):
+61|Water / Sea Level:|Niveau de l'eau / de la mer :|Wasser- / Meeresspiegel:
+62|Beach Band (Offset):|Bande de plage (décalage) :|Strandband (Versatz):
+63|Peak Activation Height:|Altitude d'activation des sommets :|Aktivierungshöhe der Gipfel:
+64|Edge Perturbation (Noise):|Perturbation des bords (bruit) :|Kantenstörung (Rauschen):
+65|3. PBR DETAIL & RELIEF|3. DÉTAIL & RELIEF PBR|3. PBR-DETAIL & RELIEF
+66|<html>Customise the fractal grain and the 3D relief of the normal map.</html>|<html>Personnalisez le grain fractal et le relief 3D de la normal map.</html>|<html>Passe die fraktale Körnung und das 3D-Relief der Normal-Map an.</html>
+67|Fractal Frequency Scale:|Échelle de fréquence fractale :|Fraktale Frequenzskala:
+68|Detail Octaves:|Octaves de détail :|Detail-Oktaven:
+69|Roughness (Persistence):|Rugosité (persistance) :|Rauheit (Persistenz):
+70|Colour Contrast:|Contraste des couleurs :|Farbkontrast:
+71|Normal Map Strength (Bump):|Intensité de la normal map (bump) :|Normal-Map-Stärke (Bump):
+72|Auto (|Auto (|Auto (
+73|Change File|Changer de fichier|Datei ändern
+74|Load Mask|Charger un masque|Maske laden
+75|Select a black and white mask for |Sélectionner un masque noir et blanc pour |Schwarz-Weiß-Maske wählen für
+76|Mask images (*.png, *.jpg, *.bmp)|Images de masque (*.png, *.jpg, *.bmp)|Maskenbilder (*.png, *.jpg, *.bmp)
+77|Error loading mask:\n|Erreur de chargement du masque :\n|Fehler beim Laden der Maske:\n
+78|Remove the file and use the automatic rule from the heightmap|Retirer le fichier et utiliser la règle automatique de la heightmap|Datei entfernen und die automatische Regel der Heightmap verwenden
+79|Material: preset|Matériau : préréglage|Material: Voreinstellung
+80|+ File|+ Fichier|+ Datei
+81|Load an external material: pick the colour file (see Material specs)|Charger un matériau externe : choisissez le fichier de couleur (voir Spécifications des matériaux)|Externes Material laden: Farbdatei wählen (siehe Materialspezifikation)
+82|Select the COLOUR file of the material for |Sélectionner le fichier COULEUR du matériau pour |FARB-Datei des Materials wählen für
+83|Texture images (*.png, *.jpg, *.bmp)|Images de texture (*.png, *.jpg, *.bmp)|Texturbilder (*.png, *.jpg, *.bmp)
+84| +normal| +normal| +Normal
+85| +relief| +relief| +Relief
+86|Material loaded, but it does not fully meet the specs:\n\n- |Matériau chargé, mais il ne respecte pas entièrement les spécifications :\n\n- |Material geladen, erfüllt die Spezifikation aber nicht ganz:\n\n-
+87|\n\nSee the "External material specs" button.|\n\nVoir le bouton « Spécifications des matériaux externes ».|\n\nSiehe Schaltfläche „Spezifikation externer Materialien“.
+88|Error loading texture:\n|Erreur de chargement de la texture :\n|Fehler beim Laden der Textur:\n
+89|Tile (elmos)|Tuile (elmos)|Kachel (Elmos)
+90|Side of one repetition of the material on the terrain, in elmos|Côté d'une répétition du matériau sur le terrain, en elmos|Seitenlänge einer Materialwiederholung auf dem Gelände, in Elmos
+91|Gloss %|Brillant %|Glanz %
+92|In-game gloss: 0 = matte, 60 = glossy plastic|Brillance en jeu : 0 = mat, 60 = plastique brillant|Glanz im Spiel: 0 = matt, 60 = glänzender Kunststoff
+93|VIEW INSPECTION:|INSPECTION DE LA VUE :|ANSICHTSPRÜFUNG:
+94|Toggle slope overlay (Slope Map) [L key]|Activer/désactiver la surcouche des pentes [touche L]|Hang-Overlay ein-/ausschalten [Taste L]
+95|Opacity:|Opacité :|Deckkraft:
+96|Adjust the opacity of the slope overlay|Régler l'opacité de la surcouche des pentes|Deckkraft des Hang-Overlays einstellen
+97|Zoom Out [-]|Zoom arrière [-]|Herauszoomen [-]
+98|Zoom In [+]|Zoom avant [+]|Hineinzoomen [+]
+99|1:1 Scale|Échelle 1:1|Maßstab 1:1
+100|Reset to 1:1 scale [0]|Revenir à l'échelle 1:1 [0]|Auf Maßstab 1:1 zurücksetzen [0]
+101|Slope Map: ON [L]|Carte des pentes : ON [L]|Hangkarte: AN [L]
+102|Texture Studio ready. Load masks or adjust the sliders.|Texture Studio prêt. Chargez des masques ou réglez les curseurs.|Texture Studio bereit. Lade Masken oder stelle die Regler ein.
+103|Open Textures Folder|Ouvrir le dossier Textures|Texturen-Ordner öffnen
+104|Save Blended Image|Enregistrer l'image fusionnée|Gemischtes Bild speichern
+105|Export Normal Map|Exporter la normal map|Normal-Map exportieren
+106|APPLY TO THE MAP TERRAIN|APPLIQUER AU TERRAIN DE LA CARTE|AUF DAS KARTENGELÄNDE ANWENDEN
+107|No active terrain. Generate one in [MAPS] or load a heightmap with [Load Heightmap].|Aucun terrain actif. Générez-en un dans [MAPS] ou chargez une heightmap avec [Charger une heightmap].|Kein aktives Gelände. Erzeuge eines in [MAPS] oder lade eine Heightmap mit [Heightmap laden].
+108|Generating and processing...|Génération et traitement en cours...|Erzeugung und Verarbeitung läuft...
+109|Synthetic Terrain|Terrain synthétique|Synthetisches Gelände
+110|Composition ready in |Composition prête en |Komposition fertig in
+111|Processing error: |Erreur de traitement : |Verarbeitungsfehler:
+112|No texture ready to apply.|Aucune texture prête à appliquer.|Keine Textur zum Anwenden bereit.
+113|Warning|Attention|Achtung
+114|4-Zone Terrain|Terrain 4 zones|4-Zonen-Gelände
+115|No image ready to save.|Aucune image prête à enregistrer.|Kein Bild zum Speichern bereit.
+116|Info|Info|Info
+117|File saved successfully: |Fichier enregistré avec succès : |Datei erfolgreich gespeichert:
+118|Texture saved successfully to:\n|Texture enregistrée avec succès dans :\n|Textur erfolgreich gespeichert in:\n
+119|Save Complete|Enregistrement terminé|Speichern abgeschlossen
+120|Save error: |Erreur d'enregistrement : |Fehler beim Speichern:
+121|NO ACTIVE TERRAIN|AUCUN TERRAIN ACTIF|KEIN AKTIVES GELÄNDE
+122|No terrain was generated at startup.|Aucun terrain n'a été généré au démarrage.|Beim Start wurde kein Gelände erzeugt.
+123|1. You can generate a procedural map in the [MAPS] tab|1. Vous pouvez générer une carte procédurale dans l'onglet [MAPS]|1. Du kannst im Reiter [MAPS] eine prozedurale Karte erzeugen
+124|2. Or load a heightmap with the [Load Heightmap] button at the top|2. Ou chargez une heightmap avec le bouton [Charger une heightmap] en haut|2. Oder lade oben mit [Heightmap laden] eine Heightmap
+125|No active terrain.|Aucun terrain actif.|Kein aktives Gelände.
+126|Pos: [0, 0] | Map: No Terrain | Zoom: |Pos : [0, 0] | Carte : aucun terrain | Zoom : |Pos: [0, 0] | Karte: Kein Gelände | Zoom:
+127|Pos: [%d, %d] | Map: %dx%d (%d x %d km) | Zoom: %.0f%% | View: %s|Pos : [%d, %d] | Carte : %dx%d (%d x %d km) | Zoom : %.0f%% | Vue : %s|Pos: [%d, %d] | Karte: %dx%d (%d x %d km) | Zoom: %.0f%% | Ansicht: %s
+128| | Height: %.1fm | Slope: %.2f (%.1f deg)| | Altitude : %.1fm | Pente : %.2f (%.1f deg)| | Höhe: %.1fm | Hang: %.2f (%.1f deg)
+129|Pos: [%d, %d] | Resolution: %dx%d | Zoom: %.0f%% | View: %s|Pos : [%d, %d] | Résolution : %dx%d | Zoom : %.0f%% | Vue : %s|Pos: [%d, %d] | Auflösung: %dx%d | Zoom: %.0f%% | Ansicht: %s

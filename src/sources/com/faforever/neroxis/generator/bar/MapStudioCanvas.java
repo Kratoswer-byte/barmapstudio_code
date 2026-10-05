@@ -160,15 +160,15 @@ public final class MapStudioCanvas extends JPanel {
                         if (wElev > -500f && h < wElev) {
                             desc = "Subacqueo (" + String.format(Locale.ROOT, "%.1fm sotto", wElev - h) + ")";
                         } else if (s < 0.22f) {
-                            desc = "Veicoli OK & Costruibile";
+                            desc = I18n.t("map.173");
                         } else if (s < 0.35f) {
-                            desc = "Veicoli Lenti / No Costruz.";
+                            desc = I18n.t("map.174");
                         } else if (s < 0.65f) {
-                            desc = "Solo Kbot / Bot Bipedi";
+                            desc = I18n.t("map.175");
                         } else {
-                            desc = "Invalicabile / Dirupo";
+                            desc = I18n.t("map.176");
                         }
-                        String info = String.format(Locale.ROOT, "Pos: [%d, %d] | Quota: %.1fm | Pendenza: %.2f (%.1f deg) | %s", Math.round(wx), Math.round(wy), h, s, deg, desc);
+                        String info = String.format(Locale.ROOT, I18n.t("map.177"), Math.round(wx), Math.round(wy), h, s, deg, desc);
                         onTerrainHover.accept(info);
                     } else {
                         onTerrainHover.accept("");
@@ -1132,6 +1132,18 @@ public final class MapStudioCanvas extends JPanel {
                     Spawn s = map.getSpawns().get(i);
                     Point sp = normToScreen(s.getPosition().x() / mw, s.getPosition().z() / mh);
                     drawSpawnMarker(g, sp.x, sp.y, s.getTeamID(), i + 1);
+                    String role = com.faforever.neroxis.exporter.bar.SpawnRoles.get(map, s);
+                    if (role != null) {
+                        // ruolo consigliato sotto il marker, come i cerchi di BAR prima della partita
+                        g.setFont(BarMapStudio.fontCond(Font.BOLD, 10));
+                        String label = role.toUpperCase(java.util.Locale.ROOT);
+                        int tw = g.getFontMetrics().stringWidth(label);
+                        int ly = sp.y + Math.max(10, (int) (12 * zoom)) + 13;
+                        g.setColor(new Color(11, 14, 20, 200));
+                        g.fillRoundRect(sp.x - tw / 2 - 4, ly - 10, tw + 8, 13, 6, 6);
+                        g.setColor(Color.WHITE);
+                        g.drawString(label, sp.x - tw / 2, ly);
+                    }
                 }
             }
 
@@ -1167,7 +1179,7 @@ public final class MapStudioCanvas extends JPanel {
             // Placeholder text
             g.setColor(new Color(0, 229, 255, 120));
             g.setFont(BarMapStudio.fontCond(Font.BOLD, 18));
-            String msg = "Nessun terreno generato - Clicca su 'GENERA TERRENO'";
+            String msg = I18n.t("map.178");
             int sw = g.getFontMetrics().stringWidth(msg);
             g.drawString(msg, b.x + (b.width - sw) / 2, b.y + b.height / 2);
         }
@@ -1271,9 +1283,11 @@ public final class MapStudioCanvas extends JPanel {
 
     private void drawSpawnMarker(Graphics2D g, int x, int y, int teamId, int playerNum) {
         int r = Math.max(10, (int) (12 * zoom));
-        Color teamColor = (teamId == 0) ? new Color(0, 229, 255) : new Color(255, 56, 92);
-        if (teamId == 1) teamColor = new Color(255, 159, 28);
-        if (teamId >= 2) teamColor = new Color(0, 255, 136);
+        // squadra 1 = toni freddi, squadra 2 = toni caldi; ogni giocatore della squadra ha la sua tinta
+        int[] cool = {0x00E5FF, 0x3D7BFF, 0x00C2A8, 0x7A5CFF, 0x4FC3F7, 0x1E90FF, 0x26E07F, 0xB388FF};
+        int[] warm = {0xFF9F1C, 0xFF385C, 0xFFD23F, 0xFF6B35, 0xE84393, 0xC0392B, 0xF5A65B, 0xFF7AA2};
+        int slot = Math.floorMod((playerNum - 1) / 2, 8);
+        Color teamColor = new Color(teamId == 0 ? cool[slot] : teamId == 1 ? warm[slot] : 0x00FF88);
 
         // Halo
         g.setColor(new Color(teamColor.getRed(), teamColor.getGreen(), teamColor.getBlue(), 60));
@@ -1422,7 +1436,7 @@ public final class MapStudioCanvas extends JPanel {
         int sizeUnitW = mw / 64;
         int sizeUnitH = mh / 64;
 
-        String coordStr = String.format("Pos: [%d, %d] | Mappa: %dx%d (%d x %d km) | Zoom: %.0f%% | Tool: %s | Simm: %s",
+        String coordStr = String.format(I18n.t("map.179"),
             wx, wy, sizeUnitW, sizeUnitH, sizeUnitW, sizeUnitH, zoom * 100, activeTool.name(),
             (symmetryEnabled ? (symmetrySettings != null ? symmetrySettings.terrainSymmetry().name() : "ON") : "OFF")
         );
@@ -1431,13 +1445,13 @@ public final class MapStudioCanvas extends JPanel {
             float hAt = map.getHeightAtWorld(wx, wy);
             float sAt = map.getSlopeAtWorld(wx, wy);
             double deg = Math.toDegrees(Math.atan(sAt));
-            coordStr += String.format(Locale.ROOT, " | Quota: %.1fm | Pend: %.2f (%.1f deg)", hAt, sAt, deg);
+            coordStr += String.format(Locale.ROOT, I18n.t("map.180"), hAt, sAt, deg);
         }
 
         if (selectedEntity instanceof Marker m && map != null && map.getMexes().contains(m)) {
-            coordStr += String.format(Locale.ROOT, " | MEX SELEZIONATO: %.1f M", getMexMetal(m));
+            coordStr += String.format(Locale.ROOT, I18n.t("map.181"), getMexMetal(m));
         } else if (selectedEntity instanceof Spawn s) {
-            coordStr += String.format(" | SPAWN SELEZIONATO: Player %d", s.getTeamID() + 1);
+            coordStr += String.format(I18n.t("map.182"), s.getTeamID() + 1);
         }
 
         g.setFont(BarMapStudio.font(Font.BOLD, 11));
@@ -1455,7 +1469,7 @@ public final class MapStudioCanvas extends JPanel {
         g.drawString(coordStr, hx + 2, hy + 2);
 
         // Hotkey cheatsheet bar in top-left corner
-        String hotkeys = "[S] Seleziona  [M] Mex  [G] Geo  [R] Rocce  [E] Cancella  [DEL] Elimina  [Ctrl+Z] Annulla  [L] Slope Map  [Space] Simm  [1-5] Metallo  [+/-] Zoom";
+        String hotkeys = I18n.t("map.183");
         g.setFont(BarMapStudio.font(Font.BOLD, 10));
         int hkW = g.getFontMetrics().stringWidth(hotkeys);
         int hkX = 16;
@@ -1486,7 +1500,7 @@ public final class MapStudioCanvas extends JPanel {
             g.setFont(BarMapStudio.fontCond(Font.BOLD, 11));
             g.setColor(new Color(255, 159, 28));
             drawMountainVector(g, legX + 12, legY + 8, 13, 10, new Color(255, 159, 28));
-            g.drawString("LEGENDA PENDENZE (BAR)", legX + 30, legY + 18);
+            g.drawString(I18n.t("map.184"), legX + 30, legY + 18);
 
             g.setFont(BarMapStudio.font(Font.BOLD, 10));
             int cy = legY + 36;
@@ -1495,35 +1509,35 @@ public final class MapStudioCanvas extends JPanel {
             g.setColor(new Color(34, 197, 94));
             g.fillRect(legX + 12, cy - 8, 12, 10);
             g.setColor(new Color(240, 244, 250));
-            g.drawString("< 12 deg  Veicoli OK & Costruibile", legX + 30, cy);
+            g.drawString(I18n.t("map.185"), legX + 30, cy);
             cy += 18;
 
             // 2. Yellow
             g.setColor(new Color(234, 179, 8));
             g.fillRect(legX + 12, cy - 8, 12, 10);
             g.setColor(new Color(240, 244, 250));
-            g.drawString("12-20 deg Veicoli Rallentati", legX + 30, cy);
+            g.drawString(I18n.t("map.186"), legX + 30, cy);
             cy += 18;
 
             // 3. Orange
             g.setColor(new Color(249, 115, 22));
             g.fillRect(legX + 12, cy - 8, 12, 10);
             g.setColor(new Color(240, 244, 250));
-            g.drawString("20-33 deg Solo Kbot / Bot", legX + 30, cy);
+            g.drawString(I18n.t("map.187"), legX + 30, cy);
             cy += 18;
 
             // 4. Red
             g.setColor(new Color(239, 68, 68));
             g.fillRect(legX + 12, cy - 8, 12, 10);
             g.setColor(new Color(240, 244, 250));
-            g.drawString("> 33 deg  Invalicabile (Scarpata)", legX + 30, cy);
+            g.drawString(I18n.t("map.188"), legX + 30, cy);
             cy += 18;
 
             // 5. Blue
             g.setColor(new Color(14, 165, 233));
             g.fillRect(legX + 12, cy - 8, 12, 10);
             g.setColor(new Color(240, 244, 250));
-            g.drawString("Acqua / Subacqueo", legX + 30, cy);
+            g.drawString(I18n.t("map.189"), legX + 30, cy);
         }
     }
 

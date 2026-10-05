@@ -27,7 +27,7 @@ public final class ObjParser {
     }
 
     public static ObjModel3D parse(File file) throws IOException {
-        File parentDir = file.getParentFile();
+        File parentDir = file.getAbsoluteFile().getParentFile();
         try (InputStream in = new FileInputStream(file)) {
             return parse(in, parentDir);
         }
@@ -52,6 +52,9 @@ public final class ObjParser {
         Map<String, float[]> materialColors = new LinkedHashMap<>();
         Map<String, String> materialMaps = new LinkedHashMap<>();
         String currentMaterial = null;
+        // pezzi del modello: ogni "o"/"g" dell'OBJ diventa un pezzo animabile dell'S3O
+        List<String> facePieces = new ArrayList<>(2048);
+        String currentPiece = null;
 
         String line;
         while ((line = reader.readLine()) != null) {
@@ -74,6 +77,9 @@ public final class ObjParser {
                         }
                     }
                 }
+            } else if (line.startsWith("o ") || line.startsWith("g ")) {
+                String pieceName = line.substring(2).trim().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9_]", "_");
+                currentPiece = pieceName.isEmpty() || pieceName.equals("default") || pieceName.equals("off") ? null : pieceName;
             } else if (line.startsWith("usemtl ")) {
                 currentMaterial = line.substring(7).trim();
             } else if (line.startsWith("v ")) {
@@ -98,8 +104,12 @@ public final class ObjParser {
                 String[] parts = line.split("\\s+");
                 if (parts.length >= 3) {
                     try {
-                        uvs.add(Float.parseFloat(parts[1]));
-                        uvs.add(Float.parseFloat(parts[2]));
+                        // Convenzione interna = S3O/motore: v=0 è il bordo ALTO dell'immagine
+                        // (negli OBJ è quello basso), quindi la V viene invertita qui, unico punto.
+                        float tu = Float.parseFloat(parts[1]);
+                        float tv = Float.parseFloat(parts[2]);
+                        uvs.add(tu);
+                        uvs.add(1.0f - tv);
                     } catch (NumberFormatException ignored) {}
                 }
             } else if (line.startsWith("f ")) {
@@ -169,6 +179,7 @@ public final class ObjParser {
                 // Se la faccia ha 3 o 4 vertici, la teniamo direttamente
                 if (faceIndices.length <= 4) {
                     faces.add(faceIndices);
+                    facePieces.add(currentPiece);
                     faceMaterials.add(currentMaterial);
                     faceColors.add(faceColor);
 
@@ -198,6 +209,7 @@ public final class ObjParser {
                     // Triangolazione per poligoni con più di 4 vertici (fan triangulation)
                     for (int i = 1; i < faceIndices.length - 1; i++) {
                         faces.add(new int[]{faceIndices[0], faceIndices[i], faceIndices[i + 1]});
+                        facePieces.add(currentPiece);
                         faceMaterials.add(currentMaterial);
                         faceColors.add(faceColor);
 
@@ -244,6 +256,7 @@ public final class ObjParser {
         String[] fmArr = faceMaterials.toArray(new String[0]);
 
         ObjModel3D model = new ObjModel3D(vArr, fArr, fnArr, fcArr, fUvArr, materialColors, fmArr);
+        model.setFacePieces(facePieces.toArray(new String[0]));
         // Collega map_Kd alle texture reali (stessa cartella OBJ) senza toccare le UV vt
         if (parentDir != null && !materialMaps.isEmpty()) {
             for (Map.Entry<String, String> e : materialMaps.entrySet()) {

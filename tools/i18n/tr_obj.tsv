@@ -1,0 +1,86 @@
+1|H: 0.0m | W: 0.0m|H : 0.0m | L : 0.0m|H: 0.0m | B: 0.0m
+2|SEND TO MAP|ENVOYER À LA CARTE|AN KARTE SENDEN
+3|ELEMENT LIBRARY|BIBLIOTHÈQUE D'ÉLÉMENTS|ELEMENTBIBLIOTHEK
+4|+ IMPORT 3D MESH (.obj)|+ IMPORTER UN MESH 3D (.obj)|+ 3D-MESH IMPORTIEREN (.obj)
+5| ENTITY DATA | DONNÉES DE L'ENTITÉ | ELEMENTDATEN
+6|Unique ID:|ID unique :|Eindeutige ID:
+7|Name:|Nom :|Name:
+8|Footprint X (16 elmos):|Empreinte X (16 elmos) :|Grundfläche X (16 Elmos):
+9|Footprint Z (16 elmos):|Empreinte Z (16 elmos) :|Grundfläche Z (16 Elmos):
+10|Hit Points (HP):|Points de vie (PV) :|Trefferpunkte (HP):
+11|Metal:|Métal :|Metall:
+12|Energy:|Énergie :|Energie:
+13| IN-GAME SCALE & PROPORTIONS | ÉCHELLE & PROPORTIONS EN JEU | SKALIERUNG & PROPORTIONEN IM SPIEL
+14|Scale (x):|Échelle (x) :|Skalierung (x):
+15|Cmd (45m)|Cmd (45m)|Cmd (45m)
+16|Bldg (60m)|Bât (60m)|Geb (60m)
+17|Prop (35m)|Prop (35m)|Prop (35m)
+18| LUA SCRIPT (ANIMATION & GADGET) | SCRIPT LUA (ANIMATION & GADGET) | LUA-SKRIPT (ANIMATION & GADGET)
+19|Paste|Coller|Einfügen
+20|Paste code from the system clipboard|Coller le code depuis le presse-papiers|Code aus der Zwischenablage einfügen
+21|Copy|Copier|Kopieren
+22|Copy code to the clipboard|Copier le code dans le presse-papiers|Code in die Zwischenablage kopieren
+23|Clear|Effacer|Leeren
+24|Empty the editor|Vider l'éditeur|Editor leeren
+25|VALIDATE LUA CODE|VALIDER LE CODE LUA|LUA-CODE PRÜFEN
+26|Send this element to the map's ready-objects palette (MAPS)|Envoyer cet élément à la palette d'objets prêts de la carte (MAPS)|Dieses Element an die Palette fertiger Objekte der Karte senden (MAPS)
+27|Valid syntax (|Syntaxe valide (|Gültige Syntax (
+28| lines). No errors.| lignes). Aucune erreur.| Zeilen). Keine Fehler.
+29|H: %.1fm | W: %.1fm|H : %.1fm | L : %.1fm|H: %.1fm | B: %.1fm
+30|Loading BAR preview...|Chargement de l'aperçu BAR...|BAR-Vorschau wird geladen...
+31|ADDED TO READY OBJECTS!|AJOUTÉ AUX OBJETS PRÊTS !|ZU FERTIGEN OBJEKTEN HINZUGEFÜGT!
+32|Select Wavefront 3D Model File (.obj)|Sélectionner un fichier de modèle 3D Wavefront (.obj)|Wavefront-3D-Modelldatei wählen (.obj)
+33|Wavefront models (.obj)|Modèles Wavefront (.obj)|Wavefront-Modelle (.obj)
+34|Custom 3D mesh imported from |Mesh 3D personnalisé importé depuis |Eigenes 3D-Mesh importiert aus
+35|Error while importing the .obj file:\n|Erreur lors de l'importation du fichier .obj :\n|Fehler beim Importieren der .obj-Datei:\n
+36|Mesh Import Error|Erreur d'importation du mesh|Mesh-Importfehler
+37|READY OBJECTS & UNITS (0)|OBJETS & UNITÉS PRÊTS (0)|FERTIGE OBJEKTE & EINHEITEN (0)
+38|+ 3D Studio|+ Studio 3D|+ 3D-Studio
+39|+ Import .OBJ|+ Importer .OBJ|+ .OBJ importieren
+40|Click an object to place it on the map.|Cliquez sur un objet pour le placer sur la carte.|Klicke ein Objekt an, um es auf der Karte zu platzieren.
+41|H: --|H : --|H: --
+42|Placed: 0 objects|Placés : 0 objet|Platziert: 0 Objekte
+43|Clear Placed|Vider les placés|Platzierte leeren
+44|Import a Wavefront 3D .obj file straight into the palette|Importer un fichier 3D Wavefront .obj directement dans la palette|Eine Wavefront-3D-.obj-Datei direkt in die Palette importieren
+45|Open Objects & Units Studio to manage all parameters and scripts|Ouvrir Objects & Units Studio pour gérer tous les paramètres et scripts|Objects & Units Studio öffnen, um alle Parameter und Skripte zu verwalten
+46|Scale:|Échelle :|Skalierung:
+47|Remove all custom objects placed on the map|Supprimer tous les objets personnalisés placés sur la carte|Alle auf der Karte platzierten eigenen Objekte entfernen
+48|3D mesh imported from |Mesh 3D importé depuis |3D-Mesh importiert aus
+49|Placed: |Placés : |Platziert:
+50| object| objet| Objekt
+51| objects| objets| Objekte
+52|H %.1fm | W %.1fm|H %.1fm | L %.1fm|H %.1fm | B %.1fm
+53|Warning: very small object in game (Commander = 45m)|Attention : objet très petit en jeu (Commandant = 45m)|Achtung: sehr kleines Objekt im Spiel (Commander = 45m)
+54|Real in-game size (1 elmo ~ 1m)|Taille réelle en jeu (1 elmo ~ 1m)|Tatsächliche Größe im Spiel (1 Elmo ~ 1m)
+55|Automatically scale the object to a height of |Mettre automatiquement l'objet à une hauteur de |Objekt automatisch auf eine Höhe skalieren von
+56|READY OBJECTS & UNITS (|OBJETS & UNITÉS PRÊTS (|FERTIGE OBJEKTE & EINHEITEN (
+57|▶ ACTIVE: |▶ ACTIF : |▶ AKTIV:
+58| (place with click)| (placer d'un clic)| (mit Klick platzieren)
+59|No ready object in the palette.|Aucun objet prêt dans la palette.|Kein fertiges Objekt in der Palette.
+60|+ Open Object Studio|+ Ouvrir le studio d'objets|+ Objekt-Studio öffnen
+61|Tech Wireframe|Fil de fer tech|Tech-Drahtgitter
+62|Cmd 45m: ON|Cmd 45m : ON|Cmd 45m: AN
+63|Cmd 45m: OFF|Cmd 45m : OFF|Cmd 45m: AUS
+64|Reset the default framing and rotation|Réinitialiser le cadrage et la rotation par défaut|Standard-Ausschnitt und -Drehung zurücksetzen
+65|Zoom out [-]|Zoom arrière [-]|Herauszoomen [-]
+66|Zoom in [+]|Zoom avant [+]|Hineinzoomen [+]
+67|Switch between Solid and Wireframe display|Basculer entre affichage plein et fil de fer|Zwischen Solid- und Drahtgitteranzeige wechseln
+68|Toggle the BAR Commander reference silhouette (45m)|Activer/désactiver la silhouette de référence du Commandant BAR (45m)|Referenzsilhouette des BAR-Commanders ein-/ausschalten (45m)
+69|Vertices: 0 | Faces: 0 | Zoom: 100%|Sommets : 0 | Faces : 0 | Zoom : 100%|Punkte: 0 | Flächen: 0 | Zoom: 100%
+70|Vertices: %d | Faces: %d | Zoom: %d%% | H: %.1fm | W: %.1fm (Scale: %.1fx)|Sommets : %d | Faces : %d | Zoom : %d%% | H : %.1fm | L : %.1fm (Échelle : %.1fx)|Punkte: %d | Flächen: %d | Zoom: %d%% | H: %.1fm | B: %.1fm (Skalierung: %.1fx)
+71|No 3D model loaded. Select or import an .obj file|Aucun modèle 3D chargé. Sélectionnez ou importez un fichier .obj|Kein 3D-Modell geladen. Wähle oder importiere eine .obj-Datei
+72|[LMB Drag] Rotate 3D   [RMB Drag] Pan   [Wheel] Zoom|[Glisser gauche] Rotation 3D   [Glisser droit] Pan   [Molette] Zoom|[Links ziehen] 3D drehen   [Rechts ziehen] Pan   [Rad] Zoom
+73|45m BAR Commander|Commandant BAR 45m|45m BAR-Commander
+74|BAR Unit|Unité BAR|BAR-Einheit
+75|Static Object|Objet statique|Statisches Objekt
+76|Animated Scenery|Décor animé|Animierte Kulisse
+77|Boss / Titan|Boss / Titan|Boss / Titan
+78|Custom Mesh|Mesh personnalisé|Eigenes Mesh
+79|Windmill (Animated)|Moulin à vent (animé)|Windmühle (animiert)
+80|Scenery structure with continuously spinning blades driven by a Spring script.|Structure de décor aux pales tournant en continu grâce à un script Spring.|Kulissenbau mit dauerhaft drehenden Flügeln per Spring-Skript.
+81|Large Alpine Pine (Static)|Grand pin alpin (statique)|Große Alpenkiefer (statisch)
+82|Tall tree that can be reclaimed for energy/metal.|Grand arbre récupérable pour de l'énergie/du métal.|Hoher Baum, für Energie/Metall verwertbar.
+83|Granite Rock (Static)|Rocher de granit (statique)|Granitfels (statisch)
+84|Large boulder that can be reclaimed for metal.|Gros rocher récupérable pour du métal.|Großer Felsblock, für Metall verwertbar.
+85|Ballistic Titan Boss|Boss Titan balistique|Ballistischer Titan-Boss
+86|Huge mobile cannon with global range that fires missiles across the whole map.|Énorme canon mobile à portée globale qui tire des missiles sur toute la carte.|Riesige mobile Kanone mit globaler Reichweite, die Raketen über die ganze Karte feuert.

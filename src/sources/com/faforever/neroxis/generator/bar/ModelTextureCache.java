@@ -30,8 +30,16 @@ public final class ModelTextureCache {
 
     /** Carica unittextures/<name> dal gioco (DDS/TGA/PNG). */
     public BufferedImage loadGameTexture(String name) {
+        return loadGameTexture(name, 2);
+    }
+
+    /**
+     * Come sopra, scegliendo il livello di dettaglio: 0 = risoluzione piena, 1 = meta' lato, 2 = un quarto.
+     * Lo studio oggetti usa 1 (un solo modello a schermo), la vista mappa resta a 2.
+     */
+    public BufferedImage loadGameTexture(String name, int mipLevel) {
         if (name == null || name.isBlank()) return null;
-        String key = "game:" + name.toLowerCase();
+        String key = "game" + mipLevel + ":" + name.toLowerCase();
         BufferedImage c = get(key);
         if (c != null) return c;
         if (dataSupplier == null) return null;
@@ -42,7 +50,7 @@ public final class ModelTextureCache {
         for (String cand : cands) {
             byte[] bytes = BarInstall.readGameBytes(data, cand);
             if (bytes == null || bytes.length < 128) continue;
-            BufferedImage img = decodeGameBytes(bytes);
+            BufferedImage img = decodeGameBytes(bytes, mipLevel);
             if (img != null) { put(key, img); return img; }
         }
         return null;
@@ -57,12 +65,16 @@ public final class ModelTextureCache {
 
     /** DDS via DDSReader (mip2) oppure TGA/PNG raw. */
     public static BufferedImage decodeGameBytes(byte[] bytes) {
+        return decodeGameBytes(bytes, 2);
+    }
+
+    public static BufferedImage decodeGameBytes(byte[] bytes, int mipLevel) {
         if (bytes == null || bytes.length < 16) return null;
         boolean isDDS = bytes.length > 4 && bytes[0] == 'D' && bytes[1] == 'D' && bytes[2] == 'S' && bytes[3] == ' ';
         if (isDDS) {
             try {
                 int mips = DDSReader.getMipmap(bytes);
-                int level = Math.min(2, Math.max(0, mips - 1));
+                int level = Math.min(Math.max(0, mipLevel), Math.max(0, mips - 1));
                 int[] px = DDSReader.read(bytes, DDSReader.ARGB, level);
                 if (px == null) px = DDSReader.read(bytes, DDSReader.ARGB, 0);
                 if (px == null) return null;
