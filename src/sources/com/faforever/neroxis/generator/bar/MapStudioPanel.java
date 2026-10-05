@@ -251,6 +251,9 @@ public final class MapStudioPanel extends JPanel {
     // Final Action
     private final JButton genFinalMapBtn = createPrimaryButton(I18n.t("map.45"), ACCENT_GREEN);
     private final JButton genAndPlayBtn = createPrimaryButton(I18n.t("map.46"), ACCENT_AMBER);
+    private final JButton hostMatchBtn = createPrimaryButton(I18n.t("host.button"), ACCENT_CYAN);
+    /** Avvia BAR con uno script di partita e, se indicata, una versione precisa del motore. */
+    private java.util.function.BiConsumer<Path, String> scriptLauncher;
     private final JProgressBar progressBar = new JProgressBar();
     private final JLabel statusLabel = new JLabel(I18n.t("map.47"));
 
@@ -443,6 +446,8 @@ public final class MapStudioPanel extends JPanel {
         genGroundBtn.addActionListener(e -> doGenerateGround());
         genFinalMapBtn.addActionListener(e -> doGenerateFinalMap(false));
         genAndPlayBtn.addActionListener(e -> doGenerateFinalMap(true));
+        hostMatchBtn.addActionListener(e -> doHostMatch());
+        hostMatchBtn.setToolTipText(I18n.t("host.button.tip"));
 
         btnRegenGround.addActionListener(e -> doRegenerateFromHeightmap(null));
         btnLoadHeightmap.addActionListener(e -> doLoadHeightmapFile());
@@ -1533,6 +1538,11 @@ public final class MapStudioPanel extends JPanel {
         exportCard.add(genAndPlayBtn);
         exportCard.add(Box.createVerticalStrut(6));
 
+        hostMatchBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        hostMatchBtn.setAlignmentX(0f);
+        exportCard.add(hostMatchBtn);
+        exportCard.add(Box.createVerticalStrut(6));
+
         progressBar.setVisible(false);
         progressBar.setForeground(ACCENT_CYAN);
         progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 6));
@@ -2151,31 +2161,7 @@ public final class MapStudioPanel extends JPanel {
         genFinalMapBtn.setEnabled(false);
         genAndPlayBtn.setEnabled(false);
 
-        float baseMetal = ((Number) baseMetalSpinner.getValue()).floatValue();
-        float maxMetal = ((Number) maxMetalSpinner.getValue()).floatValue();
-        float reclaimVal = reclaimSlider.getValue() / 10.0f;
-        int numTeams = Math.max(2, (int) m.getSpawns().stream().mapToInt(com.faforever.neroxis.map.Spawn::getTeamID).distinct().count());
-
-        m.getCustomEntities().clear();
-        m.getCustomEntities().addAll(canvas.getCustomEntities());
-
-        BarExportOptions options = new BarExportOptions(
-            2,
-            0.7f,
-            baseMetal,
-            Math.min(baseMetal, 2.0f),
-            maxMetal,
-            false,
-            numTeams,
-            finalMapName,
-            "1.0",
-            "BAR Map",
-            reclaimVal,
-            null,
-            com.faforever.neroxis.exporter.bar.MapExtraOptions.get().minWind,
-            com.faforever.neroxis.exporter.bar.MapExtraOptions.get().maxWind,
-            com.faforever.neroxis.exporter.bar.MapExtraOptions.get().tidal
-        );
+        BarExportOptions options = currentExportOptions(m, finalMapName);
 
         // Niente piu' messaggi nel pannello: progresso, esito e invito alla donazione stanno in una finestra al centro
         ExportDialog dialog = new ExportDialog(SwingUtilities.getWindowAncestor(this));
@@ -2184,28 +2170,7 @@ public final class MapStudioPanel extends JPanel {
         new Thread(() -> {
             try {
                 Path skirmishScript = barDataFolder.resolve("_neroxis_skirmish.txt");
-                Path direct;
-                try {
-                    direct = BarMapExporter.exportMap(mapsDir, m, options, skirmishScript);
-                } catch (java.nio.file.AccessDeniedException denied) {
-                    // BAR installato in una cartella protetta: la mappa viene preparata nella cartella dell'utente
-                    // e copiata con una sola richiesta di amministratore, senza riavviare il programma
-                    SwingUtilities.invokeLater(() -> dialog.log(I18n.t("export.log.protected")));
-                    Path staging = ProtectedCopy.stagingFolder();
-                    Path stagedScript = staging.resolve("_neroxis_skirmish.txt");
-                    Path staged = BarMapExporter.exportMap(staging, m, options, stagedScript);
-                    direct = mapsDir.resolve(staged.getFileName());
-                    boolean copied = ProtectedCopy.copy(ProtectedCopy.pairs(staged, direct, stagedScript, skirmishScript), true);
-                    if (!copied) {
-                        throw new java.io.IOException(I18n.t("export.protected.refused", staged.toString(), mapsDir.toString()));
-                    }
-                    try {
-                        Files.deleteIfExists(staged);
-                        Files.deleteIfExists(stagedScript);
-                    } catch (Exception ignored) {
-                    }
-                }
-                final Path archive = direct;
+                final Path archive = exportToBar(mapsDir, m, options, skirmishScript, null, java.util.List.of(), null, dialog);
                 SwingUtilities.invokeLater(() -> dialog.finish(true, I18n.t("export.log.done", archive.getFileName().toString()), () -> {
                     exported[0] = archive;
                     if (onMapCreated != null) {
@@ -2246,6 +2211,163 @@ public final class MapStudioPanel extends JPanel {
         // "genera e gioca": la partita parte solo dopo la conferma
         if (launchSkirmish && exported[0] != null && onPlaySkirmish != null) {
             onPlaySkirmish.accept(exported[0]);
+        }
+    }
+
+    public void setScriptLauncher(java.util.function.BiConsumer<Path, String> scriptLauncher) {
+        this.scriptLauncher = scriptLauncher;
+    }
+
+    /** Le opzioni di export lette dai controlli del pannello; porta anche nella mappa gli oggetti dell'editor. */
+    private BarExportOptions currentExportOptions(SCMap m, String mapName) {
+        float baseMetal = ((Number) baseMetalSpinner.getValue()).floatValue();
+        float maxMetal = ((Number) maxMetalSpinner.getValue()).floatValue();
+        float reclaimVal = reclaimSlider.getValue() / 10.0f;
+        int numTeams = Math.max(2, (int) m.getSpawns().stream().mapToInt(com.faforever.neroxis.map.Spawn::getTeamID).distinct().count());
+
+        m.getCustomEntities().clear();
+        m.getCustomEntities().addAll(canvas.getCustomEntities());
+
+        return new BarExportOptions(
+            2,
+            0.7f,
+            baseMetal,
+            Math.min(baseMetal, 2.0f),
+            maxMetal,
+            false,
+            numTeams,
+            mapName,
+            "1.0",
+            "BAR Map",
+            reclaimVal,
+            null,
+            com.faforever.neroxis.exporter.bar.MapExtraOptions.get().minWind,
+            com.faforever.neroxis.exporter.bar.MapExtraOptions.get().maxWind,
+            com.faforever.neroxis.exporter.bar.MapExtraOptions.get().tidal
+        );
+    }
+
+    /**
+     * Esporta la mappa nella cartella mappe di BAR. Se BAR e' installato in una cartella protetta, la mappa viene
+     * preparata nella cartella dell'utente e copiata con una sola richiesta di amministratore, senza riavviare
+     * il programma.
+     *
+     * @param hostScript script della partita ospitata, o null per la sola partita contro l'IA
+     */
+    private Path exportToBar(Path mapsDir, SCMap m, BarExportOptions options, Path skirmishScript, Path hostScript,
+                             java.util.List<String> players, String password, ExportDialog dialog) throws Exception {
+        try {
+            return BarMapExporter.exportMap(mapsDir, m, options, skirmishScript, hostScript, players, false, password);
+        } catch (java.nio.file.AccessDeniedException denied) {
+            SwingUtilities.invokeLater(() -> dialog.log(I18n.t("export.log.protected")));
+            Path staging = ProtectedCopy.stagingFolder();
+            Path stagedSkirmish = staging.resolve(skirmishScript.getFileName());
+            Path stagedHost = hostScript == null ? null : staging.resolve(hostScript.getFileName());
+            Path staged = BarMapExporter.exportMap(staging, m, options, stagedSkirmish, stagedHost, players, false, password);
+            Path target = mapsDir.resolve(staged.getFileName());
+            java.util.Map<Path, Path> files = ProtectedCopy.pairs(staged, target, stagedSkirmish, skirmishScript);
+            if (stagedHost != null) {
+                files.put(stagedHost, hostScript);
+            }
+            if (!ProtectedCopy.copy(files, true)) {
+                throw new java.io.IOException(I18n.t("export.protected.refused", staged.toString(), mapsDir.toString()));
+            }
+            for (Path file : files.keySet()) {
+                try {
+                    Files.deleteIfExists(file);
+                } catch (Exception ignored) {
+                }
+            }
+            return target;
+        }
+    }
+
+    /**
+     * Partita con amici che hanno solo BAR: export della mappa, caricamento nello spazio cloud dell'utente,
+     * un file di ingresso per ogni amico e avvio del gioco come host.
+     */
+    private void doHostMatch() {
+        SCMap m = canvas.getMap();
+        if (m == null) {
+            JOptionPane.showMessageDialog(this, I18n.t("map.164"), I18n.t("map.165"), JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        Path mapsDir = barDataFolder != null ? barDataFolder.resolve("maps") : null;
+        if (mapsDir == null || !Files.isDirectory(mapsDir)) {
+            JOptionPane.showMessageDialog(this, I18n.t("map.166") + mapsDir, I18n.t("map.167"), JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        Path engine = AppPaths.newestEngine();
+        if (engine == null) {
+            JOptionPane.showMessageDialog(this, I18n.t("host.noengine"), I18n.t("map.167"), JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        HostMatchDialog.Request request = HostMatchDialog.show(SwingUtilities.getWindowAncestor(this), m.getSpawnCount());
+        if (request == null) {
+            return;
+        }
+        CloudStorage.Settings cloud = CloudStorage.load();
+        String rawName = mapNameField.getText().trim();
+        final String finalMapName = rawName.isBlank() ? "Map_" + System.currentTimeMillis() : rawName;
+        BarExportOptions options = currentExportOptions(m, finalMapName);
+        String engineName = engine.getFileName().toString();
+
+        genFinalMapBtn.setEnabled(false);
+        genAndPlayBtn.setEnabled(false);
+        hostMatchBtn.setEnabled(false);
+        ExportDialog dialog = new ExportDialog(SwingUtilities.getWindowAncestor(this));
+        final Path[] ready = new Path[2]; // script dell'host, cartella dei file di ingresso
+        dialog.log(I18n.t("export.log.start", finalMapName));
+        new Thread(() -> {
+            try {
+                Path skirmishScript = barDataFolder.resolve("_neroxis_skirmish.txt");
+                Path hostScript = barDataFolder.resolve("_neroxis_host.txt");
+                Path archive = exportToBar(mapsDir, m, options, skirmishScript, hostScript, request.players(), request.password(), dialog);
+                String file = archive.getFileName().toString();
+                String base = file.substring(0, file.lastIndexOf('.'));
+                String sha = CloudStorage.sha256(archive);
+                // l'impronta nel nome: una mappa rifatta con lo stesso nome non viene confusa con quella vecchia
+                String key = "maps/" + base + "_" + sha.substring(0, 8) + file.substring(file.lastIndexOf('.'));
+                String megabytes = String.format(Locale.ROOT, "%.1f", Files.size(archive) / 1048576.0);
+                SwingUtilities.invokeLater(() -> dialog.log(I18n.t("host.log.upload", megabytes)));
+                String url = CloudStorage.upload(cloud, archive, key, sha);
+                SwingUtilities.invokeLater(() -> dialog.log(I18n.t("host.log.uploaded", url)));
+                Path folder = AppPaths.userFolder("matches").resolve(base);
+                JoinFileWriter.write(folder, new JoinFileWriter.Match(finalMapName, url, file, sha, engineName, request.address(),
+                    BarMapExporter.HOST_PORT, request.password()), request.friends());
+                SwingUtilities.invokeLater(() -> dialog.finish(true, I18n.t("host.log.files", folder.toString()), () -> {
+                    ready[0] = hostScript;
+                    ready[1] = folder;
+                    if (onMapCreated != null) {
+                        onMapCreated.accept(archive);
+                    }
+                    dialog.log(I18n.t("host.log.ready"));
+                }));
+            } catch (Throwable ex) {
+                ex.printStackTrace();
+                if (ex instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+                String msg = ex.getMessage() == null || ex.getMessage().isBlank() ? ex.toString() : ex.getMessage();
+                if (ex instanceof java.nio.file.AccessDeniedException ade) {
+                    msg = I18n.t("map.170") + ade.getFile();
+                }
+                final String shown = I18n.t("export.log.error", msg.length() > 420 ? msg.substring(0, 420) + "..." : msg);
+                SwingUtilities.invokeLater(() -> dialog.finish(false, shown, null));
+            }
+        }, "host-match").start();
+        dialog.setVisible(true); // modale: torna quando l'utente preme Conferma
+        genFinalMapBtn.setEnabled(true);
+        genAndPlayBtn.setEnabled(true);
+        hostMatchBtn.setEnabled(true);
+        if (ready[0] != null) {
+            try {
+                java.awt.Desktop.getDesktop().open(ready[1].toFile());
+            } catch (Exception ignored) {
+            }
+            if (scriptLauncher != null) {
+                scriptLauncher.accept(ready[0], engineName.startsWith("recoil_") ? engineName.substring("recoil_".length()) : null);
+            }
         }
     }
 
@@ -2662,7 +2784,7 @@ public final class MapStudioPanel extends JPanel {
         return chip;
     }
 
-    private static JButton createPrimaryButton(String text, Color color) {
+    static JButton createPrimaryButton(String text, Color color) {
         JButton b = new JButton(text);
         b.setFont(BarMapStudio.fontCond(Font.BOLD, 12));
         b.setBackground(new Color(color.getRed(), color.getGreen(), color.getBlue(), 35));

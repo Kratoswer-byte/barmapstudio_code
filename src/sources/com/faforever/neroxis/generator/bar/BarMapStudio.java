@@ -267,6 +267,15 @@ public class BarMapStudio {
                 }
             );
 
+            // partita ospitata: lo Studio indica lo script e la versione del motore da usare
+            editorPanel.setScriptLauncher((script, engineVersion) -> {
+                try {
+                    mStartEngine.invoke(launcher, script, engineVersion);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            });
+
             // Build Unified MAPS Master Panel (Editor sub-tab + Library sub-tab)
             // la libreria mappe e' una scheda di primo livello (dopo OBJECTS & UNITS), non piu' una sotto-scheda di MAPS
 

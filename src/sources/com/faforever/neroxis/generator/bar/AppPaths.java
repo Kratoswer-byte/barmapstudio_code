@@ -73,4 +73,18 @@ public final class AppPaths {
         }
         return chosen != null ? chosen : Platform.defaultData();
     }
+
+    /**
+     * La cartella del motore che BAR usa per le partite avviate dallo Studio (la piu' recente installata),
+     * per esempio {@code engine/recoil_2026.07.04}. Null se BAR non ha ancora scaricato un motore.
+     */
+    public static Path newestEngine() {
+        try (java.util.stream.Stream<Path> engines = Files.list(barData().resolve("engine"))) {
+            return engines.filter(Platform::hasEngine)
+                .max(java.util.Comparator.comparingLong(path -> path.toFile().lastModified()))
+                .orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }
