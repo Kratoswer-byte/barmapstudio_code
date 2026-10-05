@@ -86,7 +86,7 @@ if ($python) {
     }
     # le classi ereditate che il programma non usa piu' non devono rientrare nel pacchetto
     $unused = & python (Join-Path $PSScriptRoot "prune_unused.py") $sourceJar
-    if (($unused | Where-Object { $_ -match "^classi da togliere: 0 " }).Count -eq 0) {
+    if ((($unused | Where-Object { $_ -match "^classi da togliere: 0 " }).Count -eq 0) -or (($unused | Where-Object { $_ -match "^punti di ingresso inutilizzati da togliere: 0" }).Count -eq 0) -or (($unused | Where-Object { $_ -match "^manifesto da aggiornare: no" }).Count -eq 0)) {
         $unused | ForEach-Object { Write-Host $_ }
         throw "launcher.jar contiene classi inutilizzate: esegui  python build\prune_unused.py <jar> --apply"
     }

@@ -20,6 +20,10 @@ ROOTS = ("com/faforever/neroxis/generator/bar/BarMapStudio",)
 DEAD_RESOURCES = re.compile(r"^(com/faforever/neroxis/generator/bar/(barmapstudio-background\.jpg|lobby-art-\d+\.jpg|"
                             r"mapgen-sigil-\d+\.jpg|barmap_return_to_lobby\.lua|barmap_own_colour\.lua|build-info\.properties|"
                             r"barmap\.(png|ico))|trophies/.*)$")
+# La riga di comando del generatore: lo Studio non la usa, e il vecchio launcher vi aveva aggiunto le opzioni
+# per BAR. Nessun'altra classe le cita (lo script lo verifica prima di toglierle).
+UNUSED_ENTRY_POINTS = ("com/faforever/neroxis/generator/MapGeneratorCommand", "com/faforever/neroxis/generator/MapGenerator")
+MAIN_CLASS = "com.faforever.neroxis.generator.bar.BarMapStudio"
 NAME = re.compile(rb"com/faforever/neroxis/(?:generator|exporter)/bar/[A-Za-z0-9_$]+")
 
 
@@ -74,6 +78,20 @@ def main():
         todo.append(outer)
         todo.extend(other for other in classes if other.startswith(name + "$"))
     dead = sorted(set(classes) - reachable)
+    # i vecchi punti di ingresso si tolgono solo se davvero nessuno li cita
+    entry_files = [i.filename for i in source.infolist() if i.filename.endswith(".class") and i.filename[:-6].split("$")[0] in UNUSED_ENTRY_POINTS]
+    cited = False
+    for info in source.infolist():
+        if info.filename.endswith(".class") and info.filename not in entry_files and "faforever" in info.filename:
+            data = source.read(info.filename)
+            if any(re.search(name.encode() + rb"(?![A-Za-z0-9_])", data) for name in UNUSED_ENTRY_POINTS):
+                cited = True
+    if cited:
+        entry_files = []
+    manifest = source.read("META-INF/MANIFEST.MF").decode("utf-8")
+    new_manifest = re.sub(r"Main-Class: .*", "Main-Class: " + MAIN_CLASS, manifest)
+    print("punti di ingresso inutilizzati da togliere: %d%s" % (len(entry_files), " (citati da altre classi: restano)" if cited else ""))
+    print("manifesto da aggiornare: %s" % ("si" if new_manifest != manifest else "no"))
     dead_resources = sorted(info.filename for info in source.infolist() if DEAD_RESOURCES.match(info.filename) and not info.is_dir())
     tops = sorted({name.rsplit("/", 1)[1].split("$")[0] for name in dead})
     kept_tops = sorted({name.rsplit("/", 1)[1].split("$")[0] for name in reachable})
@@ -83,11 +101,14 @@ def main():
     print("risorse da togliere: %d" % len(dead_resources))
     print("spazio liberato: %.1f MB" % (size / 1048576.0))
     if apply:
-        gone = {name + ".class" for name in dead} | set(dead_resources)
+        gone = {name + ".class" for name in dead} | set(dead_resources) | set(entry_files)
         shutil.copyfile(jar, jar + ".bak_preprune")
         target = zipfile.ZipFile(jar + ".tmp", "w", zipfile.ZIP_DEFLATED)
         for info in source.infolist():
             if info.filename in gone:
+                continue
+            if info.filename == "META-INF/MANIFEST.MF":
+                target.writestr(info, new_manifest.encode("utf-8"), zipfile.ZIP_DEFLATED)
                 continue
             target.writestr(info, source.read(info.filename), zipfile.ZIP_STORED if info.compress_type == zipfile.ZIP_STORED else zipfile.ZIP_DEFLATED)
         target.close()
