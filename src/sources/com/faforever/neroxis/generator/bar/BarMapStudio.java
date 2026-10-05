@@ -607,6 +607,7 @@ public class BarMapStudio {
         JButton specsBtn = createSpecsOverlayButton(frame, lobby);
         JButton helpBtn = createHelpOverlayButton();
 
+        right.add(createUpdateOverlayButton(frame));
         right.add(barBtn);
         right.add(specsBtn);
         right.add(createFeedbackOverlayButton(frame));
@@ -615,6 +616,45 @@ public class BarMapStudio {
         footer.add(right, BorderLayout.EAST);
 
         return footer;
+    }
+
+    /** Pulsante del piede che compare solo quando su GitHub c'e' una versione piu' recente di quella in uso. */
+    private static JButton createUpdateOverlayButton(JFrame frame) {
+        final String[] label = {""};
+        final Color green = new Color(0, 255, 136);
+        JButton btn = new JButton() {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g = (Graphics2D) graphics.create();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                int w = getWidth();
+                int h = getHeight();
+                g.setColor(new Color(0, 255, 136, getModel().isRollover() ? 70 : 35));
+                g.fillRoundRect(0, 0, w, h, 8, 8);
+                g.setColor(green);
+                g.drawRoundRect(0, 0, w - 1, h - 1, 8, 8);
+                g.setFont(fontCond(Font.BOLD, 11));
+                FontMetrics fm = g.getFontMetrics();
+                g.drawString(label[0], (w - fm.stringWidth(label[0])) / 2, (h + fm.getAscent()) / 2 - 2);
+                g.dispose();
+            }
+        };
+        btn.setVisible(false);
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        UpdateChecker.checkAsync(release -> {
+            label[0] = I18n.t("upd.button", release.version().toUpperCase());
+            btn.setPreferredSize(new Dimension(btn.getFontMetrics(fontCond(Font.BOLD, 11)).stringWidth(label[0]) + 22, 20));
+            btn.setToolTipText(I18n.t("upd.button.tip"));
+            btn.addActionListener(e -> UpdateChecker.showDialog(frame, release));
+            btn.setVisible(true);
+            btn.getParent().revalidate();
+            btn.getParent().repaint();
+        });
+        return btn;
     }
 
     /** Pulsante del piede che apre la finestra per segnalare errori e proporre miglioramenti. */

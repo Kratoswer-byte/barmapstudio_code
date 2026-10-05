@@ -127,7 +127,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $dist "app") | Out-Null
 Copy-Item -LiteralPath $finalJar -Destination (Join-Path $dist "app\launcher.jar")
 Copy-Item -LiteralPath (Join-Path $app "runtime") -Destination (Join-Path $dist "runtime") -Recurse
 Copy-Item -LiteralPath (Join-Path $app "default_objects") -Destination (Join-Path $dist "default_objects") -Recurse
-foreach ($file in @("bar-map-launcher.bat", "README-FIRST.txt", "LICENSE.txt", "donation.properties", "donation_qrcode.png", "feedback.properties")) {
+foreach ($file in @("bar-map-launcher.bat", "README-FIRST.txt", "LICENSE.txt", "donation.properties", "donation_qrcode.png", "feedback.properties", "update.properties")) {
     Copy-Item -LiteralPath (Join-Path $app $file) -Destination (Join-Path $dist $file)
 }
 Copy-Item -LiteralPath (Join-Path $root "ico\BMS.ico") -Destination (Join-Path $dist "BMS.ico")
@@ -143,7 +143,7 @@ Step "Pacchetto Linux e macOS (.tar.gz, non provato)"
 New-Item -ItemType Directory -Force -Path (Join-Path $unix "app") | Out-Null
 Copy-Item -LiteralPath $finalJar -Destination (Join-Path $unix "app\launcher.jar")
 Copy-Item -LiteralPath (Join-Path $app "default_objects") -Destination (Join-Path $unix "default_objects") -Recurse
-foreach ($file in @("README-FIRST.txt", "LICENSE.txt", "donation.properties", "donation_qrcode.png", "feedback.properties")) {
+foreach ($file in @("README-FIRST.txt", "LICENSE.txt", "donation.properties", "donation_qrcode.png", "feedback.properties", "update.properties")) {
     Copy-Item -LiteralPath (Join-Path $app $file) -Destination (Join-Path $unix $file)
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "bar-map-studio.sh") -Destination (Join-Path $unix "bar-map-studio.sh")

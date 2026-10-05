@@ -1,0 +1,26 @@
+COME PUBBLICARE UN AGGIORNAMENTO DI BAR MAP STUDIO
+
+Il programma, all'avvio, chiede a GitHub l'ultima "release" del progetto scritto in update.properties
+(update_repo=utente/progetto). Se il suo nome contiene numeri piu' alti della versione installata, in basso a
+destra compare il pulsante verde UPDATE.
+
+Prima volta
+1. Crea su GitHub un progetto PUBBLICO (puo' contenere solo un file README: il codice non serve).
+2. Scrivi il suo nome in extracted\{app}\update.properties, riga update_repo=utente/progetto.
+
+A ogni versione nuova
+1. Cambia il numero in AppPaths.java (VERSION = "beta 0.2") e ricompila.
+2. Crea i pacchetti:   powershell -ExecutionPolicy Bypass -File build\build.ps1 -Version beta-0.2
+3. Su GitHub: Releases -> Draft a new release.
+   - Tag: lo stesso nome della versione con il trattino, per esempio  beta-0.2
+   - Descrizione: le novita' (il programma le mostra all'utente cosi' come sono scritte).
+   - Allega  BARMapStudioSetup-beta-0.2.exe  (il nome deve contenere "Setup" e finire in .exe),
+     e se vuoi lo zip e il tar.gz.
+   - NON allegare mapping-*.txt: annulla l'offuscamento.
+   - Lascia "Set as the latest release" attivo e pubblica.
+
+Cosa succede sul PC dell'utente
+- Vede versione e novita'; se sceglie "Download and install" il programma scarica l'installer, controlla che
+  l'impronta SHA-256 sia quella pubblicata da GitHub per quel file, lo avvia e si chiude.
+- Se l'impronta non coincide il file viene cancellato. Su Linux e Mac si apre solo la pagina della release.
+- Le release segnate come "pre-release" non vengono proposte (GitHub non le considera "latest").
