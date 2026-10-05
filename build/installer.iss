@@ -13,7 +13,7 @@ AppName=BAR Map Studio
 AppVersion={#AppVersion}
 AppVerName=BAR Map Studio {#AppDisplay}
 AppId={{7C1E2A9B-5D0E-4F5B-9B7A-0EC11A5E0001}
-AppPublisher=BAR Map Studio
+AppPublisher=Kr4Tosw3R
 DefaultDirName={autopf}\BARMapStudio
 DefaultGroupName=BAR Map Studio
 OutputDir={#OutDir}
@@ -26,11 +26,11 @@ Compression=lzma2
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-; Di norma si installa in "Program Files" (Windows chiede il permesso di amministratore). Li' la cartella del
-; programma e' protetta e il programma tiene i suoi dati in %APPDATA%\BARMapStudio.
-; Chi non ha i permessi puo' scegliere "solo per me": allora la cartella proposta e' quella dei programmi dell'utente.
+; All'avvio Windows chiede subito il permesso di amministratore: il programma va in "Program Files", dove la
+; cartella e' protetta, e tiene i suoi dati in %APPDATA%\BARMapStudio.
+; Solo da riga di comando (/CURRENTUSER) si puo' installare senza amministratore, nella cartella dell'utente.
 PrivilegesRequired=admin
-PrivilegesRequiredOverridesAllowed=dialog
+PrivilegesRequiredOverridesAllowed=commandline
 DisableProgramGroupPage=yes
 WizardStyle=modern
 
