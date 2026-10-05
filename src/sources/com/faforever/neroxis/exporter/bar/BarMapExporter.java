@@ -3142,146 +3142,153 @@ public final class BarMapExporter {
         return result;
     }
 
+    /** I quattro materiali di dettaglio della mappa: roccia, ghiaia, il suolo tipico del bioma e il fondale. */
     private GroundDetail.Material[] getSplatMaterials() {
         return new GroundDetail.Material[]{GroundDetail.Material.ROCK, GroundDetail.Material.GRAVEL, getGroundMaterial(), GroundDetail.Material.SEABED};
     }
 
+    /**
+     * Il materiale di dettaglio piu' adatto al suolo della mappa, deciso dal colore medio intorno alle basi:
+     * verde = erba, chiaro e neutro = neve, rossastro = polvere, altrimenti terra spaccata.
+     */
     private GroundDetail.Material getGroundMaterial() {
-        GroundDetail.Material result;
-        GroundDetail.Material cached = this.groundMaterial;
-        if (cached != null) {
-            return cached;
+        if (this.groundMaterial != null) {
+            return this.groundMaterial;
         }
-        float r = 0.0f;
-        float g = 0.0f;
-        float b = 0.0f;
+        float red = 0.0f;
+        float green = 0.0f;
+        float blue = 0.0f;
         int samples = 0;
         for (Spawn spawn : this.map.getSpawns()) {
-            float[] position = toElmos(spawn);
+            float[] base = toElmos(spawn);
+            // nove punti in un quadrato di 180 elmi intorno alla base
             for (int i = 0; i < 9; i++) {
-                int rgb = shade(position[0] + (((i % 3) - 1) * 90), position[1] + (((i / 3) - 1) * 90), List.of(), List.of());
-                r += (rgb >> 16) & 255;
-                g += (rgb >> 8) & 255;
-                b += rgb & 255;
+                int rgb = shade(base[0] + (i % 3 - 1) * 90, base[1] + (i / 3 - 1) * 90, List.of(), List.of());
+                red += (rgb >> 16) & 255;
+                green += (rgb >> 8) & 255;
+                blue += rgb & 255;
                 samples++;
             }
         }
+        float darkest = Math.min(red, Math.min(green, blue));
+        float brightest = Math.max(red, Math.max(green, blue));
+        GroundDetail.Material material;
         if (samples == 0) {
-            result = GroundDetail.Material.DUST;
-        } else if (g > r * 1.06f && g > b * 1.12f) {
-            result = GroundDetail.Material.GRASS;
-        } else if (Math.min(r, Math.min(g, b)) / samples > 150.0f && Math.max(r, Math.max(g, b)) < Math.min(r, Math.min(g, b)) * 1.25f) {
-            result = GroundDetail.Material.SNOW;
-        } else if (r > b * 1.3f) {
-            result = GroundDetail.Material.DUST;
+            material = GroundDetail.Material.DUST;
+        } else if (green > red * 1.06f && green > blue * 1.12f) {
+            material = GroundDetail.Material.GRASS;
+        } else if (darkest / samples > 150.0f && brightest < darkest * 1.25f) {
+            material = GroundDetail.Material.SNOW;
+        } else if (red > blue * 1.3f) {
+            material = GroundDetail.Material.DUST;
         } else {
-            result = GroundDetail.Material.CRACKED;
+            material = GroundDetail.Material.CRACKED;
         }
-        this.groundMaterial = result;
-        return result;
+        this.groundMaterial = material;
+        return material;
     }
 
+    /**
+     * La mappa che dice al gioco quale materiale di dettaglio usare in ogni punto, a un quarto della
+     * risoluzione della texture: rosso = roccia, verde = ghiaia, blu = suolo, trasparenza = sabbia e fondale.
+     */
     private byte[] buildSplatDistribution() {
         int width = this.mapX * 2;
         int height = this.mapY * 2;
-        float texelSize = 4.0f;
+        final float texel = 4.0f;
         int[] argb = new int[width * height];
-        IntStream.range(0, height).parallel().forEach(y -> {
-            float z = (y + 0.5f) * texelSize;
-            float[] weights = new float[4];
-            for (int px = 0; px < width; px++) {
-                float x = (px + 0.5f) * texelSize;
+        IntStream.range(0, height).parallel().forEach(row -> {
+            float z = (row + 0.5f) * texel;
+            float[] zones = new float[4];
+            for (int column = 0; column < width; column++) {
+                float x = (column + 0.5f) * texel;
                 if (this.zoneMaterials != null) {
-                    // zone 1..4 del pannello Texture = canali R, G, B, A
-                    this.zoneMaterials.weights(x / this.textureWidth, z / this.textureHeight, 0.0f, weights);
-                    argb[(y * width) + px] = (Math.round(weights[3] * 255.0f) << 24) | (Math.round(weights[0] * 255.0f) << 16) | (Math.round(weights[1] * 255.0f) << 8) | Math.round(weights[2] * 255.0f);
+                    // le zone 1..4 del pannello Texture vanno nei canali rosso, verde, blu, trasparenza
+                    this.zoneMaterials.weights(x / this.textureWidth, z / this.textureHeight, 0.0f, zones);
+                    argb[row * width + column] = (Math.round(zones[3] * 255.0f) << 24) | (Math.round(zones[0] * 255.0f) << 16)
+                        | (Math.round(zones[1] * 255.0f) << 8) | Math.round(zones[2] * 255.0f);
                     continue;
                 }
                 float slope = slopeAt(x, z);
-                float terrainHeight = heightAt(x, z);
+                float ground = heightAt(x, z);
                 float patches = earthPatches(x, z);
                 float rock = smoothStep(0.2f, VEHICLE_MAX_GRADIENT, slope);
-                float sand = Math.max(smoothStep(5.0f, -10.0f, terrainHeight + (patches * 3.0f)), beachAt(x, z, patches));
-                float gravel = Math.min(1.0f, smoothStep(0.06f, 0.2f, slope) + (smoothStep(0.1f, 0.32f, patches) * 0.7f));
+                float sand = Math.max(smoothStep(5.0f, -10.0f, ground + patches * 3.0f), beachAt(x, z, patches));
+                float gravel = Math.min(1.0f, smoothStep(0.06f, 0.2f, slope) + smoothStep(0.1f, 0.32f, patches) * 0.7f);
                 float rest = (1.0f - rock) * (1.0f - sand);
                 int red = Math.round(rock * 255.0f);
                 int green = Math.round(rest * gravel * 255.0f);
                 int blue = Math.round(rest * (1.0f - gravel) * 255.0f);
                 int alpha = Math.round((1.0f - rock) * sand * 255.0f);
-                argb[(y * width) + px] = (alpha << 24) | (red << 16) | (green << 8) | blue;
+                argb[row * width + column] = (alpha << 24) | (red << 16) | (green << 8) | blue;
             }
         });
         return TextureCodec.dxt5File(argb, width, height);
     }
 
+    /** Le posizioni che possono toccare la fascia di pixel tra {@code minZ} e {@code maxZ}. */
     private List<float[]> filterByRows(List<float[]> positions, float minZ, float maxZ, float radius) {
-        List<float[]> result = new ArrayList<>();
+        List<float[]> close = new ArrayList<>();
         for (float[] position : positions) {
             if (position[1] + radius >= minZ && position[1] - radius <= maxZ) {
-                result.add(position);
+                close.add(position);
             }
         }
-        return result;
+        return close;
     }
 
+    /** Tra le posizioni date, quelle entro {@code radius} dalla colonna {@code x}. */
     private static List<float[]> filterByColumn(List<float[]> positions, float x, float radius) {
-        if (positions.isEmpty()) {
-            return positions;
-        }
-        List<float[]> result = List.of();
+        List<float[]> close = new ArrayList<>();
         for (float[] position : positions) {
             if (Math.abs(position[0] - x) <= radius) {
-                if (result.isEmpty()) {
-                    result = new ArrayList();
-                }
-                result.add(position);
+                close.add(position);
             }
         }
-        return result;
+        return close;
     }
 
+    /**
+     * Scrive la texture del terreno come piastrelle da 32x32 pixel, ognuna compressa con i suoi quattro
+     * livelli di dettaglio (32, 16, 8, 4). Si lavora a blocchi di 64 righe di piastrelle per non tenere
+     * tutta la texture in memoria.
+     */
     private void writeTiles(OutputStream out) throws IOException {
-        int tilesX = this.textureWidth / 32;
-        int tilesY = this.textureHeight / 32;
-        SpringMapFile.writeTileFileHeader(out, tilesX * tilesY);
-        int tileSize = 32;
-        int i = 0;
-        while (true) {
-            int chunkStart = i;
-            if (chunkStart < tilesY) {
-                int end = Math.min(tilesY, chunkStart + 64);
-                List<byte[]> rows = IntStream.range(chunkStart, end).parallel().mapToObj(tileY -> {
-                    byte[] rowBytes = new byte[tilesX * 680];
-                    float minZ = tileY * tileSize;
-                    List<float[]> rowMexes = filterByRows(this.mexPositions, minZ, minZ + tileSize, WORN_GROUND_RADIUS);
-                    List<float[]> rowGeos = filterByRows(this.geoPositions, minZ, minZ + tileSize, GEO_MARK_RADIUS);
-                    int[] tile = new int[tileSize * tileSize];
-                    for (int tileX = 0; tileX < tilesX; tileX++) {
-                        float centerX = (tileX * tileSize) + (tileSize / 2.0f);
-                        List<float[]> tileMexes = filterByColumn(rowMexes, centerX, WORN_GROUND_RADIUS + tileSize);
-                        List<float[]> tileGeos = filterByColumn(rowGeos, centerX, GEO_MARK_RADIUS + tileSize);
-                        for (int y = 0; y < tileSize; y++) {
-                            for (int x = 0; x < tileSize; x++) {
-                                tile[(y * tileSize) + x] = shade((tileX * tileSize) + x + 0.5f, minZ + y + 0.5f, tileMexes, tileGeos);
-                            }
-                        }
-                        int offset = tileX * 680;
-                        int[] mip = tile;
-                        for (int size = tileSize; size >= 4; size /= 2) {
-                            offset += TextureCodec.compressDxt1(mip, size, size, rowBytes, offset);
-                            if (size > 4) {
-                                mip = TextureCodec.halve(mip, size, size);
-                            }
+        final int tile = SpringMapFile.TILE_SIZE;
+        final int tileBytes = SpringMapFile.TILE_BYTES;
+        int tilesAcross = this.textureWidth / tile;
+        int tilesDown = this.textureHeight / tile;
+        SpringMapFile.writeTileFileHeader(out, tilesAcross * tilesDown);
+        for (int first = 0; first < tilesDown; first += 64) {
+            int last = Math.min(tilesDown, first + 64);
+            List<byte[]> rows = IntStream.range(first, last).parallel().mapToObj(tileY -> {
+                byte[] rowBytes = new byte[tilesAcross * tileBytes];
+                float top = tileY * tile;
+                List<float[]> rowMexes = filterByRows(this.mexPositions, top, top + tile, WORN_GROUND_RADIUS);
+                List<float[]> rowGeos = filterByRows(this.geoPositions, top, top + tile, GEO_MARK_RADIUS);
+                int[] pixels = new int[tile * tile];
+                for (int tileX = 0; tileX < tilesAcross; tileX++) {
+                    float centreX = tileX * tile + tile / 2.0f;
+                    List<float[]> tileMexes = filterByColumn(rowMexes, centreX, WORN_GROUND_RADIUS + tile);
+                    List<float[]> tileGeos = filterByColumn(rowGeos, centreX, GEO_MARK_RADIUS + tile);
+                    for (int y = 0; y < tile; y++) {
+                        for (int x = 0; x < tile; x++) {
+                            pixels[y * tile + x] = shade(tileX * tile + x + 0.5f, top + y + 0.5f, tileMexes, tileGeos);
                         }
                     }
-                    return rowBytes;
-                }).toList();
-                for (byte[] row : rows) {
-                    out.write(row);
+                    int at = tileX * tileBytes;
+                    int[] level = pixels;
+                    for (int size = tile; size >= 4; size /= 2) {
+                        at += TextureCodec.compressDxt1(level, size, size, rowBytes, at);
+                        if (size > 4) {
+                            level = TextureCodec.halve(level, size, size);
+                        }
+                    }
                 }
-                i = chunkStart + 64;
-            } else {
-                return;
+                return rowBytes;
+            }).toList();
+            for (byte[] row : rows) {
+                out.write(row);
             }
         }
     }
