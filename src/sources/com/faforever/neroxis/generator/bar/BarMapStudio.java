@@ -593,7 +593,7 @@ public class BarMapStudio {
         // Left: Studio Branding
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 3));
         left.setOpaque(false);
-        JLabel brand = new JLabel(I18n.t("map.214") + "  \u00b7  " + AppPaths.VERSION.toUpperCase());
+        JLabel brand = new JLabel(I18n.t("map.214") + "  \u00b7  " + AppPaths.VERSION.toUpperCase() + "  ·  " + I18n.t("footer.by", "Kratoswer"));
         brand.setFont(fontCond(Font.BOLD, 10));
         brand.setForeground(new Color(100, 116, 139));
         left.add(brand);
