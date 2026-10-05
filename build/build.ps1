@@ -1,6 +1,6 @@
 # Costruisce il pacchetto di BAR Map Studio da distribuire.
 #
-#   powershell -ExecutionPolicy Bypass -File build\build.ps1 [-Version 1.1.0] [-NoObfuscate] [-FetchTools]
+#   powershell -ExecutionPolicy Bypass -File build\build.ps1 [-Version beta-0.1] [-NoObfuscate] [-FetchTools]
 #
 # Produce in dist\ :
 #   BARMapStudio\                    cartella del programma (portabile, Windows)
@@ -13,7 +13,7 @@
 # -FetchTools   scarica ProGuard con Maven in build\tools\proguard se manca
 
 param(
-    [string]$Version = "1.1.0",
+    [string]$Version = "beta-0.1",
     [switch]$NoObfuscate,
     [switch]$FetchTools
 )
@@ -127,7 +127,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $dist "app") | Out-Null
 Copy-Item -LiteralPath $finalJar -Destination (Join-Path $dist "app\launcher.jar")
 Copy-Item -LiteralPath (Join-Path $app "runtime") -Destination (Join-Path $dist "runtime") -Recurse
 Copy-Item -LiteralPath (Join-Path $app "default_objects") -Destination (Join-Path $dist "default_objects") -Recurse
-foreach ($file in @("bar-map-launcher.bat", "README-FIRST.txt", "LICENSE.txt", "donation.properties", "donation_qrcode.png")) {
+foreach ($file in @("bar-map-launcher.bat", "README-FIRST.txt", "LICENSE.txt", "donation.properties", "donation_qrcode.png", "feedback.properties")) {
     Copy-Item -LiteralPath (Join-Path $app $file) -Destination (Join-Path $dist $file)
 }
 Copy-Item -LiteralPath (Join-Path $root "ico\BMS.ico") -Destination (Join-Path $dist "BMS.ico")
@@ -143,7 +143,7 @@ Step "Pacchetto Linux e macOS (.tar.gz, non provato)"
 New-Item -ItemType Directory -Force -Path (Join-Path $unix "app") | Out-Null
 Copy-Item -LiteralPath $finalJar -Destination (Join-Path $unix "app\launcher.jar")
 Copy-Item -LiteralPath (Join-Path $app "default_objects") -Destination (Join-Path $unix "default_objects") -Recurse
-foreach ($file in @("README-FIRST.txt", "LICENSE.txt", "donation.properties", "donation_qrcode.png")) {
+foreach ($file in @("README-FIRST.txt", "LICENSE.txt", "donation.properties", "donation_qrcode.png", "feedback.properties")) {
     Copy-Item -LiteralPath (Join-Path $app $file) -Destination (Join-Path $unix $file)
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "bar-map-studio.sh") -Destination (Join-Path $unix "bar-map-studio.sh")
@@ -165,7 +165,7 @@ foreach ($candidate in $isccCandidates) {
     if ($candidate -and (Test-Path -LiteralPath $candidate)) { $iscc = $candidate; break }
 }
 if ($iscc) {
-    & $iscc "/Q" "/DAppVersion=$Version" "/DDistDir=$dist" "/DOutDir=$distRoot" ("/DIconFile=" + (Join-Path $root "ico\BMS.ico")) (Join-Path $PSScriptRoot "installer.iss")
+    & $iscc "/Q" "/DAppVersion=$Version" ("/DAppDisplay=" + $Version.Replace("-", " ")) "/DDistDir=$dist" "/DOutDir=$distRoot" ("/DIconFile=" + (Join-Path $root "ico\BMS.ico")) (Join-Path $PSScriptRoot "installer.iss")
     if ($LASTEXITCODE -ne 0) { throw "Inno Setup e' terminato con errore $LASTEXITCODE." }
 } else {
     Write-Host "Inno Setup non trovato: installer saltato (il pacchetto .zip e' pronto)." -ForegroundColor Yellow

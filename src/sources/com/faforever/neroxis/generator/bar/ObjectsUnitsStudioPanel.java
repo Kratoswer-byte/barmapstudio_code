@@ -75,6 +75,8 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
     private JToggleButton scriptTabBtn;
     private JToggleButton defTabBtn;
     private JButton componentsBtn;
+    /** Riga sotto le schede dell'editor: dice in breve a cosa serve quella aperta. */
+    private final JLabel editorHint = new JLabel();
     private final JButton deleteBtn = new JButton(I18n.t("objdel.button"));
     private final JCheckBox useScriptBox = new JCheckBox(I18n.t("objscript.use"));
     /** true mentre l'editor Lua viene riempito dal programma: quelle modifiche non sono dell'utente. */
@@ -753,11 +755,19 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         editorTabBar.setOpaque(false);
         editorTabBar.add(scriptTabBtn);
         editorTabBar.add(defTabBtn);
+        JButton editorHelpBtn = createLuaToolBtn("?", I18n.t("objhelp.button.tip"), e -> showEditorHelp());
+        editorHelpBtn.setForeground(BarMapStudio.ACCENT_CYAN);
+        editorTabBar.add(editorHelpBtn);
 
         JPanel luaHeader = new JPanel(new BorderLayout());
         luaHeader.setOpaque(false);
         luaHeader.add(editorTabBar, BorderLayout.WEST);
         luaHeader.add(luaToolBar, BorderLayout.EAST);
+        editorHint.setFont(BarMapStudio.font(Font.PLAIN, 11));
+        editorHint.setForeground(new Color(140, 155, 180));
+        editorHint.setBorder(BorderFactory.createEmptyBorder(4, 4, 0, 0));
+        editorHint.setText(I18n.t("objhint.script"));
+        luaHeader.add(editorHint, BorderLayout.SOUTH);
         luaPanel.add(luaHeader, BorderLayout.NORTH);
 
         // Area di testo con font Monospaced dark-tech
@@ -1123,6 +1133,46 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         }
     }
 
+    /** Finestra che spiega la differenza tra le due schede dell'editor, con un esempio per ciascuna. */
+    private void showEditorHelp() {
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), I18n.t("objhelp.title"), java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+        JPanel root = new JPanel();
+        root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
+        root.setBorder(BorderFactory.createEmptyBorder(18, 22, 16, 22));
+        String[][] parts = {
+            {null, "objhelp.intro"},
+            {"objhelp.b.title", "objhelp.b.text"},
+            {"objhelp.d.title", "objhelp.d.text"},
+            {"objhelp.rule.title", "objhelp.rule.text"},
+        };
+        Color[] colours = {null, BarMapStudio.ACCENT_CYAN, BarMapStudio.ACCENT_AMBER, new Color(0, 255, 136)};
+        for (int i = 0; i < parts.length; i++) {
+            if (parts[i][0] != null) {
+                JLabel heading = new JLabel(I18n.t(parts[i][0]));
+                heading.setFont(BarMapStudio.fontCond(Font.BOLD, 14));
+                heading.setForeground(colours[i]);
+                heading.setAlignmentX(0f);
+                root.add(Box.createVerticalStrut(12));
+                root.add(heading);
+                root.add(Box.createVerticalStrut(4));
+            }
+            JLabel text = new JLabel("<html><div style='width:520px'>" + I18n.t(parts[i][1]) + "</div></html>");
+            text.setFont(BarMapStudio.font(Font.PLAIN, 12));
+            text.setAlignmentX(0f);
+            root.add(text);
+        }
+        root.add(Box.createVerticalStrut(14));
+        JButton close = new JButton(I18n.t("objhelp.close"));
+        close.setAlignmentX(0f);
+        close.addActionListener(e -> dialog.dispose());
+        root.add(close);
+        dialog.setContentPane(root);
+        dialog.getRootPane().setDefaultButton(close);
+        dialog.pack();
+        dialog.setLocationRelativeTo(SwingUtilities.getWindowAncestor(this));
+        dialog.setVisible(true);
+    }
+
     private void switchEditor(boolean toDefinition) {
         if (editingDef == toDefinition) return;
         commitEditor();
@@ -1130,6 +1180,7 @@ public final class ObjectsUnitsStudioPanel extends JPanel {
         if (componentsBtn != null) {
             componentsBtn.setVisible(toDefinition);
         }
+        editorHint.setText(I18n.t(toDefinition ? "objhint.def" : "objhint.script"));
         loadEditor();
         if (selectedEntity != null) {
             refreshScriptHint(selectedEntity);

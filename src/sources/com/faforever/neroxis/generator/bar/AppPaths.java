@@ -18,6 +18,9 @@ import java.nio.file.Path;
 public final class AppPaths {
     private AppPaths() {}
 
+    /** Versione mostrata nel programma e nelle segnalazioni. Il pacchetto usa lo stesso nome (build.ps1). */
+    public static final String VERSION = "beta 0.1";
+
     private static volatile Path barData;
 
     /** Cartella in cui il programma puo' scrivere (impostazioni, cache, registri). */

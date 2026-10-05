@@ -593,7 +593,7 @@ public class BarMapStudio {
         // Left: Studio Branding
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 3));
         left.setOpaque(false);
-        JLabel brand = new JLabel(I18n.t("map.214"));
+        JLabel brand = new JLabel(I18n.t("map.214") + "  \u00b7  " + AppPaths.VERSION.toUpperCase());
         brand.setFont(fontCond(Font.BOLD, 10));
         brand.setForeground(new Color(100, 116, 139));
         left.add(brand);
@@ -609,11 +609,45 @@ public class BarMapStudio {
 
         right.add(barBtn);
         right.add(specsBtn);
+        right.add(createFeedbackOverlayButton(frame));
         right.add(helpBtn);
         right.add(createSettingsOverlayButton());
         footer.add(right, BorderLayout.EAST);
 
         return footer;
+    }
+
+    /** Pulsante del piede che apre la finestra per segnalare errori e proporre miglioramenti. */
+    private static JButton createFeedbackOverlayButton(JFrame frame) {
+        String label = I18n.t("fb.button");
+        JButton btn = new JButton() {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g = (Graphics2D) graphics.create();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                int w = getWidth();
+                int h = getHeight();
+                boolean hover = getModel().isRollover();
+                g.setColor(hover ? new Color(255, 159, 28, 40) : BG_CARD);
+                g.fillRoundRect(0, 0, w, h, 8, 8);
+                g.setColor(hover ? ACCENT_AMBER : BORDER_COLOR);
+                g.drawRoundRect(0, 0, w - 1, h - 1, 8, 8);
+                g.setFont(fontCond(Font.BOLD, 11));
+                g.setColor(ACCENT_AMBER);
+                FontMetrics fm = g.getFontMetrics();
+                g.drawString(label, (w - fm.stringWidth(label)) / 2, (h + fm.getAscent()) / 2 - 2);
+                g.dispose();
+            }
+        };
+        btn.setPreferredSize(new Dimension(btn.getFontMetrics(fontCond(Font.BOLD, 11)).stringWidth(label) + 20, 20));
+        btn.setToolTipText(I18n.t("fb.button.tip"));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> FeedbackDialog.open(frame));
+        return btn;
     }
 
     private static JButton createBarStatusOverlayButton(BarLauncher launcher, JLabel barStatus) {

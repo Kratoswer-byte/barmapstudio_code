@@ -2,13 +2,16 @@
 ;   /DAppVersion=1.1.0  /DDistDir=<cartella dist\BARMapStudio>  /DOutDir=<cartella di uscita>  /DIconFile=<BMS.ico>
 
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "beta-0.1"
+#endif
+#ifndef AppDisplay
+  #define AppDisplay AppVersion
 #endif
 
 [Setup]
 AppName=BAR Map Studio
 AppVersion={#AppVersion}
-AppVerName=BAR Map Studio {#AppVersion}
+AppVerName=BAR Map Studio {#AppDisplay}
 AppId={{7C1E2A9B-5D0E-4F5B-9B7A-0EC11A5E0001}
 AppPublisher=BAR Map Studio
 DefaultDirName={localappdata}\Programs\BARMapStudio
@@ -17,7 +20,7 @@ OutputDir={#OutDir}
 OutputBaseFilename=BARMapStudioSetup-{#AppVersion}
 SetupIconFile={#IconFile}
 UninstallDisplayIcon={app}\BMS.ico
-UninstallDisplayName=BAR Map Studio
+UninstallDisplayName=BAR Map Studio {#AppDisplay}
 LicenseFile={#DistDir}\LICENSE.txt
 Compression=lzma2
 SolidCompression=yes
