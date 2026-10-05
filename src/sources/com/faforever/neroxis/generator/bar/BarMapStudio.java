@@ -507,7 +507,7 @@ public class BarMapStudio {
         right.add(specsBtn);
         right.add(createFeedbackOverlayButton(frame));
         right.add(helpBtn);
-        right.add(createSettingsOverlayButton());
+        right.add(createSettingsOverlayButton(shell));
         footer.add(right, BorderLayout.EAST);
 
         return footer;
@@ -755,7 +755,7 @@ public class BarMapStudio {
     }
 
     /** Icona impostazioni (ingranaggio disegnato in Java2D): per ora contiene la scelta della lingua. */
-    private static JButton createSettingsOverlayButton() {
+    private static JButton createSettingsOverlayButton(StudioShell shell) {
         JButton btn = new JButton() {
             @Override
             protected void paintComponent(Graphics graphics) {
@@ -837,6 +837,18 @@ public class BarMapStudio {
                 });
                 scaleGroup.add(item);
                 popup.add(item);
+            }
+            if (shell != null) {
+                popup.addSeparator();
+                JMenuItem barHeader = new JMenuItem(I18n.t("settings.bar"));
+                barHeader.setEnabled(false);
+                popup.add(barHeader);
+                JMenuItem barPath = new JMenuItem(shell.barFound() ? String.valueOf(shell.barData()) : I18n.t("settings.bar.none"));
+                barPath.setEnabled(false);
+                popup.add(barPath);
+                JMenuItem barChoose = new JMenuItem(I18n.t("shell.bar.choose"));
+                barChoose.addActionListener(ev -> shell.chooseBarFolder(SwingUtilities.getWindowAncestor(btn)));
+                popup.add(barChoose);
             }
             popup.show(btn, 0, -popup.getPreferredSize().height);
         });
