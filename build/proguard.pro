@@ -23,9 +23,9 @@
 # tutto cio' che non e' lo Studio resta com'e'
 -keep class !com.faforever.neroxis.generator.bar.**,!com.faforever.neroxis.exporter.bar.**,com.faforever.neroxis.** { *; }
 
-# punti di ingresso
+# punto di ingresso (la classe di avvio ereditata viene rinominata come le altre: restano solo i membri
+# che lo Studio raggiunge per nome, elencati sotto)
 -keep class com.faforever.neroxis.generator.bar.BarMapStudio { public static void main(java.lang.String[]); }
--keep class com.faforever.neroxis.generator.bar.BarLauncher { public static void main(java.lang.String[]); }
 
 # membri che lo Studio raggiunge per nome (riflessione su BarLauncher e sul pannello delle unita')
 -keepclassmembers class com.faforever.neroxis.generator.bar.BarLauncher {

@@ -24,6 +24,8 @@ REPLACEMENTS = [
     (b"Eclipse.lnk", b"BARMapStudio-old.lnk"),
     (b"Eclipse", b"BARMapStudio"),
     (b"eclipse", b"general"),
+    # nome di un vecchio collegamento sul desktop: il nuovo valore non coincide con nessun collegamento reale
+    (b"Neroxis Launcher", b"BMS Old Shortcut"),
 ]
 # solo il codice del programma: le librerie (ICU, Jackson...) citano Eclipse per altri motivi
 PREFIX = "com/faforever/neroxis/"
