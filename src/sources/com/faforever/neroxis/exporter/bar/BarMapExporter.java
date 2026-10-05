@@ -2381,6 +2381,10 @@ public final class BarMapExporter {
         return h ^ (h >>> 12);
     }
 
+    /**
+     * Quanto ogni strato di texture dell'editor copre ogni punto, da 0 a 1. Le due immagini portano quattro
+     * strati ciascuna, uno per canale; nel canale 0 vuol dire assente e da 128 a 255 la copertura crescente.
+     */
     private static float[][] readLayerWeights(BufferedImage low, BufferedImage high) {
         int width = low.getWidth();
         int height = low.getHeight();
@@ -2389,239 +2393,222 @@ public final class BarMapExporter {
         }
         float[][] weights = new float[8][width * height];
         int[] pixel = new int[4];
-        int image = 0;
-        while (image < 2) {
-            WritableRaster raster = (image == 0 ? low : high).getRaster();
+        BufferedImage[] masks = {low, high};
+        for (int mask = 0; mask < 2; mask++) {
+            WritableRaster raster = masks[mask].getRaster();
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
                     raster.getPixel(x, y, pixel);
-                    for (int band = 0; band < 4; band++) {
-                        int raw = pixel[band];
-                        weights[(image * 4) + band][(y * width) + x] = raw > 0 ? Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, (raw - 128) / 127.0f) : SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT;
+                    for (int channel = 0; channel < 4; channel++) {
+                        int raw = pixel[channel];
+                        weights[mask * 4 + channel][y * width + x] = raw > 0 ? Math.max(0.0f, (raw - 128) / 127.0f) : 0.0f;
                     }
                 }
             }
-            image++;
         }
         return weights;
     }
 
+    /**
+     * Il colore di ogni strato di texture del bioma (quello di fondo piu' gli otto delle maschere), gia'
+     * schiarito o scurito secondo la luce del bioma. Null per gli strati che il bioma non usa.
+     */
     private float[][] readLayerColors() {
         List<String> previewColors = this.map.getBiome().terrainMaterials().previewColors();
         List<TerrainMaterials.TextureScale> textures = this.map.getBiome().terrainMaterials().textures();
-        Vector3 sunColor = this.map.getBiome().lightingSettings().sunColor();
-        Vector3 ambience = this.map.getBiome().lightingSettings().sunAmbience();
+        Vector3 sun = this.map.getBiome().lightingSettings().sunColor();
+        Vector3 ambient = this.map.getBiome().lightingSettings().sunAmbience();
         float multiplier = this.map.getBiome().lightingSettings().lightingMultiplier();
-        float neutralGain = (((((sunColor.x() + sunColor.y()) + sunColor.z()) / 3.0f) * 0.85f) + (((ambience.x() + ambience.y()) + ambience.z()) / 3.0f)) * multiplier;
-        float[] gain = {neutralGain, neutralGain, neutralGain};
+        float light = ((sun.x() + sun.y() + sun.z()) / 3.0f * 0.85f + (ambient.x() + ambient.y() + ambient.z()) / 3.0f) * multiplier;
         float[][] colors = new float[9][];
-        int i = 0;
-        while (i < 9) {
-            String hex = i < previewColors.size() ? previewColors.get(i) : "";
-            boolean used = (i >= textures.size() || textures.get(i).path().isBlank() || hex.isBlank()) ? false : true;
-            if (used) {
-                int rgb = Integer.parseInt(hex, 16);
-                float[] color = new float[3];
-                color[0] = (((rgb >> 16) & 255) / 255.0f) * gain[0];
-                color[1] = (((rgb >> 8) & 255) / 255.0f) * gain[1];
-                color[2] = ((rgb & 255) / 255.0f) * gain[2];
-                float brightest = Math.max(color[0], Math.max(color[1], color[2]));
-                if (brightest > 0.92f) {
-                    for (int c = 0; c < 3; c++) {
-                        int i2 = c;
-                        color[i2] = color[i2] * (0.92f / brightest);
-                    }
-                }
-                colors[i] = color;
+        for (int layer = 0; layer < 9; layer++) {
+            String hex = layer < previewColors.size() ? previewColors.get(layer) : "";
+            boolean used = layer < textures.size() && !textures.get(layer).path().isBlank() && !hex.isBlank();
+            if (!used) {
+                continue;
             }
-            i++;
+            int rgb = Integer.parseInt(hex, 16);
+            float[] color = {((rgb >> 16) & 255) / 255.0f * light, ((rgb >> 8) & 255) / 255.0f * light, (rgb & 255) / 255.0f * light};
+            // niente colori bruciati: il canale piu' forte non supera 0,92
+            float brightest = Math.max(color[0], Math.max(color[1], color[2]));
+            if (brightest > 0.92f) {
+                for (int c = 0; c < 3; c++) {
+                    color[c] *= 0.92f / brightest;
+                }
+            }
+            colors[layer] = color;
         }
         return colors;
     }
 
+    /** Un riquadro 512x512 di rumore ripetibile, a media zero e con dispersione fissa, usato per variare i colori. */
     private static float[] createNoise() {
-        float[] result = new float[262144];
+        float[] values = new float[512 * 512];
         IntStream.range(0, 512).parallel().forEach(y -> {
             for (int x = 0; x < 512; x++) {
-                result[(y * 512) + x] = GroundDetail.tileableNoise((x + 0.5f) / 512.0f, (y + 0.5f) / 512.0f, 6, 6, 0.6f, 7919);
+                values[y * 512 + x] = GroundDetail.tileableNoise((x + 0.5f) / 512.0f, (y + 0.5f) / 512.0f, 6, 6, 0.6f, 7919);
             }
         });
-        double mean = 0.0d;
-        for (float f : result) {
-            mean += (double) f;
+        double sum = 0.0d;
+        for (float value : values) {
+            sum += value;
         }
-        double mean2 = mean / ((double) result.length);
+        double mean = sum / values.length;
         double variance = 0.0d;
-        for (float value : result) {
-            variance += (((double) value) - mean2) * (((double) value) - mean2);
+        for (float value : values) {
+            variance += (value - mean) * (value - mean);
         }
-        float scale = NOISE_DEVIATION / ((float) StrictMath.sqrt(variance / ((double) result.length)));
-        for (int i = 0; i < result.length; i++) {
-            result[i] = Math.max(-1.0f, Math.min(1.0f, ((float) (((double) result[i]) - mean2)) * scale));
+        float scale = NOISE_DEVIATION / (float) StrictMath.sqrt(variance / values.length);
+        for (int i = 0; i < values.length; i++) {
+            values[i] = Math.max(-1.0f, Math.min(1.0f, (float) (values[i] - mean) * scale));
         }
         if (System.getProperty("neroxis.bar.debug") != null) {
-            System.out.printf(Locale.ROOT, "noise deviation before rescale %.3f%n", Float.valueOf(NOISE_DEVIATION / scale));
+            System.out.printf(Locale.ROOT, "noise deviation before rescale %.3f%n", NOISE_DEVIATION / scale);
         }
-        return result;
-    }
-
-    private static void addValueNoise(float[] target, int cells, float amplitude, int seed) {
-        float[] lattice = new float[cells * cells];
-        for (int i = 0; i < lattice.length; i++) {
-            int h = (i + seed) * (-1640531535);
-            int h2 = (h ^ (h >>> 16)) * (-2048144789);
-            lattice[i] = ((h2 ^ (h2 >>> 13)) & 65535) / 65535.0f;
-        }
-        float scale = cells / 512.0f;
-        for (int y = 0; y < 512; y++) {
-            float fy = y * scale;
-            int y0 = (int) fy;
-            float ty = smooth(fy - y0);
-            int y1 = (y0 + 1) % cells;
-            for (int x = 0; x < 512; x++) {
-                float fx = x * scale;
-                int x0 = (int) fx;
-                float tx = smooth(fx - x0);
-                int x1 = (x0 + 1) % cells;
-                float top = (lattice[(y0 * cells) + x0] * (1.0f - tx)) + (lattice[(y0 * cells) + x1] * tx);
-                float bottom = (lattice[(y1 * cells) + x0] * (1.0f - tx)) + (lattice[(y1 * cells) + x1] * tx);
-                int i2 = (y * 512) + x;
-                target[i2] = target[i2] + (((top * (1.0f - ty)) + (bottom * ty)) * amplitude);
-            }
-        }
+        return values;
     }
 
     private static float smooth(float t) {
-        return t * t * (3.0f - (2.0f * t));
+        return t * t * (3.0f - 2.0f * t);
     }
 
+    /** Chiazze di terra nuda: due letture del rumore a scale e direzioni diverse. */
     private float earthPatches(float x, float z) {
-        return (noiseAt((((x * 0.788f) + (z * 0.616f)) * 0.031f) + 77.0f, (((z * 0.788f) - (x * 0.616f)) * 0.031f) + 5.0f) * 0.7f) + (noiseAt((((x * 0.342f) - (z * 0.94f)) * 0.1f) + 19.0f, (((x * 0.94f) + (z * 0.342f)) * 0.1f) + 233.0f) * 0.45f);
+        float broad = noiseAt((x * 0.788f + z * 0.616f) * 0.031f + 77.0f, (z * 0.788f - x * 0.616f) * 0.031f + 5.0f);
+        float fine = noiseAt((x * 0.342f - z * 0.94f) * 0.1f + 19.0f, (x * 0.94f + z * 0.342f) * 0.1f + 233.0f);
+        return broad * 0.7f + fine * 0.45f;
     }
 
+    /** Il rumore in un punto qualsiasi: il riquadro si ripete all'infinito e si interpola tra i quattro valori vicini. */
     private float noiseAt(float x, float y) {
-        float fx = x - (((float) Math.floor(x / 512.0f)) * 512.0f);
-        float fy = y - (((float) Math.floor(y / 512.0f)) * 512.0f);
-        int x0 = ((int) fx) & 511;
-        int y0 = ((int) fy) & 511;
+        float wrappedX = x - (float) Math.floor(x / 512.0f) * 512.0f;
+        float wrappedY = y - (float) Math.floor(y / 512.0f) * 512.0f;
+        int x0 = (int) wrappedX & 511;
+        int y0 = (int) wrappedY & 511;
         int x1 = (x0 + 1) & 511;
         int y1 = (y0 + 1) & 511;
-        float tx = fx - ((int) fx);
-        float ty = fy - ((int) fy);
-        float top = (this.noise[(y0 * 512) + x0] * (1.0f - tx)) + (this.noise[(y0 * 512) + x1] * tx);
-        float bottom = (this.noise[(y1 * 512) + x0] * (1.0f - tx)) + (this.noise[(y1 * 512) + x1] * tx);
-        return (top * (1.0f - ty)) + (bottom * ty);
+        float fractionX = wrappedX - (int) wrappedX;
+        float fractionY = wrappedY - (int) wrappedY;
+        float top = this.noise[y0 * 512 + x0] * (1.0f - fractionX) + this.noise[y0 * 512 + x1] * fractionX;
+        float bottom = this.noise[y1 * 512 + x0] * (1.0f - fractionX) + this.noise[y1 * 512 + x1] * fractionX;
+        return top * (1.0f - fractionY) + bottom * fractionY;
     }
 
+    /** Pendenza del terreno gia' ammorbidito in un punto della griglia, misurata su quattro celle. */
+    private float broadSlope(float[] blurred, int x, int z) {
+        int row = this.mapX + 1;
+        int x0 = Math.max(0, x - 2);
+        int x1 = Math.min(this.mapX, x + 2);
+        int z0 = Math.max(0, z - 2);
+        int z1 = Math.min(this.mapY, z + 2);
+        float dx = (blurred[z * row + x1] - blurred[z * row + x0]) / ((x1 - x0) * 8);
+        float dz = (blurred[z1 * row + x] - blurred[z0 * row + x]) / ((z1 - z0) * 8);
+        return (float) StrictMath.sqrt(dx * dx + dz * dz);
+    }
+
+    /**
+     * Rende le scarpate piu' nette: dove il terreno e' ripido, ogni punto viene spinto verso il piede o verso
+     * la cima della scarpata, cosi' il pendio si concentra in una parete invece di una rampa.
+     */
     private void sharpenCliffs() {
         int row = this.mapX + 1;
         int rows = this.mapY + 1;
         float[] blurred = boxBlur(this.heights, row, rows, 2);
-        float[] highest = extremeFilter(this.heights, row, rows, 3, true);
-        float[] lowest = extremeFilter(this.heights, row, rows, 3, false);
-        float[] result = new float[this.heights.length];
+        float[] top = extremeFilter(this.heights, row, rows, 3, true);
+        float[] foot = extremeFilter(this.heights, row, rows, 3, false);
+        float[] sharpened = new float[this.heights.length];
         IntStream.range(0, rows).parallel().forEach(z -> {
             for (int x = 0; x < row; x++) {
-                int x0 = Math.max(0, x - 2);
-                int x1 = Math.min(this.mapX, x + 2);
-                int z0 = Math.max(0, z - 2);
-                int z1 = Math.min(this.mapY, z + 2);
-                float dx = (blurred[(z * row) + x1] - blurred[(z * row) + x0]) / ((x1 - x0) * 8);
-                float dz = (blurred[(z1 * row) + x] - blurred[(z0 * row) + x]) / ((z1 - z0) * 8);
-                float steep = smoothStep(0.55f, 0.95f, (float) StrictMath.sqrt((dx * dx) + (dz * dz)));
-                int i = (z * row) + x;
+                float steep = smoothStep(0.55f, 0.95f, broadSlope(blurred, x, z));
+                int i = z * row + x;
                 float height = this.heights[i];
-                if (steep <= SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT || highest[i] - lowest[i] < 12.0f) {
-                    result[i] = height;
-                } else {
-                    float position = (height - lowest[i]) / (highest[i] - lowest[i]);
-                    float curved = position * position * (3.0f - (2.0f * position));
-                    float target = lowest[i] + ((highest[i] - lowest[i]) * curved * curved * (3.0f - (2.0f * curved)));
-                    result[i] = height + ((target - height) * steep * 0.75f);
+                if (steep <= 0.0f || top[i] - foot[i] < 12.0f) {
+                    sharpened[i] = height;
+                    continue;
                 }
+                float position = (height - foot[i]) / (top[i] - foot[i]);
+                float curved = position * position * (3.0f - 2.0f * position);
+                float target = foot[i] + (top[i] - foot[i]) * curved * curved * (3.0f - 2.0f * curved);
+                sharpened[i] = height + (target - height) * steep * 0.75f;
             }
         });
-        float[] smoothed = boxBlur(result, row, rows, 1);
+        float[] softened = boxBlur(sharpened, row, rows, 1);
         for (int i = 0; i < this.heights.length; i++) {
-            this.heights[i] = (result[i] * 0.5f) + (smoothed[i] * 0.5f);
+            this.heights[i] = sharpened[i] * 0.5f + softened[i] * 0.5f;
         }
     }
 
+    /** Aggiunge creste e canaloni sulle pareti ripide, perche' non sembrino lisce. */
     private void addRidges() {
         int row = this.mapX + 1;
         float[] blurred = boxBlur(this.heights, row, this.mapY + 1, 2);
-        float[] result = new float[this.heights.length];
+        float[] ridged = new float[this.heights.length];
         IntStream.rangeClosed(0, this.mapY).parallel().forEach(z -> {
             for (int x = 0; x <= this.mapX; x++) {
-                int x0 = Math.max(0, x - 2);
-                int x1 = Math.min(this.mapX, x + 2);
-                int z0 = Math.max(0, z - 2);
-                int z1 = Math.min(this.mapY, z + 2);
-                float dx = (blurred[(z * row) + x1] - blurred[(z * row) + x0]) / ((x1 - x0) * 8);
-                float dz = (blurred[(z1 * row) + x] - blurred[(z0 * row) + x]) / ((z1 - z0) * 8);
-                float steep = smoothStep(0.5f, 0.9f, (float) StrictMath.sqrt((dx * dx) + (dz * dz)));
-                int i = (z * row) + x;
-                if (steep <= SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT) {
-                    result[i] = this.heights[i];
-                } else {
-                    float wx = x * 8;
-                    float wz = z * 8;
-                    float ridge = 1.0f - (Math.abs(smoothNoise(wx, wz, 110.0f, 0.788f, 0.616f, 9)) * 2.2f);
-                    float fineRidge = 1.0f - (Math.abs(smoothNoise(wx, wz, 46.0f, 0.454f, -0.891f, 37)) * 2.2f);
-                    float ridge2 = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, ridge);
-                    float fineRidge2 = Math.max(SetonishLastTerrainGenerator.WATER_LAYER_MIN_HEIGHT, fineRidge);
-                    result[i] = this.heights[i] + (((((ridge2 * ridge2) - 0.45f) * 14.0f) + (((fineRidge2 * fineRidge2) - 0.45f) * 5.0f)) * steep);
+                float steep = smoothStep(0.5f, 0.9f, broadSlope(blurred, x, z));
+                int i = z * row + x;
+                if (steep <= 0.0f) {
+                    ridged[i] = this.heights[i];
+                    continue;
                 }
+                float worldX = x * 8;
+                float worldZ = z * 8;
+                float large = Math.max(0.0f, 1.0f - Math.abs(smoothNoise(worldX, worldZ, 110.0f, 0.788f, 0.616f, 9)) * 2.2f);
+                float small = Math.max(0.0f, 1.0f - Math.abs(smoothNoise(worldX, worldZ, 46.0f, 0.454f, -0.891f, 37)) * 2.2f);
+                ridged[i] = this.heights[i] + ((large * large - 0.45f) * 14.0f + (small * small - 0.45f) * 5.0f) * steep;
             }
         });
-        System.arraycopy(result, 0, this.heights, 0, this.heights.length);
+        System.arraycopy(ridged, 0, this.heights, 0, this.heights.length);
     }
 
+    /** Per ogni punto, il valore piu' alto (o piu' basso) nel quadrato di lato 2*radius+1 intorno. */
     private static float[] extremeFilter(float[] values, int width, int height, int radius, boolean maximum) {
-        float[] horizontal = new float[values.length];
+        float[] rows = new float[values.length];
         float[] result = new float[values.length];
         IntStream.range(0, height).parallel().forEach(y -> {
             for (int x = 0; x < width; x++) {
-                float extreme = values[(y * width) + x];
+                float extreme = values[y * width + x];
                 for (int d = -radius; d <= radius; d++) {
-                    float value = values[(y * width) + Math.max(0, Math.min(width - 1, x + d))];
+                    float value = values[y * width + clamp(x + d, width)];
                     extreme = maximum ? Math.max(extreme, value) : Math.min(extreme, value);
                 }
-                horizontal[(y * width) + x] = extreme;
+                rows[y * width + x] = extreme;
             }
         });
-        IntStream.range(0, height).parallel().forEach(y2 -> {
+        IntStream.range(0, height).parallel().forEach(y -> {
             for (int x = 0; x < width; x++) {
-                float extreme = horizontal[(y2 * width) + x];
+                float extreme = rows[y * width + x];
                 for (int d = -radius; d <= radius; d++) {
-                    float value = horizontal[(Math.max(0, Math.min(height - 1, y2 + d)) * width) + x];
+                    float value = rows[clamp(y + d, height) * width + x];
                     extreme = maximum ? Math.max(extreme, value) : Math.min(extreme, value);
                 }
-                result[(y2 * width) + x] = extreme;
+                result[y * width + x] = extreme;
             }
         });
         return result;
     }
 
+    /** Media nel quadrato di lato 2*radius+1 intorno a ogni punto (i bordi ripetono l'ultimo valore). */
     private static float[] boxBlur(float[] values, int width, int height, int radius) {
-        float[] horizontal = new float[values.length];
+        float[] rows = new float[values.length];
         float[] result = new float[values.length];
+        int window = radius * 2 + 1;
         IntStream.range(0, height).parallel().forEach(y -> {
             for (int x = 0; x < width; x++) {
                 float sum = 0.0f;
                 for (int d = -radius; d <= radius; d++) {
-                    sum += values[(y * width) + Math.max(0, Math.min(width - 1, x + d))];
+                    sum += values[y * width + clamp(x + d, width)];
                 }
-                horizontal[(y * width) + x] = sum / ((radius * 2) + 1);
+                rows[y * width + x] = sum / window;
             }
         });
-        IntStream.range(0, height).parallel().forEach(y2 -> {
+        IntStream.range(0, height).parallel().forEach(y -> {
             for (int x = 0; x < width; x++) {
                 float sum = 0.0f;
                 for (int d = -radius; d <= radius; d++) {
-                    sum += horizontal[(Math.max(0, Math.min(height - 1, y2 + d)) * width) + x];
+                    sum += rows[clamp(y + d, height) * width + x];
                 }
-                result[(y2 * width) + x] = sum / ((radius * 2) + 1);
+                result[y * width + x] = sum / window;
             }
         });
         return result;
