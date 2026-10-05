@@ -34,16 +34,17 @@ import javax.swing.border.EmptyBorder;
 
 /**
  * Finestra per segnalare un errore o proporre un miglioramento. Il programma non invia nulla da solo:
- * prepara il testo (con i dettagli tecnici, se l'utente vuole, e sempre visibili prima dell'invio) e lo
- * passa al programma di posta o alla pagina indicati in {@code feedback.properties}, oppure lo copia.
+ * prepara il testo (con i dettagli tecnici, se l'utente vuole, e sempre visibili prima dell'invio) e, quando
+ * l'utente preme Invia, lo spedisce al servizio di moduli indicato in {@code feedback.properties}.
+ *
+ * <p>L'indirizzo di posta dell'autore non sta nel programma: lo conosce solo il servizio di moduli, che
+ * inoltra il messaggio. Nel programma c'e' soltanto l'indirizzo del modulo.</p>
  */
 final class FeedbackDialog extends JDialog {
     private static final Color ACCENT_CYAN = new Color(0, 229, 255);
     private static final Color ACCENT_GREEN = new Color(0, 255, 136);
     private static final Color TEXT_MUTED = new Color(140, 155, 180);
     private static final Color FAIL_RED = new Color(255, 107, 107);
-    /** I programmi di posta rifiutano indirizzi "mailto" troppo lunghi. */
-    private static final int MAIL_BODY_LIMIT = 1500;
 
     private final JComboBox<String> kind = new JComboBox<>(new String[]{I18n.t("fb.kind.bug"), I18n.t("fb.kind.idea")});
     private final JTextField summary = new JTextField(34);
@@ -51,8 +52,10 @@ final class FeedbackDialog extends JDialog {
     private final JCheckBox withDetails = new JCheckBox(I18n.t("fb.details"), true);
     private final JTextArea details = new JTextArea(6, 44);
     private final JLabel state = new JLabel(" ");
-    private final String email;
+    private final String endpoint;
+    private final String accessKey;
     private final String page;
+    private JButton sendBtn;
 
     private FeedbackDialog(Window owner) {
         super(owner, I18n.t("fb.title"), ModalityType.APPLICATION_MODAL);
@@ -61,7 +64,8 @@ final class FeedbackDialog extends JDialog {
             config.load(new java.io.InputStreamReader(in, StandardCharsets.UTF_8));
         } catch (Exception ignored) {
         }
-        email = config.getProperty("feedback_email", "").trim();
+        endpoint = config.getProperty("feedback_endpoint", "").trim();
+        accessKey = config.getProperty("feedback_key", "").trim();
         page = config.getProperty("feedback_url", "").trim();
 
         JPanel root = new JPanel(new BorderLayout(0, 10));
@@ -109,7 +113,7 @@ final class FeedbackDialog extends JDialog {
         root.add(form, BorderLayout.CENTER);
 
         JPanel south = new JPanel(new BorderLayout(0, 8));
-        south.add(HostMatchDialog.wrapped(email.isEmpty() && page.isEmpty() ? I18n.t("fb.note.manual") : I18n.t("fb.note"), 520, TEXT_MUTED), BorderLayout.NORTH);
+        south.add(HostMatchDialog.wrapped(endpoint.isEmpty() ? I18n.t("fb.note.manual") : I18n.t("fb.note"), 520, TEXT_MUTED), BorderLayout.NORTH);
         state.setPreferredSize(new Dimension(520, 18));
         south.add(state, BorderLayout.CENTER);
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
@@ -129,10 +133,10 @@ final class FeedbackDialog extends JDialog {
             open.addActionListener(e -> openPage());
             buttons.add(open);
         }
-        if (!email.isEmpty()) {
-            JButton send = MapStudioPanel.createPrimaryButton(I18n.t("fb.mail"), ACCENT_GREEN);
-            send.addActionListener(e -> sendMail());
-            buttons.add(send);
+        if (!endpoint.isEmpty()) {
+            sendBtn = MapStudioPanel.createPrimaryButton(I18n.t("fb.send"), ACCENT_GREEN);
+            sendBtn.addActionListener(e -> send());
+            buttons.add(sendBtn);
         }
         south.add(buttons, BorderLayout.SOUTH);
         root.add(south, BorderLayout.SOUTH);
@@ -190,27 +194,79 @@ final class FeedbackDialog extends JDialog {
         }
     }
 
-    private void sendMail() {
+    /** Spedisce la segnalazione al servizio di moduli. Se non riesce, il testo resta copiato e salvato. */
+    private void send() {
         if (!ready()) {
             return;
         }
         copyReport();
         saveReport();
+        String title = subject();
         String body = report(true);
-        boolean cut = body.length() > MAIL_BODY_LIMIT;
-        if (cut) {
-            body = report(false);
-            if (body.length() > MAIL_BODY_LIMIT) {
-                body = body.substring(0, MAIL_BODY_LIMIT) + "...";
+        sendBtn.setEnabled(false);
+        say(I18n.t("fb.sending"), TEXT_MUTED);
+        new Thread(() -> {
+            boolean sent = false;
+            try {
+                StringBuilder json = new StringBuilder("{");
+                if (!accessKey.isEmpty()) {
+                    json.append("\"access_key\":").append(quote(accessKey)).append(',');
+                }
+                json.append("\"_subject\":").append(quote(title))
+                    .append(",\"subject\":").append(quote(title))
+                    .append(",\"name\":").append(quote("BAR Map Studio " + AppPaths.VERSION))
+                    .append(",\"_captcha\":\"false\",\"_template\":\"box\"")
+                    .append(",\"message\":").append(quote(body)).append('}');
+                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder(URI.create(endpoint))
+                    .timeout(java.time.Duration.ofSeconds(30))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(json.toString(), StandardCharsets.UTF_8))
+                    .build();
+                java.net.http.HttpResponse<String> response = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(15))
+                    .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+                    .build().send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+                String answer = response.body() == null ? "" : response.body().replace(" ", "");
+                sent = response.statusCode() / 100 == 2 && !answer.contains("\"success\":false") && !answer.contains("\"success\":\"false\"");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (Throwable ignored) {
             }
-            body += "\n\n" + I18n.t("fb.mail.paste");
+            boolean ok = sent;
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                sendBtn.setEnabled(true);
+                if (ok) {
+                    text.setText("");
+                    summary.setText("");
+                    say(I18n.t("fb.sent"), ACCENT_GREEN);
+                } else {
+                    say(I18n.t("fb.send.failed"), FAIL_RED);
+                }
+            });
+        }, "feedback").start();
+    }
+
+    /** Testo tra virgolette secondo le regole di JSON. */
+    private static String quote(String value) {
+        StringBuilder out = new StringBuilder("\"");
+        for (char c : value.toCharArray()) {
+            switch (c) {
+                case '"' -> out.append("\\\"");
+                case '\\' -> out.append("\\\\");
+                case '\n' -> out.append("\\n");
+                case '\r' -> { }
+                case '\t' -> out.append("\\t");
+                default -> {
+                    if (c < 0x20) {
+                        out.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        out.append(c);
+                    }
+                }
+            }
         }
-        try {
-            java.awt.Desktop.getDesktop().mail(URI.create("mailto:" + email + "?subject=" + encode(subject()) + "&body=" + encode(body)));
-            say(cut ? I18n.t("fb.mail.cut") : I18n.t("fb.mail.done"), ACCENT_GREEN);
-        } catch (Exception e) {
-            say(I18n.t("fb.mail.failed", email), FAIL_RED);
-        }
+        return out.append('"').toString();
     }
 
     private void openPage() {
@@ -225,10 +281,6 @@ final class FeedbackDialog extends JDialog {
         } catch (Exception e) {
             say(I18n.t("fb.page.failed", page), FAIL_RED);
         }
-    }
-
-    private static String encode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     private static String shortDetails() {
