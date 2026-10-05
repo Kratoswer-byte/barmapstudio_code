@@ -5,6 +5,13 @@ on Linux or macOS. Please report what does not work.
 
 Requirements
 - Java 25 or newer ("java" on the PATH, or the JAVA_HOME variable).
+  On Linux it must be the full package, not the "headless" one, which cannot open windows:
+      Debian / Ubuntu / Mint:  sudo apt install openjdk-25-jre
+      Fedora:                  sudo dnf install java-25-openjdk
+      Arch:                    sudo pacman -S jre-openjdk
+  The error "HeadlessException: No X11 DISPLAY variable was set, or no headful library support was found"
+  means exactly this, or that the program was started outside the desktop session (text console, SSH).
+  On Wayland, XWayland must be installed.
 - Beyond All Reason installed and started once.
 
 Start

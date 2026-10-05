@@ -12,6 +12,26 @@ else
     exit 1
 fi
 
+# Su Linux la finestra ha bisogno di un Java completo (non "headless") e di uno schermo X11 o XWayland:
+# senza, il programma si ferma con HeadlessException. Meglio dirlo subito e in chiaro.
+if [ "$(uname -s)" = "Linux" ]; then
+    JAVA_DIR="$("$JAVA" -XshowSettings:properties -version 2>&1 | sed -n 's/^ *java\.home = //p')"
+    if [ -n "$JAVA_DIR" ] && [ ! -e "$JAVA_DIR/lib/libawt_xawt.so" ]; then
+        echo "This Java ($JAVA_DIR) is a \"headless\" one: it cannot open windows."
+        echo "Install the full Java package and start this file again, for example:"
+        echo "    Debian / Ubuntu / Mint:  sudo apt install openjdk-25-jre     (not openjdk-25-jre-headless)"
+        echo "    Fedora:                  sudo dnf install java-25-openjdk    (not java-25-openjdk-headless)"
+        echo "    Arch:                    sudo pacman -S jre-openjdk          (not jre-openjdk-headless)"
+        exit 1
+    fi
+    if [ -z "$DISPLAY" ]; then
+        echo "No screen found (the DISPLAY variable is empty)."
+        echo "Start this file from a terminal inside your desktop session, not from a text console or SSH."
+        echo "On Wayland the XWayland package must be installed and enabled."
+        exit 1
+    fi
+fi
+
 # Dove il programma scrive impostazioni, cache e registri: accanto al programma se la cartella e' scrivibile,
 # altrimenti nella cartella dati dell'utente.
 HOME_DIR="$ROOT"
