@@ -46,6 +46,9 @@ final class FeedbackDialog extends JDialog {
     private static final Color TEXT_MUTED = new Color(140, 155, 180);
     private static final Color FAIL_RED = new Color(255, 107, 107);
 
+    /** Nome con cui il programma si presenta al servizio di moduli (dominio riservato, non appartiene a nessuno). */
+    private static final String ORIGIN = "https://bar-map-studio.invalid";
+
     private final JComboBox<String> kind = new JComboBox<>(new String[]{I18n.t("fb.kind.bug"), I18n.t("fb.kind.idea")});
     private final JTextField summary = new JTextField(34);
     private final JTextArea text = new JTextArea(8, 44);
@@ -221,6 +224,9 @@ final class FeedbackDialog extends JDialog {
                     .timeout(java.time.Duration.ofSeconds(30))
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
+                    // i servizi di moduli vogliono sapere da quale "pagina" arriva il messaggio: e' il nome del programma
+                    .header("Referer", ORIGIN + "/feedback")
+                    .header("Origin", ORIGIN)
                     .POST(java.net.http.HttpRequest.BodyPublishers.ofString(json.toString(), StandardCharsets.UTF_8))
                     .build();
                 java.net.http.HttpResponse<String> response = java.net.http.HttpClient.newBuilder()
