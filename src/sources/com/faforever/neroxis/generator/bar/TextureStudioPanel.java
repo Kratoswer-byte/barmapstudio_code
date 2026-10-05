@@ -808,7 +808,7 @@ public class TextureStudioPanel extends JPanel {
         btnLoadMask.setPreferredSize(new Dimension(105, 22));
         btnLoadMask.setFont(BarMapStudio.font(Font.BOLD, 9));
         btnLoadMask.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser("custom_assets/textures");
+            JFileChooser chooser = new JFileChooser(AppPaths.userFolder("custom_assets/textures").toFile());
             FileChoosers.detailed(chooser);
             chooser.setDialogTitle(I18n.t("tex.75") + z.title);
             chooser.setFileFilter(new FileNameExtensionFilter(I18n.t("tex.76"), "png", "jpg", "jpeg", "bmp"));
@@ -904,7 +904,7 @@ public class TextureStudioPanel extends JPanel {
         btnTexFile.setFont(BarMapStudio.font(Font.BOLD, 9));
         btnTexFile.setToolTipText(I18n.t("tex.81"));
         btnTexFile.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser("custom_assets/textures");
+            JFileChooser chooser = new JFileChooser(AppPaths.userFolder("custom_assets/textures").toFile());
             FileChoosers.detailed(chooser);
             chooser.setDialogTitle(I18n.t("tex.82") + z.title);
             chooser.setFileFilter(new FileNameExtensionFilter(I18n.t("tex.83"), "png", "jpg", "jpeg", "bmp"));
@@ -1736,7 +1736,7 @@ public class TextureStudioPanel extends JPanel {
             return;
         }
 
-        File targetDir = new File("custom_assets/textures");
+        File targetDir = AppPaths.userFolder("custom_assets/textures").toFile();
         if (!targetDir.exists()) targetDir.mkdirs();
 
         String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
@@ -1755,7 +1755,7 @@ public class TextureStudioPanel extends JPanel {
     }
 
     private void openCustomFolder() {
-        File dir = new File("custom_assets/textures");
+        File dir = AppPaths.userFolder("custom_assets/textures").toFile();
         if (!dir.exists()) dir.mkdirs();
         try {
             Desktop.getDesktop().open(dir);

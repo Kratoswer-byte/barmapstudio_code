@@ -103,7 +103,7 @@ public final class ObjectEntity {
      */
     public static java.util.List<ObjectEntity> loadDefaultObjects() {
         java.util.List<ObjectEntity> result = new java.util.ArrayList<>();
-        java.io.File root = new java.io.File(System.getProperty("neroxis.home", System.getProperty("user.dir")), "default_objects");
+        java.io.File root = AppPaths.appDir().resolve("default_objects").toFile();
         java.io.File[] folders = root.listFiles(java.io.File::isDirectory);
         if (folders == null) {
             return result;

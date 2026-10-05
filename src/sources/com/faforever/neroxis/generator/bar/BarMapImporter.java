@@ -41,7 +41,7 @@ public final class BarMapImporter {
     private BarMapImporter() {}
 
     public static Imported load(File archive) throws Exception {
-        Path data = Platform.defaultData();
+        Path data = AppPaths.barData();
         Path sevenZip = data != null ? Platform.sevenZip(data) : null;
         if (sevenZip == null) {
             throw new IllegalStateException("7-Zip di BAR non trovato: serve l'installazione di Beyond All Reason.");

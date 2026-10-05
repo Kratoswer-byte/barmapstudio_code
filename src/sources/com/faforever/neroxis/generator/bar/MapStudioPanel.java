@@ -1672,7 +1672,7 @@ public final class MapStudioPanel extends JPanel {
         try {
             java.nio.file.Path log = homeFolder != null
                 ? homeFolder.resolve("barmap-error.log")
-                : java.nio.file.Path.of("barmap-error.log");
+                : AppPaths.userDir().resolve("barmap-error.log");
             StringWriter sw = new StringWriter();
             ex.printStackTrace(new java.io.PrintWriter(sw));
             String entry = "[" + new java.util.Date() + "] GENERA TERRENO "
@@ -1897,7 +1897,7 @@ public final class MapStudioPanel extends JPanel {
     /** Carica nell'editor una mappa BAR esistente (.sd7/.sdz): terreno, texture, spawn, metallo, geyser, luce e acqua. */
     private void doImportBarMap() {
         JFileChooser chooser = new JFileChooser();
-        java.nio.file.Path data = Platform.defaultData();
+        java.nio.file.Path data = AppPaths.barData();
         if (data != null && Files.isDirectory(data.resolve("maps"))) {
             chooser.setCurrentDirectory(data.resolve("maps").toFile());
         }
@@ -1981,7 +1981,7 @@ public final class MapStudioPanel extends JPanel {
     private void doLoadCustomTextureFile() {
         JFileChooser chooser = new JFileChooser();
         FileChoosers.detailed(chooser);
-        File defaultDir = new File("custom_assets/textures");
+        File defaultDir = AppPaths.userFolder("custom_assets/textures").toFile();
         if (defaultDir.exists()) chooser.setCurrentDirectory(defaultDir);
         chooser.setDialogTitle(I18n.t("map.149"));
         chooser.setFileFilter(new FileNameExtensionFilter(I18n.t("map.150"), "png", "jpg", "jpeg", "bmp"));
@@ -2184,7 +2184,28 @@ public final class MapStudioPanel extends JPanel {
         new Thread(() -> {
             try {
                 Path skirmishScript = barDataFolder.resolve("_neroxis_skirmish.txt");
-                Path archive = BarMapExporter.exportMap(mapsDir, m, options, skirmishScript);
+                Path direct;
+                try {
+                    direct = BarMapExporter.exportMap(mapsDir, m, options, skirmishScript);
+                } catch (java.nio.file.AccessDeniedException denied) {
+                    // BAR installato in una cartella protetta: la mappa viene preparata nella cartella dell'utente
+                    // e copiata con una sola richiesta di amministratore, senza riavviare il programma
+                    SwingUtilities.invokeLater(() -> dialog.log(I18n.t("export.log.protected")));
+                    Path staging = ProtectedCopy.stagingFolder();
+                    Path stagedScript = staging.resolve("_neroxis_skirmish.txt");
+                    Path staged = BarMapExporter.exportMap(staging, m, options, stagedScript);
+                    direct = mapsDir.resolve(staged.getFileName());
+                    boolean copied = ProtectedCopy.copy(ProtectedCopy.pairs(staged, direct, stagedScript, skirmishScript), true);
+                    if (!copied) {
+                        throw new java.io.IOException(I18n.t("export.protected.refused", staged.toString(), mapsDir.toString()));
+                    }
+                    try {
+                        Files.deleteIfExists(staged);
+                        Files.deleteIfExists(stagedScript);
+                    } catch (Exception ignored) {
+                    }
+                }
+                final Path archive = direct;
                 SwingUtilities.invokeLater(() -> dialog.finish(true, I18n.t("export.log.done", archive.getFileName().toString()), () -> {
                     exported[0] = archive;
                     if (onMapCreated != null) {
@@ -2203,7 +2224,7 @@ public final class MapStudioPanel extends JPanel {
                 try {
                     java.nio.file.Path log = homeFolder != null
                         ? homeFolder.resolve("barmap-error.log")
-                        : java.nio.file.Path.of("barmap-error.log");
+                        : AppPaths.userDir().resolve("barmap-error.log");
                     java.nio.file.Files.writeString(log, entry,
                         java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
                 } catch (Exception ignored) {}
@@ -2213,7 +2234,7 @@ public final class MapStudioPanel extends JPanel {
                 } else {
                     msg = ex.getMessage();
                     if (msg == null || msg.isBlank()) msg = ex.toString();
-                    if (msg.length() > 220) msg = msg.substring(0, 220) + "...";
+                    if (msg.length() > 420) msg = msg.substring(0, 420) + "...";
                 }
                 final String shown = I18n.t("export.log.error", msg) + I18n.t("map.134");
                 SwingUtilities.invokeLater(() -> dialog.finish(false, shown, null));
@@ -2330,7 +2351,7 @@ public final class MapStudioPanel extends JPanel {
             String url = donationUrl();
             BufferedImage qr = null;
             try {
-                java.io.File qrFile = new java.io.File(System.getProperty("neroxis.home", System.getProperty("user.dir")), "donation_qrcode.png");
+                java.io.File qrFile = AppPaths.appDir().resolve("donation_qrcode.png").toFile();
                 qr = qrFile.isFile() ? ImageIO.read(qrFile) : null;
             } catch (Exception ignored) {
             }
@@ -2433,7 +2454,7 @@ public final class MapStudioPanel extends JPanel {
     /** Link PayPal da donation.properties (chiave paypal_url), oppure null se manca. */
     private static String donationUrl() {
         try {
-            java.io.File file = new java.io.File(System.getProperty("neroxis.home", System.getProperty("user.dir")), "donation.properties");
+            java.io.File file = AppPaths.appDir().resolve("donation.properties").toFile();
             if (file.isFile()) {
                 java.util.Properties props = new java.util.Properties();
                 try (java.io.Reader reader = new java.io.InputStreamReader(new java.io.FileInputStream(file), java.nio.charset.StandardCharsets.UTF_8)) {

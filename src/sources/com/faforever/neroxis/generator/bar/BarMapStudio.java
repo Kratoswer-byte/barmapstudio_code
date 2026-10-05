@@ -244,6 +244,8 @@ public class BarMapStudio {
                 barData = BarFolder.usual();
             }
             final Path finalBarData = barData;
+            // da qui in poi tutto il programma usa questa cartella di BAR, ovunque sia installato
+            AppPaths.setBarData(finalBarData);
 
             // Instantiate Map Editor Panel
             MapStudioPanel editorPanel = new MapStudioPanel(

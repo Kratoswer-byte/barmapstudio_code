@@ -16,3 +16,6 @@ extracted/{app}/.shortcut-asked
 extracted/{app}/mapfeatures/
 TestFolder.class
 extracted/{app}/app/launcher.jar.bak_*
+extracted/{app}/launcher.properties
+extracted/{app}/.write-test
+dist/

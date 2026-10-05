@@ -1,11 +1,18 @@
-Neroxis launcher for Beyond All Reason (unofficial, not affiliated with the BAR team)
+BAR Map Studio - map and unit editor for Beyond All Reason
+(unofficial, not affiliated with the Beyond All Reason team)
 
-1. Install Beyond All Reason (https://www.beyondallreason.info) and start it once so it downloads the game.
-2. Unzip this folder anywhere and double click  bar-map-launcher.bat
-3. Click "Sign in to play online" -> "Create account" (user name, email, password). Use a password you do not
-   use anywhere else: this test server has no encrypted connection yet.
-4. PLAY tab: join a room or press CREATE GAME. In a room: GENERATE NEW MAP makes a new random map for everybody,
-   Add AI adds a computer player, READY + START GAME starts. The first game downloads the current BAR version.
+1. Install Beyond All Reason (https://www.beyondallreason.info) and start it once, so it downloads the game.
+2. Start BAR Map Studio from the shortcut, or double click  bar-map-launcher.bat  in the program folder.
+3. If BAR is not found by itself, press the BAR button at the bottom and pick its "data" folder.
+   BAR Map Studio works wherever BAR is installed.
 
-Windows may warn about an unknown publisher when you start the .bat, choose "More info" -> "Run anyway".
-Problems? Tell Rowan what the chat panel of the room says.
+Where things are kept
+- Program files: the folder you installed into. Nothing personal is stored there.
+- Your settings, cache, logs and your own textures: the program folder when it can be written,
+  otherwise  %APPDATA%\BARMapStudio  (this is the case for installs under "Program Files").
+- Exported maps go into the "maps" folder of BAR. When that folder is protected, Windows asks once for
+  permission to copy the map; the program itself never needs to run as administrator.
+
+Windows may warn about an unknown publisher the first time: choose "More info" -> "Run anyway".
+
+Built on the Neroxis map generator (MIT licence, see LICENSE.txt).

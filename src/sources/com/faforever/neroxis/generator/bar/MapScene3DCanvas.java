@@ -583,7 +583,7 @@ public final class MapScene3DCanvas extends JPanel {
     private void loadCommanderRefAsync() {
         bg.execute(() -> {
             try {
-                Path data = Platform.defaultData();
+                Path data = AppPaths.barData();
                 if (data == null) return;
                 byte[] b = BarInstall.readGameBytes(data, "objects3d/units/armcom.s3o");
                 if (b == null) b = BarInstall.readGameBytes(data, "objects3d/armcom.s3o");

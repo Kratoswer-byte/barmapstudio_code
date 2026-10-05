@@ -335,7 +335,7 @@ public class AssetSpecsDialog extends JDialog {
         p.add(createBadgeRow(
             new String[]{I18n.t("spec.10"), I18n.t("spec.11")},
             new String[]{I18n.t("spec.12"), I18n.t("spec.13")},
-            new String[]{I18n.t("spec.14"), "(DimensioneInElmos / 8) + 1"},
+            new String[]{I18n.t("spec.14"), I18n.t("spec.v.formula")},
             new String[]{I18n.t("spec.15"), I18n.t("spec.16")},
             new String[]{I18n.t("spec.17"), I18n.t("spec.18")}
         ));
@@ -384,7 +384,7 @@ public class AssetSpecsDialog extends JDialog {
         p.add(Box.createVerticalStrut(10));
 
         p.add(createBadgeRow(
-            new String[]{I18n.t("spec.32"), "Potenze di 2 (1024, 2048, 4096 px)"},
+            new String[]{I18n.t("spec.32"), I18n.t("spec.v.pow2")},
             new String[]{I18n.t("spec.33"), I18n.t("spec.34")},
             new String[]{I18n.t("spec.35"), I18n.t("spec.36")},
             new String[]{I18n.t("spec.37"), I18n.t("spec.38")},
@@ -452,8 +452,8 @@ public class AssetSpecsDialog extends JDialog {
         p.add(createBadgeRow(
             new String[]{I18n.t("spec.67"), I18n.t("spec.68")},
             new String[]{I18n.t("spec.69"), I18n.t("spec.70")},
-            new String[]{I18n.t("spec.71"), "100 - 600 Triangoli"},
-            new String[]{I18n.t("spec.72"), "1.000 - 2.500 Triangoli"},
+            new String[]{I18n.t("spec.71"), I18n.t("spec.v.tris", "100 - 600")},
+            new String[]{I18n.t("spec.72"), I18n.t("spec.v.tris", "1000 - 2500")},
             new String[]{I18n.t("spec.73"), I18n.t("spec.74")}
         ));
         p.add(Box.createVerticalStrut(14));
@@ -637,7 +637,7 @@ public class AssetSpecsDialog extends JDialog {
 
     private void openCustomAssetsDirectory() {
         try {
-            File dir = new File("custom_assets");
+            File dir = AppPaths.userFolder("custom_assets").toFile();
             if (!dir.exists()) dir.mkdirs();
             Desktop.getDesktop().open(dir);
         } catch (Exception ex) {

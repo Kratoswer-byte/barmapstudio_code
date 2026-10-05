@@ -447,7 +447,13 @@ public final class BarMapExporter {
         }
         BufferedImage minimapImage = renderMinimap();
         byte[] minimap = compressWithMips(minimapImage, 9);
-        Files.deleteIfExists(archivePath);
+        // Riesportando una mappa con lo stesso nome il file esistente viene riscritto, non cancellato: nella
+        // cartella mappe di BAR un utente normale puo' scrivere ma spesso non cancellare (per esempio un file
+        // creato da un avvio come amministratore), e la cancellazione faceva fallire l'export.
+        try {
+            Files.deleteIfExists(archivePath);
+        } catch (IOException | SecurityException ignored) {
+        }
         ZipOutputStream zip = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(archivePath, new OpenOption[0])));
         try {
             zip.setLevel(6);

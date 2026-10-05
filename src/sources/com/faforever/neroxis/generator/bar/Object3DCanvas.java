@@ -304,7 +304,7 @@ public final class Object3DCanvas extends JPanel {
                 if (sm == null) return;
                 SoftRenderer3D.Texture tex = null;
                 try {
-                    Path data = Platform.defaultData();
+                    Path data = AppPaths.barData();
                     if (data != null && sm.tex1 != null && !sm.tex1.isBlank()) {
                         BufferedImage img = new ModelTextureCache(() -> data).loadGameTexture(sm.tex1, 1);
                         if (img != null) tex = new SoftRenderer3D.Texture(mixTeamColour(img, new Color(74, 158, 255)));

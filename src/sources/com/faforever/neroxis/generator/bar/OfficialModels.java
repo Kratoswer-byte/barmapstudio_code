@@ -71,7 +71,7 @@ public final class OfficialModels {
     private static Path indexedData() {
         Path data;
         try {
-            data = Platform.defaultData();
+            data = AppPaths.barData();
         } catch (Exception ex) {
             return null;
         }

@@ -1,29 +1,28 @@
 @echo off
-rem Opens the map generator window: pick the game format, size and style, generate, preview and play.
+rem Starts BAR Map Studio with the Java runtime shipped in the "runtime" folder.
 setlocal
 set "ROOT=%~dp0"
-rem updatable package: plain Java runtime + app\launcher.jar. A downloaded update waits as launcher-new.jar,
-rem the old launcher may need a moment to exit before the file can be replaced.
-if exist "%ROOT%app\launcher-new.jar" (
-    for /l %%i in (1,1,10) do (
-        if exist "%ROOT%app\launcher-new.jar" (
-            move /y "%ROOT%app\launcher-new.jar" "%ROOT%app\launcher.jar" >nul 2>&1
-            if exist "%ROOT%app\launcher-new.jar" timeout /t 1 /nobreak >nul
-        )
-    )
+rem Where the program writes its settings, cache and logs. Normally next to the program; when that folder
+rem is read-only (for example an install under Program Files) the user data folder is used instead and the
+rem real program folder is passed on, so the bundled files are still found.
+set "HOME_DIR=%ROOT%."
+set "APPARG="
+( >"%ROOT%.write-test" echo.) 2>nul
+if exist "%ROOT%.write-test" (
+    del "%ROOT%.write-test" >nul 2>&1
+) else (
+    set "HOME_DIR=%APPDATA%\BARMapStudio"
+    if not exist "%APPDATA%\BARMapStudio" mkdir "%APPDATA%\BARMapStudio"
+    set APPARG="-Dbarstudio.app=%ROOT%."
 )
-if exist "%ROOT%app\launcher.jar" if exist "%ROOT%runtime\bin\javaw.exe" (
-    start "" "%ROOT%runtime\bin\javaw.exe" "-splash:%ROOT%cache\splash.png" -Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive "-XX:SharedArchiveFile=%ROOT%cache\barmap.jsa" --enable-native-access=ALL-UNNAMED "-Dneroxis.home=%ROOT%." -cp "%ROOT%app\launcher.jar" com.faforever.neroxis.generator.bar.BarMapStudio
-    exit /b 0
-)
-if exist "%ROOT%runtime\bin\javaw.exe" (
-    start "" "%ROOT%runtime\bin\javaw.exe" "-splash:%ROOT%cache\splash.png" -Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive "-XX:SharedArchiveFile=%ROOT%cache\barmap.jsa" --enable-native-access=com.formdev.flatlaf "-Dneroxis.home=%ROOT%." -cp "%ROOT%app\launcher.jar" com.faforever.neroxis.generator.bar.BarMapStudio
-    exit /b 0
-)
-set "JAVAW=javaw"
-if not exist "%ROOT%generator\build\libs\NeroxisGen_snapshot.jar" (
-    echo The generator is not built yet, run build-bar-generator.bat first.
-    pause
-    exit /b 1
-)
-start "" "%JAVAW%" "-splash:%ROOT%cache\splash.png" -Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive "-XX:SharedArchiveFile=%ROOT%cache\barmapstudio.jsa" --enable-native-access=ALL-UNNAMED "-Dneroxis.home=%ROOT%." -cp "%ROOT%generator\build\libs\NeroxisGen_snapshot.jar" com.faforever.neroxis.generator.bar.BarLauncher
+if not exist "%HOME_DIR%\cache" mkdir "%HOME_DIR%\cache" >nul 2>&1
+if not exist "%ROOT%app\launcher.jar" goto :broken
+if not exist "%ROOT%runtime\bin\javaw.exe" goto :broken
+start "" "%ROOT%runtime\bin\javaw.exe" "-splash:%HOME_DIR%\cache\splash.png" -Xms48m -Xmx1g -XX:+UseG1GC -XX:G1PeriodicGCInterval=20000 -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=25 -XX:TieredStopAtLevel=1 -XX:+AutoCreateSharedArchive "-XX:SharedArchiveFile=%HOME_DIR%\cache\barmap.jsa" --enable-native-access=ALL-UNNAMED "-Dneroxis.home=%HOME_DIR%" %APPARG% -cp "%ROOT%app\launcher.jar" com.faforever.neroxis.generator.bar.BarMapStudio
+exit /b 0
+
+:broken
+echo BAR Map Studio is incomplete: "app\launcher.jar" or the "runtime" folder is missing.
+echo Install it again.
+pause
+exit /b 1
