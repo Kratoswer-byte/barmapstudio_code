@@ -23,3 +23,6 @@ macOS: ~/Library/Application Support/Beyond-All-Reason-mac).
 
 Settings, cache and logs are kept next to the program when that folder can be written, otherwise in
 ~/.config/BARMapStudio (Linux) or ~/Library/Application Support/BARMapStudio (macOS).
+
+Text too small on a 4K screen? Press the gear button at the bottom right, choose Interface size 200% and
+start the program again.

@@ -58,6 +58,7 @@ public class BarMapStudio {
     }
 
     public static void main(String[] args) {
+        UiScale.applyAtStartup();
         Locale.setDefault(Locale.ROOT);
 
         Font mainFont = font(Font.BOLD, 12);
@@ -286,6 +287,7 @@ public class BarMapStudio {
             }
 
             frame.setVisible(true);
+            SwingUtilities.invokeLater(() -> UiScale.suggestIfSmall(frame));
 
             // Mostra automaticamente la finestra delle specifiche all'avvio se non silenziata
             SwingUtilities.invokeLater(() -> AssetSpecsDialog.showOnStartup(frame, shell));
@@ -820,6 +822,24 @@ public class BarMapStudio {
                     }
                 });
                 group.add(item);
+                popup.add(item);
+            }
+            popup.addSeparator();
+            JMenuItem scaleHeader = new JMenuItem(I18n.t("settings.scale"));
+            scaleHeader.setEnabled(false);
+            popup.add(scaleHeader);
+            ButtonGroup scaleGroup = new ButtonGroup();
+            for (String value : UiScale.choices()) {
+                String label = UiScale.AUTO.equals(value) ? I18n.t("settings.scale.auto") : UiScale.percent(value) + "%";
+                JRadioButtonMenuItem item = new JRadioButtonMenuItem(label, value.equals(UiScale.current()));
+                item.addActionListener(ev -> {
+                    if (!value.equals(UiScale.current())) {
+                        UiScale.save(value);
+                        JOptionPane.showMessageDialog(SwingUtilities.getWindowAncestor(btn), I18n.t("settings.scale.restart"),
+                            I18n.t("settings.title"), JOptionPane.INFORMATION_MESSAGE);
+                    }
+                });
+                scaleGroup.add(item);
                 popup.add(item);
             }
             popup.show(btn, 0, -popup.getPreferredSize().height);
