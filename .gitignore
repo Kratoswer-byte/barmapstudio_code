@@ -20,3 +20,5 @@ extracted/{app}/launcher.properties
 extracted/{app}/.write-test
 dist/
 build/tools/
+extracted/{app}/settings.properties
+heightmap-*.tif
