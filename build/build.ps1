@@ -23,7 +23,7 @@ Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $root = Split-Path -Parent $PSScriptRoot
-$app = Join-Path $root "extracted\{app}"
+$app = Join-Path $root "app"
 $distRoot = Join-Path $root "dist"
 $dist = Join-Path $distRoot "BARMapStudio"
 $unix = Join-Path $distRoot "BARMapStudio-unix"
@@ -75,7 +75,7 @@ if (-not (Test-Path -LiteralPath $sourceJar)) { throw "Manca $sourceJar" }
 $finalJar = Join-Path $work "launcher.jar"
 
 # Il programma deriva da un vecchio launcher: nessun suo indirizzo o nome deve finire nel pacchetto.
-# (Si tolgono con:  python build\clean_legacy_refs.py "extracted\{app}pp\launcher.jar")
+# (Si tolgono con:  python build/clean_legacy_refs.py "app/app/launcher.jar")
 $python = Get-Command python -ErrorAction SilentlyContinue
 if ($python) {
     Step "Controllo dei riferimenti al vecchio launcher"

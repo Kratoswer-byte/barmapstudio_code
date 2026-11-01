@@ -53,9 +53,9 @@ BAR Map Studio trova da solo l'installazione di BAR; se non ci riesce, il pulsan
 
 | Cosa | Come |
 | --- | --- |
-| Interfaccia grafica | doppio clic su `AVVIA_BAR_MAP_STUDIO.bat` (oppure `extracted/{app}/bar-map-launcher.bat`) |
-| Generatore da menu | `extracted/{app}/generate-bar-map.bat` senza argomenti |
-| Ultima mappa giocata | `extracted/{app}/play-last-map.bat` |
+| Interfaccia grafica | doppio clic su `AVVIA_BAR_MAP_STUDIO.bat` (oppure `app/bar-map-launcher.bat`) |
+| Generatore da menu | `app/generate-bar-map.bat` senza argomenti |
+| Ultima mappa giocata | `app/play-last-map.bat` |
 
 La prima mappa, in cinque passi: scheda **MAPS** → **GENERA TERRENO** → **+ Auto Base Mexes** e **+ Auto Contested Mexes** → nome della mappa → **GENERA E GIOCA VS AI**.
 
@@ -98,13 +98,16 @@ src/sources/           sorgenti Java
 src_test/              piccoli programmi di prova usati durante lo sviluppo
 patch/                 classi compilate, pronte da iniettare in launcher.jar
 build/                 script di pacchettizzazione, ProGuard, installer Inno Setup
-extracted/{app}/       cartella di lavoro del launcher. Nel repository restano solo gli script
-                       .bat e i file che build.ps1 mette nel pacchetto; launcher.jar, runtime,
-                       cache e mapfeatures sono ignorati da git
+app/                   cartella di lavoro del launcher (la radice del pacchetto distribuito).
+                       Nel repository restano solo gli script .bat e i file che build.ps1 mette
+                       nel pacchetto; launcher.jar, runtime, cache e mapfeatures sono ignorati
+                       da git
 docs/                  documentazione e immagini
 tools/                 utilità Python (biomi, traduzioni) e il server lobby finto
 release-repo/          README, guide e licenza del progetto pubblico delle release
 ```
+
+`AUDIT.md` e `PROGRESS.md` sono registri datati e citano ancora il vecchio percorso `extracted/{app}`: quella cartella oggi si chiama `app/`.
 
 ## Compilare
 
@@ -121,13 +124,13 @@ I file decompilati non sono compilabili con `javac` (per esempio i record risult
 # dalla radice del progetto, con launcher.jar presente
 $src = (Get-ChildItem -Recurse src\sources\com\faforever\neroxis\generator\bar, `
         src\sources\com\faforever\neroxis\exporter\bar -Filter *.java).FullName
-javac --release 25 -encoding UTF-8 -cp "extracted/{app}/app/launcher.jar" -d build\classes $src
+javac --release 25 -encoding UTF-8 -cp "app/app/launcher.jar" -d build\classes $src
 
 # inietta le classi aggiornate nell'archivio del launcher
-jar uf "extracted/{app}/app/launcher.jar" -C build\classes .
+jar uf "app/app/launcher.jar" -C build\classes .
 ```
 
-`extracted/{app}/app/launcher.jar` e il runtime Java **non sono versionati** (`.gitignore` esclude `*.jar` e `extracted/{app}/runtime/`): la copia di lavoro li contiene, mentre da un clone pulito servono il pacchetto distribuito o il launcher originale per ricostruirli. Lo stesso vale per `mapfeatures`, che i launcher scaricano alla prima generazione.
+`app/app/launcher.jar` e il runtime Java **non sono versionati** (`.gitignore` esclude `app/*` e `*.jar`): la copia di lavoro li contiene, mentre da un clone pulito servono il pacchetto distribuito o il launcher originale per ricostruirli. Lo stesso vale per `mapfeatures`, che i launcher scaricano alla prima generazione.
 
 ## Creare il pacchetto
 
@@ -165,6 +168,6 @@ Per pubblicare una versione nuova la procedura completa è in `build/RELEASE.txt
 
 ## Licenza e crediti
 
-BAR Map Studio è © 2026 Kratoswer, gratuito per uso personale e non commerciale; il testo completo e l'elenco delle librerie di terze parti sono in [`extracted/{app}/LICENSE.txt`](extracted/{app}/LICENSE.txt).
+BAR Map Studio è © 2026 Kratoswer, gratuito per uso personale e non commerciale; il testo completo e l'elenco delle librerie di terze parti sono in [`release-repo/LICENSE.txt`](release-repo/LICENSE.txt) (la stessa copia che `build.ps1` mette nel pacchetto).
 
 È costruito sul [Neroxis Map Generator](https://github.com/FAForever/Neroxis-Map-Generator) (MIT License, © 2020 Peter Ziegler). Beyond All Reason e i suoi contenuti appartengono ai rispettivi autori: il programma legge i file di gioco dall'installazione dell'utente e non li include.

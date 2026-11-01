@@ -6,7 +6,7 @@ destra compare il pulsante verde UPDATE.
 
 Prima volta
 1. Crea su GitHub un progetto PUBBLICO (puo' contenere solo un file README: il codice non serve).
-2. Scrivi il suo nome in extracted\{app}\update.properties, riga update_repo=utente/progetto.
+2. Scrivi il suo nome in app\update.properties, riga update_repo=utente/progetto.
 
 A ogni versione nuova
 1. Cambia il numero in AppPaths.java (VERSION = "beta 0.2") e ricompila.
