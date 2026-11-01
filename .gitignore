@@ -32,3 +32,8 @@ app/*
 
 # residuo non versionato della vecchia cartella extracted/
 extracted/*.iss
+
+# note di lavoro: restano in locale, non vanno nel repository
+AUDIT.md
+PROGRESS.md
+piano_vista3d_texture.md

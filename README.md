@@ -4,7 +4,7 @@
 
 BAR Map Studio parte dal [Neroxis Map Generator](https://github.com/FAForever/Neroxis-Map-Generator), di cui conserva la generazione procedurale del terreno, e ne riscrive l'esportazione: al posto delle mappe Supreme Commander produce un archivio per BAR con heightmap a 16 bit, texture DXT1/DXT5 in tile, mappe ausiliarie e `mapinfo.lua`, lo scrive nella cartella mappe del gioco e da lì può avviare subito una partita contro le AI.
 
-![Interfaccia di BAR Map Studio](barmapstudio_preview.png)
+![Editor di BAR Map Studio: mappa generata, slope map e vista 3D](release-repo/docs/img/editor-3d.png)
 
 Versione **beta 0.1** (`AppPaths.VERSION`). Strumento non ufficiale: non è affiliato, approvato o supportato dal team di Beyond All Reason.
 
@@ -107,8 +107,6 @@ tools/                 utilità Python (biomi, traduzioni) e il server lobby fin
 release-repo/          README, guide e licenza del progetto pubblico delle release
 ```
 
-`AUDIT.md` e `PROGRESS.md` sono registri datati e citano ancora il vecchio percorso `extracted/{app}`: quella cartella oggi si chiama `app/`.
-
 ## Compilare
 
 `src/sources` contiene due cose diverse:
@@ -152,9 +150,6 @@ Per pubblicare una versione nuova la procedura completa è in `build/RELEASE.txt
 
 | Documento | Contenuto |
 | --- | --- |
-| [`AUDIT.md`](AUDIT.md) | audit tecnico: architettura, cause dei blocchi di generazione, correzioni |
-| [`PROGRESS.md`](PROGRESS.md) | registro dei commit, roadmap e stato delle funzionalità |
-| [`piano_vista3d_texture.md`](piano_vista3d_texture.md) | piano della vista 3D e del Texture Studio |
 | [`docs/GENERATORE-NEROXIS.md`](docs/GENERATORE-NEROXIS.md) | generatore Neroxis per BAR: opzioni, conversioni, formati |
 | [`docs/BAR-INTEGRATION.md`](docs/BAR-INTEGRATION.md) | mappe generate nelle lobby multiplayer: checksum, `!nextmap`, cosa servirebbe lato BAR |
 | [`release-repo/docs/GUIDE.md`](release-repo/docs/GUIDE.md) · [`GUIDA.md`](release-repo/docs/GUIDA.md) | guida utente in inglese e in italiano |
