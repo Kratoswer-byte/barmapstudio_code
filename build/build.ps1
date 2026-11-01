@@ -145,9 +145,11 @@ New-Item -ItemType Directory -Force -Path (Join-Path $dist "app") | Out-Null
 Copy-Item -LiteralPath $finalJar -Destination (Join-Path $dist "app\launcher.jar")
 Copy-Item -LiteralPath (Join-Path $app "runtime") -Destination (Join-Path $dist "runtime") -Recurse
 Copy-Item -LiteralPath (Join-Path $app "default_objects") -Destination (Join-Path $dist "default_objects") -Recurse
-foreach ($file in @("bar-map-launcher.bat", "README-FIRST.txt", "LICENSE.txt", "donation.properties", "donation_qrcode.png", "feedback.properties", "update.properties")) {
+foreach ($file in @("bar-map-launcher.bat", "README-FIRST.txt", "donation.properties", "donation_qrcode.png", "feedback.properties", "update.properties")) {
     Copy-Item -LiteralPath (Join-Path $app $file) -Destination (Join-Path $dist $file)
 }
+# la licenza ha una sola copia nel repository, quella del progetto pubblico delle release
+Copy-Item -LiteralPath (Join-Path $root "release-repo\LICENSE.txt") -Destination (Join-Path $dist "LICENSE.txt")
 Copy-Item -LiteralPath (Join-Path $root "ico\BMS.ico") -Destination (Join-Path $dist "BMS.ico")
 # il vecchio launcher chiedeva al primo avvio se creare un collegamento: ora lo fa l'installer
 New-Item -ItemType File -Force -Path (Join-Path $dist ".shortcut-asked") | Out-Null
@@ -161,9 +163,10 @@ Step "Pacchetto Linux e macOS (.tar.gz, non provato)"
 New-Item -ItemType Directory -Force -Path (Join-Path $unix "app") | Out-Null
 Copy-Item -LiteralPath $finalJar -Destination (Join-Path $unix "app\launcher.jar")
 Copy-Item -LiteralPath (Join-Path $app "default_objects") -Destination (Join-Path $unix "default_objects") -Recurse
-foreach ($file in @("README-FIRST.txt", "LICENSE.txt", "donation.properties", "donation_qrcode.png", "feedback.properties", "update.properties")) {
+foreach ($file in @("README-FIRST.txt", "donation.properties", "donation_qrcode.png", "feedback.properties", "update.properties")) {
     Copy-Item -LiteralPath (Join-Path $app $file) -Destination (Join-Path $unix $file)
 }
+Copy-Item -LiteralPath (Join-Path $root "release-repo\LICENSE.txt") -Destination (Join-Path $unix "LICENSE.txt")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "bar-map-studio.sh") -Destination (Join-Path $unix "bar-map-studio.sh")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "README-UNIX.txt") -Destination (Join-Path $unix "README-UNIX.txt")
 $tarball = Join-Path $distRoot "BARMapStudio-$Version-unix.tar.gz"

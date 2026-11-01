@@ -98,9 +98,11 @@ src/sources/           sorgenti Java
 src_test/              piccoli programmi di prova usati durante lo sviluppo
 patch/                 classi compilate, pronte da iniettare in launcher.jar
 build/                 script di pacchettizzazione, ProGuard, installer Inno Setup
-extracted/{app}/       cartella di lavoro del launcher: script .bat, launcher.jar, runtime
-docs/                  immagini della documentazione
-tools/                 utilità Python: generazione biomi, estrazione e compilazione delle traduzioni
+extracted/{app}/       cartella di lavoro del launcher. Nel repository restano solo gli script
+                       .bat e i file che build.ps1 mette nel pacchetto; launcher.jar, runtime,
+                       cache e mapfeatures sono ignorati da git
+docs/                  documentazione e immagini
+tools/                 utilità Python (biomi, traduzioni) e il server lobby finto
 release-repo/          README, guide e licenza del progetto pubblico delle release
 ```
 
@@ -150,8 +152,8 @@ Per pubblicare una versione nuova la procedura completa è in `build/RELEASE.txt
 | [`AUDIT.md`](AUDIT.md) | audit tecnico: architettura, cause dei blocchi di generazione, correzioni |
 | [`PROGRESS.md`](PROGRESS.md) | registro dei commit, roadmap e stato delle funzionalità |
 | [`piano_vista3d_texture.md`](piano_vista3d_texture.md) | piano della vista 3D e del Texture Studio |
-| [`extracted/{app}/README.md`](extracted/{app}/README.md) | generatore Neroxis per BAR: opzioni, conversioni, formati |
-| [`extracted/{app}/BAR-INTEGRATION.md`](extracted/{app}/BAR-INTEGRATION.md) | mappe generate nelle lobby multiplayer: checksum, `!nextmap`, cosa servirebbe lato BAR |
+| [`docs/GENERATORE-NEROXIS.md`](docs/GENERATORE-NEROXIS.md) | generatore Neroxis per BAR: opzioni, conversioni, formati |
+| [`docs/BAR-INTEGRATION.md`](docs/BAR-INTEGRATION.md) | mappe generate nelle lobby multiplayer: checksum, `!nextmap`, cosa servirebbe lato BAR |
 | [`release-repo/docs/GUIDE.md`](release-repo/docs/GUIDE.md) · [`GUIDA.md`](release-repo/docs/GUIDA.md) | guida utente in inglese e in italiano |
 
 ## Note tecnici
